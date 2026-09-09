@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Cabecalho } from '../componentes/Layout';
-import { ALVOS, CLIENTES, POSTS } from '../dados/mock';
+import { CLIENTES } from '../dados/mock';
+import { ESTADOS_EM_VOO, useApp } from '../contexto';
 import type { Perfil } from '../dados/tipos';
-
-const EM_VOO = ['pendente', 'container_criando', 'container_aguardando', 'container_pronto', 'publicando'];
 
 type Estado = 'no_ar' | 'desenhado' | 'a_fazer';
 
@@ -21,10 +20,10 @@ interface Bloco {
 }
 
 const CONTEUDO: Bloco[] = [
-  { titulo: 'Calendário', desc: 'O mês inteiro por cliente. Arraste para reagendar.', para: '/calendario', estado: 'a_fazer' },
-  { titulo: 'Editor de post', desc: 'Legenda, arquivo, destino e preview do feed.', para: '/editor', estado: 'a_fazer' },
-  { titulo: 'Fila de publicação', desc: 'O que está saindo, o que falhou e por quê.', para: '/fila', estado: 'a_fazer' },
-  { titulo: 'Portal do cliente', desc: 'O link de aprovação, do lado de quem aprova.', para: '/aprovacao', estado: 'a_fazer' },
+  { titulo: 'Calendário', desc: 'O mês inteiro por cliente. Arraste para reagendar.', para: '/calendario', estado: 'desenhado' },
+  { titulo: 'Editor de post', desc: 'Legenda, arquivo, destino e preview do feed.', para: '/editor', estado: 'desenhado' },
+  { titulo: 'Fila de publicação', desc: 'O que está saindo, o que falhou e por quê.', para: '/fila', estado: 'desenhado' },
+  { titulo: 'Portal do cliente', desc: 'O link de aprovação, do lado de quem aprova.', para: '/aprovacao', estado: 'desenhado' },
 ];
 
 const RESTO: Bloco[] = [
@@ -90,9 +89,10 @@ function CartaoBloco({ b }: { b: Bloco }) {
 }
 
 export function Inicio({ operador }: { operador: Perfil }) {
-  const falhas = ALVOS.filter((a) => a.estado === 'falhou').length;
-  const esperando = POSTS.filter((p) => p.status === 'aguardando_aprovacao').length;
-  const naFila = ALVOS.filter((a) => EM_VOO.includes(a.estado)).length;
+  const { posts, alvos } = useApp();
+  const falhas = alvos.filter((a) => a.estado === 'falhou').length;
+  const esperando = posts.filter((p) => p.status === 'aguardando_aprovacao').length;
+  const naFila = alvos.filter((a) => ESTADOS_EM_VOO.includes(a.estado)).length;
   const clientesAtivos = CLIENTES.filter((c) => c.ativo).length;
   const acessoTravado = CLIENTES.filter((c) =>
     c.contas.some((x) => x.ativo && x.acessoParceiro !== 'concedido'),

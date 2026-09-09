@@ -1,9 +1,14 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { CLIENTES } from '../dados/mock';
+import type { CtxApp } from '../contexto';
 import type { Perfil } from '../dados/tipos';
 
 interface Props {
   operador: Perfil;
   aoTrocarOperador: () => void;
+  clienteAtivo: string;
+  setClienteAtivo: (id: string) => void;
+  contexto: CtxApp;
 }
 
 interface ItemNav {
@@ -61,7 +66,8 @@ function iniciais(nome: string) {
   return (p[0]?.charAt(0) ?? '') + (p[1]?.charAt(0) ?? '');
 }
 
-export function Layout({ operador, aoTrocarOperador }: Props) {
+export function Layout({ operador, aoTrocarOperador, clienteAtivo, setClienteAtivo, contexto }: Props) {
+  const ativos = CLIENTES.filter((c) => c.ativo);
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[232px_1fr]">
       <nav className="sticky top-0 flex h-auto flex-col gap-5 border-b border-linha bg-superficie py-4 lg:h-screen lg:overflow-y-auto lg:border-r lg:border-b-0">
@@ -72,6 +78,29 @@ export function Layout({ operador, aoTrocarOperador }: Props) {
             studi<span className="text-pink">o</span>
           </span>
           <span className="pb-px font-mono text-[9.5px] tracking-wider text-tinta-3">plataforma</span>
+        </div>
+
+        <div className="flex flex-col gap-1 px-3">
+          <span className="rotulo px-1.5 pb-0.5">Clientes</span>
+          {ativos.map((c) => {
+            const on = c.id === clienteAtivo;
+            const pendentes = contexto.posts.filter((p) => p.clienteId === c.id && p.status !== 'publicado').length;
+            return (
+              <button
+                key={c.id}
+                aria-pressed={on}
+                onClick={() => setClienteAtivo(c.id)}
+                className={
+                  'flex items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 text-left text-[13px] transition-colors ' +
+                  (on ? 'bg-pink-suave font-semibold text-tinta' : 'text-tinta-2 hover:bg-superficie-2 hover:text-tinta')
+                }
+              >
+                <i className="size-[7px] shrink-0 rounded-full" style={{ background: c.cor }} />
+                <span className="truncate">{c.nome}</span>
+                <span className="numeros ml-auto text-[11px] text-tinta-3">{pendentes}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex flex-col gap-1.5 px-3">
@@ -113,7 +142,7 @@ export function Layout({ operador, aoTrocarOperador }: Props) {
       </nav>
 
       <main className="flex min-w-0 flex-col">
-        <Outlet />
+        <Outlet context={contexto} />
       </main>
     </div>
   );

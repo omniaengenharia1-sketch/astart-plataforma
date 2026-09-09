@@ -185,3 +185,47 @@ export function contaPorId(id: string) {
   }
   return undefined;
 }
+
+import type { EventoAlvo } from './tipos';
+
+/** Log append-only por alvo. Espelha publicacao_eventos. */
+export const EVENTOS: Record<string, EventoAlvo[]> = {
+  a1: [
+    { hora: '09:30:04', evento: 'tick.reivindicou', tom: 'meta', detalhe: 'Lease de 120s tomado pelo tick 4f2a…c1.' },
+    { hora: '09:30:04', evento: 'container_solicitado', tom: 'neutro', detalhe: '1 arquivo, link assinado válido por 2h.' },
+    { hora: '09:30:05', evento: 'meta.ig.criar_container_imagem', tom: 'meta', detalhe: 'POST /17841…/media → 201 em 812 ms.' },
+    { hora: '09:30:05', evento: 'container_criado', tom: 'ok', detalhe: 'container_id 17999…3021.' },
+  ],
+  a2: [
+    { hora: '16:00:03', evento: 'container_solicitado', tom: 'neutro', detalhe: '1 arquivo, link assinado válido por 2h.' },
+    { hora: '16:00:04', evento: 'meta.ig.criar_container_imagem', tom: 'meta', detalhe: 'POST /17841…/media → 400 em 640 ms.' },
+    { hora: '16:00:04', evento: 'erro_permanente', tom: 'erro', detalhe: 'Código 2207009. Sem retry — o arquivo é 1200×500 (2.4:1). O JSON cru da Meta ficou só aqui no log.' },
+    { hora: '16:00:04', evento: 'alerta_enviado', tom: 'neutro', detalhe: 'Webhook disparado para o canal #social-alertas.' },
+  ],
+  a3: [
+    { hora: '16:00:03', evento: 'container_solicitado', tom: 'neutro', detalhe: 'Foto na Página do Facebook.' },
+    { hora: '16:00:04', evento: 'meta.fb.publicar_foto', tom: 'meta', detalhe: 'POST /5550…/photos → 200 em 1.1 s.' },
+    { hora: '16:00:04', evento: 'publicacao_confirmada', tom: 'ok', detalhe: 'media_id 122098…4471. Saiu no Facebook e falhou no Instagram: o post virou publicado_parcial.' },
+  ],
+  a4: [
+    { hora: '19:30:02', evento: 'container_solicitado', tom: 'neutro', detalhe: '1 arquivo.' },
+    { hora: '19:30:03', evento: 'container_criado', tom: 'ok', detalhe: 'container_id 17888…9915.' },
+    { hora: '19:30:33', evento: 'container_processando', tom: 'neutro', detalhe: 'status_code IN_PROGRESS. Nova checagem em 30s — não consome tentativa.' },
+  ],
+  a5: [
+    { hora: '08:00:02', evento: 'meta.ig.consultar_cota', tom: 'meta', detalhe: 'quota_usage 11 de 50 na janela móvel de 24h.' },
+    { hora: '08:00:02', evento: 'publicacao_solicitada', tom: 'neutro', detalhe: 'creation_id 17777…2210. Gravado antes da chamada.' },
+    { hora: '08:00:27', evento: 'publicacao_indefinida', tom: 'erro', detalhe: 'Timeout de 25s sem resposta. Não sabemos se publicou — e por isso não republicamos.' },
+    { hora: '08:01:03', evento: 'reconciliacao_iniciada', tom: 'meta', detalhe: 'GET /17777…2210?fields=status_code → FINISHED.' },
+    { hora: '08:01:04', evento: 'meta.ig.midias_recentes', tom: 'meta', detalhe: 'Nenhuma mídia nova na conta desde 08:00:02.' },
+  ],
+  a6: [
+    { hora: '—', evento: 'aguardando_horario', tom: 'neutro', detalhe: 'Alvo criado no agendamento. Só fica elegível às 12:00 de 27/08.' },
+  ],
+};
+
+export const LEGENDAS_EXEMPLO: Record<string, string> = {
+  p06: 'Registrou a marca e acha que está tudo resolvido? Existem três tipos de registro no INPI, e escolher o errado deixa buraco na sua proteção.\n\nSalva esse post para consultar antes de entrar com o pedido.\n\n#registrodemarca #INPI #propriedadeintelectual #marcas #empreendedorismo',
+  p13: 'O que a sua marca faz nas três primeiras horas de uma crise decide o tamanho dela. Silêncio também é posicionamento — só que involuntário.\n\n#assessoriadeimprensa #gestaodecrise #comunicacao',
+  p17: 'Mesa posta para 12. Setembro fecha o ciclo do semestre e a curadoria deste encontro foi feita peça por peça. Confirmação até dia 25.\n\n#networking #confrariasomos',
+};

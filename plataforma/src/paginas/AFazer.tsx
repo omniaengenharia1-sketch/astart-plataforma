@@ -11,55 +11,6 @@ export interface Modulo {
 }
 
 export const MODULOS: Record<string, Modulo> = {
-  calendario: {
-    nome: 'Calendário',
-    linha: 'O mês inteiro por cliente, com arrastar para reagendar.',
-    resumo:
-      'A tela já foi desenhada e aprovada no protótipo. Falta portá-la para React em cima destes componentes — é o próximo passo do módulo 1.',
-    itens: [
-      'Visão mensal e semanal, filtro por cliente, cor por status.',
-      'Arrastar uma peça para outro dia reescreve agendado_para.',
-      'Peça publicada não é reagendada.',
-    ],
-    base: 'Consome posts e clientes, que já existem no banco com RLS.',
-  },
-  editor: {
-    nome: 'Editor de post',
-    linha: 'Upload, legenda, destino e preview fiel do feed.',
-    resumo:
-      'Validação antes do upload: proporção, formato, contagem de caracteres e hashtags. Bloquear o erro na tela custa menos do que descobrir que a Meta recusou na hora de publicar.',
-    itens: [
-      'Imagem: JPEG ou PNG, proporção entre 4:5 e 1.91:1.',
-      'Carrossel: 2 a 10 itens, com aviso destacado quando as proporções divergem.',
-      'Reel: 9:16, com alerta de duração fora do padrão.',
-      'Primeiro comentário publicado logo após o post; falha aqui não derruba a peça.',
-    ],
-    base: 'Grava em posts e post_midias, e sobe arquivo para o bucket privado midias-posts.',
-  },
-  fila: {
-    nome: 'Fila de publicação',
-    linha: 'O que está saindo, o que falhou e por quê.',
-    resumo:
-      'Uma linha por peça × conta de destino. O worker já roda em produção; falta a tela que mostra o estado dele.',
-    itens: [
-      'Estado, tentativas, próxima tentativa e motivo em português.',
-      'Linha do tempo de publicacao_eventos por item.',
-      'Botão de reprocessar, que respeita o lease e a reconciliação.',
-    ],
-    base: 'Lê post_alvos e publicacao_eventos. O worker publicar-tick já está construído e testado.',
-  },
-  aprovacao: {
-    nome: 'Portal do cliente',
-    linha: 'O link de aprovação, do lado de quem aprova.',
-    resumo:
-      'Acessado por link com token, sem cadastro. Aprovar move a peça direto para agendado; reprovar devolve para rascunho com o comentário.',
-    itens: [
-      'Lista só as peças daquele cliente, validadas pelo hash do token.',
-      'Comentário por peça, gravado em aprovacao_comentarios.',
-      'anon não tem privilégio nenhum: a leitura passa por Edge Function com service role.',
-    ],
-    base: 'Usa links_aprovacao e aprovacao_comentarios, já criadas com RLS.',
-  },
   financeiro: {
     nome: 'Financeiro',
     linha: 'Quanto entra por cliente, quando entra e o que ainda não entrou.',

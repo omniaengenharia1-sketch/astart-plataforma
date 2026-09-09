@@ -90,3 +90,16 @@ export interface PostAlvo {
   erroMensagem: string | null;
   mediaId: string | null;
 }
+
+export interface EventoAlvo {
+  hora: string;
+  evento: string;
+  tom: 'ok' | 'erro' | 'meta' | 'neutro';
+  detalhe: string;
+}
+
+export interface Aprovacao {
+  postId: string;
+  decisao: 'sim' | 'nao' | null;
+  comentario: string;
+}
