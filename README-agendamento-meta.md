@@ -97,13 +97,33 @@ Guarde o token no Vault, nunca em variavel de ambiente e nunca no front:
 select vault.create_secret('<TOKEN_DO_SYSTEM_USER>', 'meta_system_user_token');
 ```
 
-**Cliente que nao aceita compartilhar via BM:** guarde o token proprio dele com
-outro nome e aponte a conta para ele. Sem `token_ref`, a conta usa o token global.
+### Cliente que nao aceita compartilhar via BM
+
+Esse e o unico caso de OAuth. A conta entra com `origem_token = 'oauth'` e um
+vencimento; a partir dai a rotina diaria cuida dela.
 
 ```sql
-select vault.create_secret('<TOKEN_DO_CLIENTE>', 'token_cliente_fulano');
-update contas_sociais set token_ref = 'token_cliente_fulano' where id = '...';
+update contas_sociais
+   set origem_token = 'oauth', token_expira_em = now() + interval '60 days'
+ where id = '...';
+
+select atualizar_token_conta('<id da conta>', '<TOKEN_DO_CLIENTE>', now() + interval '60 days');
 ```
+
+`atualizar_token_conta()` cria a chave no Vault na primeira chamada e sobrescreve
+nas seguintes, sempre com o mesmo nome. Nao ha como cadastrar um token OAuth sem
+vencimento: uma constraint impede, justamente para a rotina nunca perder a conta
+de vista.
+
+Para isso funcionar, a Edge Function precisa de mais dois segredos:
+
+```bash
+supabase secrets set META_APP_ID=<id do app> META_APP_SECRET=<segredo do app>
+```
+
+**Um token que ja venceu nao volta sozinho.** A Meta so devolve um novo depois
+que alguem reconecta a conta; a rotina detecta o caso, para de tentar e alerta o
+time — em vez de insistir em silencio.
 
 ### Descobrindo `ig_user_id` e `page_id`
 
@@ -122,12 +142,14 @@ curl -s "https://graph.facebook.com/v23.0/me/accounts?fields=id,name,instagram_b
 | Chave | Para que serve |
 | --- | --- |
 | `meta_system_user_token` | token de System User do BM da Astart |
-| `tick_secret` | segredo compartilhado entre o `pg_cron` e a Edge Function |
-| `publicar_tick_url` | URL completa da function, usada pelo `pg_cron` |
-| `token_<cliente>` | opcional, token proprio de uma conta especifica |
+| `tick_secret` | segredo compartilhado entre o `pg_cron` e as Edge Functions |
+| `publicar_tick_url` | URL da function de publicacao, usada pelo `pg_cron` |
+| `renovar_tokens_url` | URL da function de renovacao de token |
+| `token_conta_<uuid>` | criada sozinha na primeira renovacao de uma conta OAuth |
 
 ```sql
 select vault.create_secret('https://<ref>.supabase.co/functions/v1/publicar-tick', 'publicar_tick_url');
+select vault.create_secret('https://<ref>.supabase.co/functions/v1/renovar-tokens', 'renovar_tokens_url');
 select vault.create_secret('<gere_um_valor_longo_e_aleatorio>', 'tick_secret');
 ```
 
@@ -166,6 +188,7 @@ supabase link --project-ref <ref>
 supabase db push
 
 supabase functions deploy publicar-tick --no-verify-jwt
+supabase functions deploy renovar-tokens --no-verify-jwt
 ```
 
 Verifique o cron:

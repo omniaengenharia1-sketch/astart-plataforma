@@ -30,11 +30,13 @@ alter table storage.objects enable row level security;
 create table vault.secrets (id uuid primary key default gen_random_uuid(), name text unique, secret text);
 create or replace view vault.decrypted_secrets as
   select id, name, secret as decrypted_secret from vault.secrets;
-create or replace function vault.create_secret(p_secret text, p_name text)
+create or replace function vault.create_secret(p_secret text, p_name text, p_desc text default null)
 returns uuid language sql as $$
   insert into vault.secrets (name, secret) values (p_name, p_secret)
   on conflict (name) do update set secret = excluded.secret returning id;
 $$;
+create or replace function vault.update_secret(p_id uuid, p_secret text)
+returns void language sql as $$ update vault.secrets set secret = p_secret where id = p_id $$;
 
 create table cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text);
 create or replace function cron.schedule(jobname text, schedule text, command text)
@@ -58,3 +60,4 @@ grant usage on schema public to anon, authenticated, service_role;
 select vault.create_secret('https://exemplo.supabase.co/functions/v1/publicar-tick', 'publicar_tick_url');
 select vault.create_secret('segredo-de-teste', 'tick_secret');
 select vault.create_secret('TOKEN_FAKE_DO_SYSTEM_USER', 'meta_system_user_token');
+select vault.create_secret('https://exemplo.supabase.co/functions/v1/renovar-tokens', 'renovar_tokens_url');

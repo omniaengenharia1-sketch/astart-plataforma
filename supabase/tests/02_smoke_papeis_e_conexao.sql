@@ -71,3 +71,34 @@ select p.proname,
    and p.proname in ('usuario_ativo','usuario_edita','usuario_admin','usuario_financeiro',
                      'contas_com_token_vencendo','obter_token_conta')
  order by 1;
+
+-- ---------------------------------------------------------------------------
+-- Migration 0012: renovacao de token OAuth
+-- ---------------------------------------------------------------------------
+insert into clientes (id, nome, slug) values ('cccc1111-0000-0000-0000-000000000001','Cliente B','cliente-b');
+insert into contas_sociais (id, cliente_id, plataforma, nome_exibicao, ig_user_id, origem_token, token_expira_em) values
+  ('dddd1111-0000-0000-0000-000000000001','cccc1111-0000-0000-0000-000000000001','instagram','@oauth','1780000101','oauth', now() + interval '3 days'),
+  ('dddd1111-0000-0000-0000-000000000002','cccc1111-0000-0000-0000-000000000001','instagram','@sysuser','1780000102','system_user', null);
+
+\echo '--- 10. renovacao grava o token e move o vencimento'
+select atualizar_token_conta('dddd1111-0000-0000-0000-000000000001','TOKEN_NOVO', now() + interval '60 days') as chave;
+select access_token from obter_token_conta('dddd1111-0000-0000-0000-000000000001');
+
+\echo '--- 11. renovar de novo reusa a mesma chave, nao cria outra'
+select atualizar_token_conta('dddd1111-0000-0000-0000-000000000001','TOKEN_MAIS_NOVO', now() + interval '60 days');
+select count(*) as chaves_no_vault from vault.secrets where name like 'token_conta_%';
+select access_token from obter_token_conta('dddd1111-0000-0000-0000-000000000001');
+
+\echo '--- 12. System User recusa renovacao'
+do $$ begin
+  perform atualizar_token_conta('dddd1111-0000-0000-0000-000000000002','X', now() + interval '60 days');
+  raise exception 'FALHOU: deveria ter recusado';
+exception when others then raise notice '%', sqlerrm;
+end $$;
+
+\echo '--- 13. vencimento no passado e recusado'
+do $$ begin
+  perform atualizar_token_conta('dddd1111-0000-0000-0000-000000000001','X', now() - interval '1 day');
+  raise exception 'FALHOU: deveria ter recusado';
+exception when others then raise notice '%', sqlerrm;
+end $$;

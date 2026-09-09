@@ -6,3 +6,7 @@ project_id = "astart-agendamento"
 [functions.publicar-tick]
 # O pg_cron autentica com o header x-tick-secret, nao com JWT.
 verify_jwt = false
+
+[functions.renovar-tokens]
+# Autentica pelo header x-tick-secret, igual ao publicar-tick.
+verify_jwt = false
