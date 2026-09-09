@@ -1,9 +1,6 @@
-.env
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-venv/
 node_modules/
 dist/
 deno.lock
+.env
+.env.local
+.DS_Store
