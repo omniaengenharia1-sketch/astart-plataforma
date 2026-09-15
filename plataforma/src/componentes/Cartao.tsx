@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 export function Cartao({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-linha bg-superficie p-4 ${className}`}>{children}</div>
+    <div className={`border border-linha bg-superficie p-4 ${className}`}>{children}</div>
   );
 }
 
@@ -16,7 +16,7 @@ const TONS: Record<TomAviso, string> = {
 
 export function Aviso({ tom = 'espera', children }: { tom?: TomAviso; children: ReactNode }) {
   return (
-    <p className={`rounded-md px-3 py-2 text-[12px] leading-relaxed ${TONS[tom]}`}>{children}</p>
+    <p className={`border-l-2 border-current/40 px-3 py-2 text-[12px] leading-relaxed ${TONS[tom]}`}>{children}</p>
   );
 }
 

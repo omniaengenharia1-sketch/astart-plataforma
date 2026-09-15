@@ -55,14 +55,14 @@ export function Tabela<T>({
               onChange={(e) => setTermo(e.target.value)}
               placeholder={placeholderBusca}
               aria-label={placeholderBusca}
-              className="w-full max-w-64 rounded-full border border-linha-forte bg-superficie px-3.5 py-1.5 text-[12px] text-tinta placeholder:text-tinta-3 focus:border-pink"
+              className="w-full max-w-64 border-0 border-b border-linha-forte bg-transparent px-0 py-1.5 text-[12px] text-tinta placeholder:text-tinta-3 focus:border-pink focus:outline-none"
             />
           )}
           {acoes && <div className="ml-auto flex flex-wrap items-center gap-2">{acoes}</div>}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-md border border-linha bg-superficie">
+      <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] border-collapse">
           <thead>
             <tr>
@@ -70,7 +70,7 @@ export function Tabela<T>({
                 <th
                   key={c.chave}
                   scope="col"
-                  className="rotulo border-b border-linha bg-superficie-2 px-3 py-2.5 text-left"
+                  className="rotulo border-b border-tinta px-3 py-2.5 text-left first:pl-0"
                   style={c.larguraMin ? { minWidth: c.larguraMin } : undefined}
                 >
                   {c.titulo}
@@ -88,13 +88,13 @@ export function Tabela<T>({
                   aria-selected={ativa}
                   onClick={aoClicar ? () => aoClicar(l) : undefined}
                   className={
-                    'border-b border-linha last:border-b-0 ' +
+                    'border-b border-linha ' +
                     (aoClicar ? 'cursor-pointer ' : '') +
                     (ativa ? 'bg-pink-suave' : 'hover:bg-superficie-2')
                   }
                 >
                   {colunas.map((c) => (
-                    <td key={c.chave} className="px-3 py-2.5 align-top text-[12.5px]">
+                    <td key={c.chave} className="px-3 py-3 align-top text-[12.5px] first:pl-0">
                       {c.render(l)}
                     </td>
                   ))}

@@ -98,7 +98,7 @@ export function Clientes({ operador }: { operador: Perfil }) {
       render: (c) =>
         c.linkAprovacao && !c.linkAprovacao.revogado ? (
           <>
-            <Pilula tom="acao">ativo</Pilula>
+            <Pilula tom="ok">ativo</Pilula>
             <span className="rotulo mt-0.5 block">expira {c.linkAprovacao.expiraEm}</span>
           </>
         ) : (

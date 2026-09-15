@@ -10,11 +10,12 @@ import type { EstadoAlvo, EventoAlvo, PostAlvo } from '../dados/tipos';
 
 const MAX_TENTATIVAS = 6;
 
+// Pink e so da marca e do que quebrou. Estado em andamento e ambar; parado e neutro.
 const TOM_ESTADO: Record<EstadoAlvo, 'ok' | 'espera' | 'falha' | 'acao' | 'neutro'> = {
-  pendente: 'acao',
-  container_criando: 'acao',
-  container_aguardando: 'acao',
-  container_pronto: 'acao',
+  pendente: 'neutro',
+  container_criando: 'espera',
+  container_aguardando: 'espera',
+  container_pronto: 'espera',
   publicando: 'espera',
   publicado: 'ok',
   falhou: 'falha',

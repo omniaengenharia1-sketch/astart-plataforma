@@ -1,151 +1,254 @@
 import { useNavigate } from 'react-router-dom';
-import { Cabecalho } from '../componentes/Layout';
-import { CLIENTES } from '../dados/mock';
-import { ESTADOS_EM_VOO, useApp } from '../contexto';
-import type { Perfil } from '../dados/tipos';
+import { clientePorId, contaPorId } from '../dados/mock';
+import { ESTADOS_EM_VOO, HOJE, useApp } from '../contexto';
+import type { EstadoAlvo, Perfil, PostAlvo } from '../dados/tipos';
 
-type Estado = 'no_ar' | 'desenhado' | 'a_fazer';
-
-const SELO: Record<Estado, { texto: string; classe: string }> = {
-  no_ar: { texto: 'no ar', classe: 'bg-ok-suave text-ok' },
-  desenhado: { texto: 'desenhado', classe: 'bg-espera-suave text-espera' },
-  a_fazer: { texto: 'a fazer', classe: 'border border-linha-forte text-tinta-3' },
+const ROTULO_ESTADO: Record<EstadoAlvo, string> = {
+  pendente: 'Pendente',
+  container_criando: 'Criando container',
+  container_aguardando: 'Container aguardando',
+  container_pronto: 'Container pronto',
+  publicando: 'Publicando',
+  publicado: 'Publicado',
+  falhou: 'Falhou',
+  cancelado: 'Cancelado',
 };
 
-interface Bloco {
-  titulo: string;
-  desc: string;
-  para: string;
-  estado: Estado;
-}
+const COR_ESTADO: Record<EstadoAlvo, string> = {
+  pendente: 'text-tinta-3',
+  container_criando: 'text-espera',
+  container_aguardando: 'text-espera',
+  container_pronto: 'text-espera',
+  publicando: 'text-espera',
+  publicado: 'text-ok',
+  falhou: '',
+  cancelado: 'text-tinta-3',
+};
 
-const CONTEUDO: Bloco[] = [
-  { titulo: 'Calendário', desc: 'O mês inteiro por cliente. Arraste para reagendar.', para: '/calendario', estado: 'desenhado' },
-  { titulo: 'Editor de post', desc: 'Legenda, arquivo, destino e preview do feed.', para: '/editor', estado: 'desenhado' },
-  { titulo: 'Fila de publicação', desc: 'O que está saindo, o que falhou e por quê.', para: '/fila', estado: 'desenhado' },
-  { titulo: 'Portal do cliente', desc: 'O link de aprovação, do lado de quem aprova.', para: '/aprovacao', estado: 'desenhado' },
-];
-
-const RESTO: Bloco[] = [
-  { titulo: 'Clientes', desc: 'O cadastro único que costura os módulos.', para: '/clientes', estado: 'desenhado' },
-  { titulo: 'Financeiro', desc: 'Quanto entra por cliente, quando entra e o que não entrou.', para: '/financeiro', estado: 'a_fazer' },
-  { titulo: 'Contratos', desc: 'Vigência, escopo e reajuste em um lugar só.', para: '/contratos', estado: 'a_fazer' },
-  { titulo: 'CRM', desc: 'O funil antes do cliente virar cliente.', para: '/crm', estado: 'a_fazer' },
-];
-
-function saudacao() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-}
-
-function Alerta({
-  n,
-  titulo,
-  desc,
-  tom,
-  para,
-}: {
-  n: number;
-  titulo: string;
-  desc: string;
-  tom: 'falha' | 'espera' | 'ok';
-  para: string;
-}) {
-  const nav = useNavigate();
-  const borda = n === 0 ? 'border-l-ok' : tom === 'falha' ? 'border-l-falha' : tom === 'espera' ? 'border-l-espera' : 'border-l-ok';
-  const cor = n === 0 ? 'text-ok' : tom === 'falha' ? 'text-falha' : tom === 'espera' ? 'text-espera' : 'text-ok';
-  return (
-    <button
-      onClick={() => nav(para)}
-      className={`flex flex-col items-start gap-1 rounded-md border border-l-3 border-linha bg-superficie px-3.5 py-3 text-left transition-colors hover:border-linha-forte ${borda}`}
-    >
-      <span className={`numeros text-[25px] leading-none font-medium ${cor}`}>{n}</span>
-      <span className="text-[12.5px] font-semibold">{titulo}</span>
-      <span className="text-[11px] leading-snug text-tinta-3">{desc}</span>
-    </button>
-  );
-}
-
-function CartaoBloco({ b }: { b: Bloco }) {
-  const nav = useNavigate();
-  const futuro = b.estado === 'a_fazer';
-  return (
-    <button
-      onClick={() => nav(b.para)}
-      className={
-        'flex min-h-32 flex-col items-start gap-1.5 rounded-lg border p-4 text-left transition-all ' +
-        (futuro
-          ? 'border-dashed border-linha bg-superficie-2'
-          : 'border-linha bg-superficie hover:-translate-y-0.5 hover:border-pink')
-      }
-    >
-      <span className="text-[13.5px] font-semibold">{b.titulo}</span>
-      <span className="text-[11.5px] leading-relaxed text-tinta-3">{b.desc}</span>
-      <span className={`mt-auto rounded-full px-2 py-0.5 font-mono text-[9px] tracking-wider ${SELO[b.estado].classe}`}>
-        {SELO[b.estado].texto}
-      </span>
-    </button>
-  );
+/**
+ * A manchete do dia. Quando algo trava, ela nomeia o problema; quando nada
+ * trava, ela dá o número do dia. Uma home que abre com "Bom dia, fulano" não
+ * diz nada — esta é obrigada a ter uma opinião sobre o dia.
+ */
+function manchete(falhas: PostAlvo[], saemHoje: number, acessoPendente: number) {
+  if (falhas.length > 0) {
+    const primeira = falhas[0]!;
+    const cliente = clientePorId(primeira.clienteId)?.nome ?? '';
+    return falhas.length === 1
+      ? { antes: 'Uma peça ', destaque: 'travada', depois: ` na ${cliente}.`, nota: primeira.erroMensagem }
+      : {
+          antes: `${falhas.length} peças `,
+          destaque: 'travadas',
+          depois: ' hoje.',
+          nota: primeira.erroMensagem,
+        };
+  }
+  if (acessoPendente > 0) {
+    return {
+      antes: 'Uma conta sem ',
+      destaque: 'acesso',
+      depois: ' no Business Manager.',
+      nota: 'Enquanto o cliente não aceitar o convite de parceiro, essa conta não publica.',
+    };
+  }
+  if (saemHoje === 0) {
+    return { antes: 'Nada ', destaque: 'sai', depois: ' hoje.', nota: 'A fila está vazia para o dia.' };
+  }
+  return {
+    antes: `${saemHoje === 1 ? 'Uma peça sai' : `${saemHoje} peças saem`} hoje. Nenhuma `,
+    destaque: 'parada',
+    depois: '.',
+    nota: 'O worker está avançando a fila sozinho, um passo por minuto.',
+  };
 }
 
 export function Inicio({ operador }: { operador: Perfil }) {
+  const nav = useNavigate();
   const { posts, alvos } = useApp();
-  const falhas = alvos.filter((a) => a.estado === 'falhou').length;
+
+  const falhas = alvos.filter((a) => a.estado === 'falhou');
+  const emVoo = alvos.filter((a) => ESTADOS_EM_VOO.includes(a.estado));
   const esperando = posts.filter((p) => p.status === 'aguardando_aprovacao').length;
-  const naFila = alvos.filter((a) => ESTADOS_EM_VOO.includes(a.estado)).length;
-  const clientesAtivos = CLIENTES.filter((c) => c.ativo).length;
-  const acessoTravado = CLIENTES.filter((c) =>
-    c.contas.some((x) => x.ativo && x.acessoParceiro !== 'concedido'),
+
+  const doDia = posts
+    .filter((p) => p.dia === HOJE && p.status !== 'rascunho')
+    .sort((a, b) => (a.hora < b.hora ? -1 : 1));
+
+  const acessoPendente = alvos.filter(
+    (a) => contaPorId(a.contaSocialId)?.acessoParceiro !== 'concedido',
+  ).length;
+
+  const m = manchete(falhas, doDia.length, acessoPendente);
+  const publicados = posts.filter(
+    (p) => p.status === 'publicado' || p.status === 'publicado_parcial',
   ).length;
 
   return (
     <>
-      <Cabecalho
-        titulo={`${saudacao()}, ${operador.nome}.`}
-        linha={
-          falhas
-            ? `Tem ${falhas} peça(s) travada(s) esperando alguém. O resto está andando sozinho.`
-            : 'Nada travado. A fila está andando sozinha.'
-        }
-      />
-
-      <div className="px-6 pb-8">
-        <p className="rotulo mb-3">Precisa de você agora</p>
-        <div className="mb-7 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
-          <Alerta n={falhas} titulo="Falharam" desc="Motivo legível e botão de tentar de novo." tom="falha" para="/fila" />
-          <Alerta n={esperando} titulo="Esperando o cliente" desc="Peças paradas no portal de aprovação." tom="espera" para="/aprovacao" />
-          <Alerta n={naFila} titulo="Na fila agora" desc="Avançando um passo por minuto." tom="ok" para="/fila" />
-          <Alerta n={acessoTravado} titulo="Acesso pendente" desc="Conta sem permissão de parceiro no BM." tom="espera" para="/clientes" />
+      {/* Manchete — a única serifada da tela, e só aparece uma vez. */}
+      <div className="flex flex-wrap items-end justify-between gap-8 border-b border-tinta pt-6 pb-4">
+        <div className="min-w-0">
+          <h1 className="m-0 max-w-[20ch] font-display text-[clamp(28px,3.4vw,44px)] leading-[1.06] font-normal tracking-tight">
+            {m.antes}
+            <em className="text-pink italic">{m.destaque}</em>
+            {m.depois}
+          </h1>
+          {m.nota && <p className="mt-2.5 max-w-[62ch] text-[12.5px] leading-relaxed text-tinta-2">{m.nota}</p>}
         </div>
 
-        <div className="mb-3.5 flex items-center gap-3">
-          <span className="rotulo whitespace-nowrap">Operação de conteúdo</span>
-          <span className="h-px flex-1 bg-linha" />
+        <div className="flex shrink-0">
+          <Numero valor={doDia.length} rotulo="Saem hoje" aoClicar={() => nav('/calendario')} />
+          <Numero valor={esperando} rotulo="Esperando o cliente" alerta={esperando > 0} aoClicar={() => nav('/aprovacao')} />
+          <Numero valor={acessoPendente} rotulo="Acesso pendente" alerta={acessoPendente > 0} aoClicar={() => nav('/clientes')} />
+          <Numero valor="11/50" rotulo="Cota 24h" />
         </div>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(232px,1fr))] gap-3.5">
-          {CONTEUDO.map((b) => (
-            <CartaoBloco key={b.para} b={b} />
-          ))}
+      </div>
+
+      {/* Quadro do dia — tudo que é máquina vive em mono. */}
+      <div className="pt-4 pb-2">
+        <div className="flex items-center gap-3 text-[9.5px] font-bold tracking-[0.2em] uppercase">
+          Quadro do dia
+          <span className="h-px flex-1 bg-linha-forte" />
+          <span className="font-mono text-[10.5px] font-normal tracking-[0.06em] text-tinta-3 normal-case">
+            {doDia.length} {doDia.length === 1 ? 'peça' : 'peças'} · {falhas.length} parada
+            {falhas.length === 1 ? '' : 's'}
+          </span>
         </div>
 
-        <div className="mt-7 mb-3.5 flex items-center gap-3">
-          <span className="rotulo whitespace-nowrap">Resto da plataforma</span>
-          <span className="h-px flex-1 bg-linha" />
+        <div className="overflow-x-auto">
+          <table className="mt-3 w-full min-w-[840px] border-collapse">
+            <thead>
+              <tr>
+                {['Hora', 'Peça', 'Estado', 'Motivo'].map((h) => (
+                  <th
+                    key={h}
+                    scope="col"
+                    className="border-b border-tinta pb-2 text-left text-[9px] font-semibold tracking-[0.18em] text-tinta-3 uppercase"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {doDia.map((p) => {
+                const alvo = alvos.find((a) => a.postId === p.id);
+                const conta = alvo ? contaPorId(alvo.contaSocialId) : undefined;
+                const falhou = alvo?.estado === 'falhou';
+                return (
+                  <tr
+                    key={p.id}
+                    onClick={() => nav('/fila')}
+                    className={
+                      'cursor-pointer border-b border-linha ' +
+                      (falhou ? 'bg-pink-suave' : 'hover:bg-superficie-2')
+                    }
+                  >
+                    <td className="w-24 py-3 align-middle">
+                      <span
+                        className={
+                          'numeros text-[21px] font-medium tracking-tight ' +
+                          (falhou ? 'text-pink-tinta' : '')
+                        }
+                      >
+                        {p.hora}
+                      </span>
+                    </td>
+                    <td className="py-3 align-middle">
+                      <span className="block text-[13.5px] leading-tight font-semibold">
+                        {p.tituloInterno}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] font-semibold tracking-[0.11em] text-tinta-3 uppercase">
+                        {clientePorId(p.clienteId)?.nome}
+                        {conta && ` · ${conta.nomeExibicao}`}
+                      </span>
+                    </td>
+                    <td className="w-44 py-3 align-middle">
+                      {alvo ? (
+                        falhou ? (
+                          <span className="bg-pink px-2.5 py-1 font-mono text-[10.5px] font-semibold tracking-[0.13em] text-white uppercase">
+                            Falhou
+                          </span>
+                        ) : (
+                          <span
+                            className={`font-mono text-[10.5px] tracking-[0.13em] uppercase ${COR_ESTADO[alvo.estado]}`}
+                          >
+                            {ROTULO_ESTADO[alvo.estado]}
+                          </span>
+                        )
+                      ) : (
+                        <span className="font-mono text-[10.5px] tracking-[0.13em] text-tinta-3 uppercase">
+                          Agendado
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 align-middle">
+                      <span
+                        className={
+                          'block max-w-[46ch] font-mono text-[10.5px] leading-relaxed ' +
+                          (falhou ? 'text-pink-tinta' : 'text-tinta-3')
+                        }
+                      >
+                        {alvo?.erroMensagem ?? `Elegível às ${p.hora}.`}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {doDia.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center font-mono text-[11px] text-tinta-3">
+                    Nenhuma peça agendada para hoje.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(232px,1fr))] gap-3.5">
-          {RESTO.map((b) => (
-            <CartaoBloco key={b.para} b={b} />
-          ))}
-        </div>
+      </div>
 
-        <p className="mt-6 max-w-[78ch] border-l-2 border-linha-forte py-1 pl-3.5 text-[11.5px] leading-relaxed text-tinta-3">
-          <b className="text-tinta-2">Como ler esta home:</b> <b className="text-tinta-2">no ar</b> tem
-          código rodando. <b className="text-tinta-2">desenhado</b> tem a tela e as regras acordadas, mas
-          ainda não grava nada. <b className="text-tinta-2">a fazer</b> é só estrutura. Estamos indo módulo
-          a módulo — primeiro o visual, depois a API. Os {clientesAtivos} clientes ativos são a mesma
-          tabela em todos eles.
-        </p>
+      <div className="mt-auto flex flex-wrap gap-x-7 gap-y-1 border-t-2 border-tinta py-2.5 font-mono text-[10.5px] tracking-[0.05em] text-tinta-3 uppercase">
+        <span>
+          Publicados no mês <b className="font-medium text-tinta">{publicados}</b>
+        </span>
+        <span>
+          Na fila agora <b className="font-medium text-tinta">{emVoo.length}</b>
+        </span>
+        <span>
+          Falhas <b className="font-medium text-tinta">{falhas.length}</b>
+        </span>
+        <span>
+          Operador <b className="font-medium text-tinta">{operador.nome}</b>
+        </span>
       </div>
     </>
+  );
+}
+
+function Numero({
+  valor,
+  rotulo,
+  alerta,
+  aoClicar,
+}: {
+  valor: number | string;
+  rotulo: string;
+  alerta?: boolean;
+  aoClicar?: () => void;
+}) {
+  const Tag = aoClicar ? 'button' : 'div';
+  return (
+    <Tag
+      onClick={aoClicar}
+      className={
+        'border-l border-linha px-5 text-right first:border-l-0 ' +
+        (aoClicar ? 'transition-colors hover:text-pink-tinta' : '')
+      }
+    >
+      <div className={`numeros text-[26px] leading-none font-medium ${alerta ? 'text-espera' : ''}`}>
+        {valor}
+      </div>
+      <div className="rotulo mt-1.5">{rotulo}</div>
+    </Tag>
   );
 }

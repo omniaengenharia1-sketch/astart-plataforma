@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { CLIENTES } from '../dados/mock';
+import { ANO, HOJE, MES } from '../contexto';
 import type { CtxApp } from '../contexto';
 import type { Perfil } from '../dados/tipos';
 
@@ -15,139 +17,132 @@ interface ItemNav {
   para: string;
   texto: string;
   fim?: boolean;
-  estado?: 'no_ar' | 'desenhado' | 'a_fazer';
+  /** Módulo sem tela ainda: aparece apagado, mas aparece. */
+  futuro?: boolean;
 }
 
-const OPERACAO: ItemNav[] = [
+const NAV: ItemNav[] = [
   { para: '/', texto: 'Início', fim: true },
   { para: '/calendario', texto: 'Calendário' },
-  { para: '/editor', texto: 'Editor de post' },
+  { para: '/editor', texto: 'Editor' },
   { para: '/fila', texto: 'Fila' },
-  { para: '/aprovacao', texto: 'Portal do cliente' },
+  { para: '/aprovacao', texto: 'Portal' },
+  { para: '/clientes', texto: 'Clientes' },
+  { para: '/financeiro', texto: 'Financeiro', futuro: true },
+  { para: '/contratos', texto: 'Contratos', futuro: true },
+  { para: '/crm', texto: 'CRM', futuro: true },
 ];
 
-const PLATAFORMA: ItemNav[] = [
-  { para: '/clientes', texto: 'Clientes', estado: 'desenhado' },
-  { para: '/financeiro', texto: 'Financeiro', estado: 'a_fazer' },
-  { para: '/contratos', texto: 'Contratos', estado: 'a_fazer' },
-  { para: '/crm', texto: 'CRM', estado: 'a_fazer' },
+const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const MESES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ];
 
-const SELO_ESTADO: Record<string, string> = {
-  no_ar: 'no ar',
-  desenhado: 'desenhado',
-  a_fazer: 'a fazer',
-};
-
-function Item({ item }: { item: ItemNav }) {
-  return (
-    <NavLink
-      to={item.para}
-      end={item.fim}
-      className={({ isActive }) =>
-        'flex items-center gap-2.5 rounded-r-md border-l-2 px-2.5 py-2 text-[11px] font-semibold tracking-[0.09em] uppercase transition-colors ' +
-        (isActive
-          ? 'border-pink bg-superficie-2 text-pink-tinta'
-          : 'border-transparent text-tinta-2 hover:bg-superficie-2 hover:text-tinta')
-      }
-    >
-      {item.texto}
-      {item.estado && (
-        <span className="ml-auto rounded-full border border-linha-forte px-1.5 py-px font-mono text-[9px] font-normal tracking-normal normal-case text-tinta-3">
-          {SELO_ESTADO[item.estado]}
-        </span>
-      )}
-    </NavLink>
-  );
+function dataPorExtenso(d: Date) {
+  return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 }
 
-function iniciais(nome: string) {
-  const p = nome.trim().split(/\s+/);
-  return (p[0]?.charAt(0) ?? '') + (p[1]?.charAt(0) ?? '');
-}
-
+/**
+ * Chrome da plataforma: chapa de jornal e menu horizontal, não trilho lateral.
+ * O trilho era a parte mais genérica do desenho anterior — todo SaaS tem um.
+ */
 export function Layout({ operador, aoTrocarOperador, clienteAtivo, setClienteAtivo, contexto }: Props) {
   const ativos = CLIENTES.filter((c) => c.ativo);
+
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[232px_1fr]">
-      <nav className="sticky top-0 flex h-auto flex-col gap-5 border-b border-linha bg-superficie py-4 lg:h-screen lg:overflow-y-auto lg:border-r lg:border-b-0">
-        <div className="flex items-end gap-2.5 px-4.5">
-          <span className="text-[16px] leading-[0.98] font-semibold tracking-tight lowercase">
-            astart
-            <br />
-            studi<span className="text-pink">o</span>
+    <div className="flex min-h-screen flex-col">
+      <header className="px-6 pt-5 lg:px-10">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-tinta pb-2.5">
+          <span className="text-[22px] leading-none font-bold tracking-[0.34em] uppercase">
+            Astart<span className="text-pink">.</span>
           </span>
-          <span className="pb-px font-mono text-[9.5px] tracking-wider text-tinta-3">plataforma</span>
+          <button
+            onClick={aoTrocarOperador}
+            className="font-mono text-[11px] tracking-[0.08em] text-tinta-2 uppercase hover:text-pink-tinta"
+            title="Trocar de operador"
+          >
+            {dataPorExtenso(new Date(ANO, MES, HOJE))} · {operador.nome} · {operador.papel}
+          </button>
         </div>
 
-        <div className="flex flex-col gap-1 px-3">
-          <span className="rotulo px-1.5 pb-0.5">Clientes</span>
+        <nav className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-tinta py-2">
+          {NAV.map((i) => (
+            <NavLink
+              key={i.para}
+              to={i.para}
+              end={i.fim}
+              className={({ isActive }) =>
+                'text-[10.5px] font-semibold tracking-[0.16em] uppercase transition-colors ' +
+                (isActive
+                  ? '-mb-[9px] border-b-2 border-pink pb-[7px] text-tinta'
+                  : i.futuro
+                    ? 'text-linha-forte hover:text-tinta-3'
+                    : 'text-tinta-3 hover:text-tinta')
+              }
+            >
+              {i.texto}
+            </NavLink>
+          ))}
+          <Tick />
+        </nav>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-linha py-1.5">
+          <span className="rotulo">Clientes</span>
           {ativos.map((c) => {
             const on = c.id === clienteAtivo;
-            const pendentes = contexto.posts.filter((p) => p.clienteId === c.id && p.status !== 'publicado').length;
+            const pendentes = contexto.posts.filter(
+              (p) => p.clienteId === c.id && p.status !== 'publicado',
+            ).length;
             return (
               <button
                 key={c.id}
                 aria-pressed={on}
                 onClick={() => setClienteAtivo(c.id)}
                 className={
-                  'flex items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 text-left text-[13px] transition-colors ' +
-                  (on ? 'bg-pink-suave font-semibold text-tinta' : 'text-tinta-2 hover:bg-superficie-2 hover:text-tinta')
+                  'flex items-center gap-1.5 text-[11.5px] transition-colors ' +
+                  (on ? 'font-semibold text-tinta' : 'text-tinta-3 hover:text-tinta')
                 }
               >
-                <i className="size-[7px] shrink-0 rounded-full" style={{ background: c.cor }} />
-                <span className="truncate">{c.nome}</span>
-                <span className="numeros ml-auto text-[11px] text-tinta-3">{pendentes}</span>
+                {on && <i className="size-[6px] rounded-full" style={{ background: c.cor }} />}
+                {c.nome}
+                <span className="numeros text-[10px] text-tinta-3">{pendentes}</span>
               </button>
             );
           })}
         </div>
+      </header>
 
-        <div className="flex flex-col gap-1.5 px-3">
-          <span className="rotulo px-1.5 pb-0.5">Operação</span>
-          {OPERACAO.map((i) => (
-            <Item key={i.para} item={i} />
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-1.5 px-3">
-          <span className="rotulo px-1.5 pb-0.5">Plataforma</span>
-          {PLATAFORMA.map((i) => (
-            <Item key={i.para} item={i} />
-          ))}
-        </div>
-
-        <div className="mt-auto hidden border-t border-linha px-4.5 pt-3 lg:block">
-          <button
-            onClick={aoTrocarOperador}
-            className="mb-3 flex w-full items-center gap-2.5 rounded-full border border-linha p-1 pr-2.5 text-left transition-colors hover:border-pink"
-          >
-            <span
-              className="grid size-6.5 shrink-0 place-items-center rounded-full font-display text-[12px] text-white"
-              style={{ background: operador.cor }}
-            >
-              {iniciais(operador.nome)}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[11.5px] leading-tight font-semibold">{operador.nome}</span>
-              <span className="rotulo block">{operador.papel}</span>
-            </span>
-            <span className="rotulo ml-auto text-[9px]">trocar</span>
-          </button>
-          <p className="text-[11px] leading-snug text-tinta-3">
-            <b className="text-tinta-2">Fase 1</b> — imagem única no Instagram. Carrossel, Reels e
-            Facebook Page entram pelo mesmo adapter.
-          </p>
-        </div>
-      </nav>
-
-      <main className="flex min-w-0 flex-col">
+      <main className="flex min-w-0 flex-1 flex-col px-6 lg:px-10">
         <Outlet context={contexto} />
       </main>
     </div>
   );
 }
 
+/**
+ * O batimento do tick. Nenhum outro painel tem isto porque nenhum outro é
+ * movido por um cron de um minuto — por isso ele fica visível.
+ */
+function Tick() {
+  const agora = new Date();
+  const segundos = agora.getSeconds();
+  return (
+    <span className="ml-auto flex items-center gap-2 font-mono text-[10.5px] tracking-[0.06em] text-tinta-3">
+      TICK
+      <span className="relative h-[3px] w-20 bg-linha">
+        <i
+          className="absolute inset-y-0 left-0 bg-pink"
+          style={{ right: `${100 - (segundos / 60) * 100}%` }}
+        />
+      </span>
+      <b className="font-medium text-tinta">{agora.toLocaleTimeString('pt-BR', { hour12: false })}</b>
+      <span>· próximo em {60 - segundos}s</span>
+    </span>
+  );
+}
+
+/** Cabeçalho das telas internas. O Início não usa: lá a manchete faz esse papel. */
 export function Cabecalho({
   titulo,
   linha,
@@ -155,17 +150,17 @@ export function Cabecalho({
 }: {
   titulo: string;
   linha?: string;
-  acoes?: React.ReactNode;
+  acoes?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4 px-6 pt-6 pb-3.5">
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-tinta pt-6 pb-3">
       <div className="min-w-0">
-        <h1 className="m-0 font-display text-[27px] leading-tight font-medium tracking-tight text-balance">
+        <h1 className="m-0 font-display text-[30px] leading-tight font-normal tracking-tight text-balance">
           {titulo}
         </h1>
-        {linha && <p className="mt-1 max-w-[62ch] text-[12.5px] text-tinta-3">{linha}</p>}
+        {linha && <p className="mt-1.5 max-w-[68ch] text-[12.5px] text-tinta-3">{linha}</p>}
       </div>
       {acoes && <div className="flex flex-wrap items-center gap-2">{acoes}</div>}
-    </header>
+    </div>
   );
 }
