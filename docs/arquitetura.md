@@ -188,6 +188,44 @@ Serviços em multi-seleção: a barra *Adicionar serviço* abre a lista dos seis
 cada um adicionado abre o próprio bloco de valor. Totais separados —
 **Mensal** e **Pagamento único** — nunca somados.
 
+## 9b. Como a equipe preenche o sistema
+
+A regra: **ninguém digita duas vezes, e ninguém digita o que o sistema já sabe.**
+
+O que o sistema preenche sozinho:
+
+| O quê | De onde vem |
+|---|---|
+| Ficha do cliente | proposta em PDF lida pela IA, confirmada por uma pessoa |
+| Entregáveis do projeto | modelo do serviço contratado |
+| Cobranças | valores e vencimentos do contrato |
+| Slots do mês | escopo contratado + padrão de publicação do cliente |
+| Ideias de conteúdo | rotina das 9h |
+| Status de pagamento | webhook da Asaas |
+| Status de publicação | worker da Meta |
+
+O que uma pessoa digita, e onde:
+
+| Quem | O quê | Onde |
+|---|---|---|
+| Operação | título e legenda do mês inteiro | **Planejar o mês** (tabela, teclado, uma tela) |
+| Operação | ajuste de uma peça | Editor de peça |
+| Designer | arte | Editor de peça, ou arrastar no Grid |
+| Audiovisual | material de captação | Galeria |
+| Operação | versão de entregável | Entregáveis |
+| Financeiro | lançamento avulso e rateio | Financeiro |
+| Comercial | lead e follow-up | Comercial |
+| Admin | cliente, contrato, equipe | Cadastro e Ajustes |
+
+O mês não se monta peça por peça. **Planejar o mês** gera os dez slots nas
+datas certas a partir do escopo e do padrão de publicação (`2ª, 4ª e 6ª às 12h`),
+e a pessoa preenche só o miolo — em tabela, descendo com o teclado. Dá para
+duplicar o mês anterior e para puxar do banco de ideias. Peça criada nasce em
+`Produzindo`, sem arte; ganha arte depois e só então entra no Grid.
+
+Montar o mês é trabalho de tela grande. No celular essa tela vira leitura e
+ajuste de uma peça.
+
 ## 10. Regras do sistema inteiro
 
 1. Aba não contratada **não existe**. Não cinza, não com cadeado: ausente.
@@ -235,7 +273,7 @@ cada um adicionado abre o próprio bloco de valor. Totais separados —
 (Entrada, Cadastro, Aprovação):
 <https://claude.ai/artifact/Sjwz1yLNgK4GSJkQRDRDVc>
 
-**MVP navegável** — as 44 telas do mapa, ligadas, responsivo, abre no celular:
+**MVP navegável** — as 45 telas do mapa, ligadas, responsivo, abre no celular:
 <https://claude.ai/artifact/5nuLBonHy1jE5nyVmAZi7y>
 Fonte em `docs/proto/plataforma-astart.html` (arquivo único, sem dependências).
 
