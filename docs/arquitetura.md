@@ -235,6 +235,11 @@ cada um adicionado abre o próprio bloco de valor. Totais separados —
 (Entrada, Cadastro, Aprovação):
 <https://claude.ai/artifact/Sjwz1yLNgK4GSJkQRDRDVc>
 
-**Protótipo navegável** — as 12 telas ligadas, responsivo, abre no celular:
+**MVP navegável** — as 44 telas do mapa, ligadas, responsivo, abre no celular:
 <https://claude.ai/artifact/5nuLBonHy1jE5nyVmAZi7y>
 Fonte em `docs/proto/plataforma-astart.html` (arquivo único, sem dependências).
+
+Cobre a entrada, o painel da equipe inteiro (Início, Clientes, Aprovações, Agenda,
+Fila, Financeiro, Comercial, Ajustes), o cadastro de cliente, as 14 abas da ficha
+do cliente, o editor de peça, as 12 telas do portal e o link de quem não tem conta.
+Inclui o estado vazio do primeiro dia.
