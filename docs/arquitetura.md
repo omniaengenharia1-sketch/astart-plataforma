@@ -229,7 +229,12 @@ cada um adicionado abre o próprio bloco de valor. Totais separados —
 | Tela de Equipe | cadastro de membro ainda sem wireframe |
 | Comercial / CRM | 13 etapas mapeadas no Notion, nenhuma tela |
 
-## 13. Wireframes
+## 13. Telas
 
-Canvas com as 11 telas, em três páginas (Entrada, Cadastro, Aprovação):
+**Wireframes** — canvas com as 11 telas, em três páginas
+(Entrada, Cadastro, Aprovação):
 <https://claude.ai/artifact/Sjwz1yLNgK4GSJkQRDRDVc>
+
+**Protótipo navegável** — as 12 telas ligadas, responsivo, abre no celular:
+<https://claude.ai/artifact/5nuLBonHy1jE5nyVmAZi7y>
+Fonte em `docs/proto/plataforma-astart.html` (arquivo único, sem dependências).
