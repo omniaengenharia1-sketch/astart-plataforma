@@ -9,8 +9,8 @@
 // =============================================================================
 import type {
   Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
-  FichaCliente, FormatoContrato, ItemNaFila, PainelCliente, PainelEquipe, Perfil,
-  ServicoContratado, ServicoEscolhido, Sessao,
+  EntregavelNoProjeto, FichaCliente, FormatoContrato, ItemNaFila, PainelCliente,
+  PainelEquipe, Perfil, ServicoContratado, ServicoEscolhido, ServicoNoProjeto, Sessao,
 } from './tipos';
 
 import { sluguificar } from '../formato';
@@ -506,4 +506,154 @@ export function criarClienteExemplo(
     contatos: [],
   });
   return { id: cliente.id, slug: alvo, nome: cliente.nome };
+}
+
+// ---------------------------------------------------------------------------
+// O projeto — os mesmos modelos da migration 0018, resumidos para o exemplo
+// ---------------------------------------------------------------------------
+const MODELOS: Partial<Record<ChaveServico, [string, string][]>> = {
+  website: [
+    ['Descoberta', 'Briefing e arquitetura'],
+    ['Descoberta', 'Wireframe'],
+    ['Design', 'Layout desktop'],
+    ['Design', 'Layout mobile'],
+    ['Desenvolvimento', 'Desenvolvimento responsivo'],
+    ['Desenvolvimento', 'Otimização SEO'],
+    ['Desenvolvimento', 'Velocidade e performance'],
+    ['Publicação', 'Domínio e hospedagem'],
+    ['Publicação', 'Certificado SSL'],
+    ['Publicação', 'Homologação'],
+    ['Publicação', 'Site no ar'],
+  ],
+  branding: [
+    ['Diagnóstico', 'Diagnóstico de marca'],
+    ['Estratégia', 'Arquétipo, propósito e valores'],
+    ['Estratégia', 'Posicionamento estratégico'],
+    ['Estratégia', 'Proposta de valor'],
+    ['Entrega', 'Tom de voz e direcionamento'],
+    ['Entrega', 'Brandbook'],
+  ],
+  identidade_visual: [
+    ['Conceito', 'Logo'],
+    ['Sistema', 'Paleta de cores'],
+    ['Sistema', 'Tipografia'],
+    ['Sistema', 'Elementos gráficos e padrões'],
+    ['Entrega', 'Manual de aplicação'],
+    ['Entrega', 'Papelaria digital'],
+  ],
+  audiovisual: [
+    ['Pré', 'Roteiro'],
+    ['Captação', 'Captação'],
+    ['Pós', 'Seleção de material'],
+    ['Pós', 'Edição e color grading'],
+    ['Entrega', 'Entrega final'],
+  ],
+  sistemas: [
+    ['Descoberta', 'Mapeamento do processo'],
+    ['Desenho', 'Fluxos e automações'],
+    ['Construção', 'Integrações'],
+    ['Entrega', 'Homologação'],
+    ['Entrega', 'Treinamento de uso'],
+  ],
+};
+
+/** Os entregaveis nascem do contrato, como o gatilho da 0018 faz no banco. */
+const PROJETOS = new Map<string, ServicoNoProjeto[]>();
+
+function projetoDe(c: ClienteExemplo): ServicoNoProjeto[] {
+  const pronto = PROJETOS.get(c.cliente.id);
+  if (pronto) return pronto;
+
+  const servicos: ServicoNoProjeto[] = ativos(c)
+    .filter((s) => MODELOS[s.servico])
+    .map((s) => ({
+      clienteServicoId: s.id,
+      servico: s.servico,
+      servicoNome: s.servicoNome,
+      entregaEm: s.entregaEm,
+      entregaveis: (MODELOS[s.servico] ?? []).map(([fase, titulo], i) => ({
+        id: `${s.id}-e${i + 1}`,
+        itemId: null,
+        fase,
+        titulo,
+        ordem: i + 1,
+        estado: 'a_fazer' as const,
+        prazo: null,
+        versaoAtual: null,
+        enviadoEm: null,
+        respondidoEm: null,
+        responsavelNome: s.responsavelNome,
+      })),
+      marcos: [],
+    }));
+
+  PROJETOS.set(c.cliente.id, servicos);
+  return servicos;
+}
+
+export function projetoExemplo(clienteId: string): ServicoNoProjeto[] {
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  if (!c) return [];
+  const p = projetoDe(c);
+  // O estado real mora no item, como na view do banco.
+  for (const s of p) {
+    for (const e of s.entregaveis) {
+      const item = e.itemId ? ITENS.find((i) => i.id === e.itemId) : null;
+      e.estado = item ? item.estado : 'a_fazer';
+      e.enviadoEm = item?.enviadoEm ?? null;
+      e.respondidoEm = item?.respondidoEm ?? null;
+    }
+  }
+  return p;
+}
+
+function acharEntregavel(id: string): { cliente: string; e: EntregavelNoProjeto } | null {
+  for (const c of CLIENTES) {
+    for (const s of projetoDe(c)) {
+      const e = s.entregaveis.find((x) => x.id === id);
+      if (e) return { cliente: c.cliente.id, e };
+    }
+  }
+  return null;
+}
+
+/** Mesmo contrato de item_do_entregavel(): chamar de novo devolve o mesmo item. */
+export function itemDoEntregavelExemplo(entregavelId: string): string {
+  const achado = acharEntregavel(entregavelId);
+  if (!achado) throw new Error('Entregável não encontrado.');
+  if (achado.e.itemId) return achado.e.itemId;
+
+  const id = `item-${entregavelId}`;
+  ITENS.push(item(id, achado.cliente, achado.e.titulo, {
+    tipo: 'entregavel', estado: 'produzindo', enviadoEm: null,
+  }));
+  achado.e.itemId = id;
+  return id;
+}
+
+export function enviarExemplo(itemIds: string[]): number {
+  if (itemIds.length === 0) throw new Error('Escolha o que enviar.');
+  const itens = itemIds.map((id) => {
+    const i = ITENS.find((x) => x.id === id);
+    if (!i) throw new Error('Item não encontrado.');
+    return i;
+  });
+  if (new Set(itens.map((i) => i.clienteId)).size > 1) {
+    throw new Error('Um envio é de um cliente só. Separe em dois.');
+  }
+  for (const i of itens) {
+    if (i.estado === 'em_aprovacao') {
+      throw new Error(`“${i.titulo}” já está esperando o cliente.`);
+    }
+    if (i.estado === 'aprovado') {
+      throw new Error(`“${i.titulo}” já foi aprovado. Para mandar de novo, crie uma nova versão.`);
+    }
+  }
+  for (const i of itens) {
+    i.estado = 'em_aprovacao';
+    i.enviadoEm = new Date().toISOString();
+    i.respondidoEm = null;
+    i.respondidoPor = null;
+  }
+  return itens.length;
 }

@@ -375,6 +375,8 @@ O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do 
 | Aprovações | `/aprovacoes` | `fila_aprovacoes()` |
 | Início do cliente | `/portal` | `painel_cliente()` |
 | Para aprovar | `/portal/aprovar` | `painel_cliente()` + `responder_item()` |
+| Entregáveis (ficha) | `/clientes/:id/entregaveis` | `projeto_do_cliente()` + `enviar_para_aprovacao()` |
+| Meu projeto | `/portal/projeto` | `projeto_do_cliente()` |
 
 As abas da ficha e as outras telas do portal já existem como rota e dizem que ainda
 não foram construídas, em vez de abrir em branco.
@@ -385,6 +387,12 @@ próprio valor, e o lado direito mostra em tempo real quanto fica por mês, quan
 em projeto e **quais abas o contrato liga** — a mesma matriz que o RLS aplica.
 A aba de jogar a proposta diz o que falta para existir (a chave da Anthropic e a
 decisão sobre o documento sair da nossa infraestrutura) em vez de fingir.
+
+A mesma tela de projeto serve os dois lados, com `equipe` ligado ou desligado:
+a equipe marca etapas e manda o lote, o cliente lê o andamento. O item de
+aprovação nasce no envio — entregável sem item é "a fazer", e é por isso que
+começar a trabalhar e mandar para o cliente são dois momentos diferentes no
+banco.
 
 **Responder é a única escrita que o cliente faz.** A regra do comentário obrigatório
 está nos dois lados: a tela desabilita o botão e explica por quê, e `responder_item()`

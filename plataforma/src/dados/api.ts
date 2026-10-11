@@ -11,12 +11,13 @@
 import { ligado, sb } from './supabase';
 import {
   PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  catalogoExemplo, criarClienteExemplo, fichaExemplo, filaExemplo, listaClientesExemplo,
-  painelClienteExemplo, responderExemplo,
+  catalogoExemplo, criarClienteExemplo, enviarExemplo, fichaExemplo, filaExemplo,
+  itemDoEntregavelExemplo, listaClientesExemplo, painelClienteExemplo, projetoExemplo,
+  responderExemplo,
 } from './mock';
 import type {
   Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, FichaCliente, ItemNaFila,
-  PainelCliente, PainelEquipe, Perfil, ServicoEscolhido, Sessao,
+  PainelCliente, PainelEquipe, Perfil, ServicoEscolhido, ServicoNoProjeto, Sessao,
 } from './tipos';
 
 export { ligado };
@@ -266,4 +267,44 @@ export async function criarCliente(
     );
   }
   return exija(data as ClienteNovo | null, 'O cliente cadastrado');
+}
+
+export async function projetoDoCliente(clienteId: string): Promise<ServicoNoProjeto[]> {
+  if (!sb) return projetoExemplo(clienteId);
+  const { data, error } = await sb.rpc('projeto_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir o projeto: ${error.message}`);
+  return exija(data as ServicoNoProjeto[] | null, 'O projeto deste cliente');
+}
+
+/** O item de aprovação do entregável, criando se ainda não existir. */
+export async function itemDoEntregavel(entregavelId: string): Promise<string> {
+  if (!sb) return itemDoEntregavelExemplo(entregavelId);
+  const { data, error } = await sb.rpc('item_do_entregavel', { p_entregavel_id: entregavelId });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as string | null, 'O item deste entregável');
+}
+
+/**
+ * Manda o lote para o cliente. A funcao do banco recusa o que ja esta na mao
+ * dele em vez de reenviar: reenviar faria o mesmo material aparecer duas vezes
+ * na fila do cliente.
+ */
+export async function enviarParaAprovacao(
+  itemIds: string[],
+  mensagem?: string,
+): Promise<number> {
+  if (!sb) {
+    try {
+      return enviarExemplo(itemIds);
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui enviar.');
+    }
+  }
+  const { data, error } = await sb.rpc('enviar_para_aprovacao', {
+    p_item_ids: itemIds,
+    p_mensagem: mensagem?.trim() || null,
+  });
+  if (error) throw new FalhaDados(error.message);
+  const r = data as { enviados?: number } | null;
+  return r?.enviados ?? 0;
 }

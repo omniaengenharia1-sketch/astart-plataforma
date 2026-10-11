@@ -3,7 +3,7 @@
 // em cada tela viraria "Gestao Digital" numa e "Gestão digital" na outra.
 // =============================================================================
 import type {
-  ChaveModulo, EstadoAprovacao, EstadoEntregavel, FormatoContrato,
+  ChaveModulo, EstadoEntregavel, FormatoContrato,
   PapelCliente, StatusServico, TipoItem,
 } from './dados/tipos';
 
@@ -46,7 +46,11 @@ export const ESTADO: Record<EstadoEntregavel, string> = {
 };
 
 /** Como o próprio cliente lê o mesmo estado, do lado dele do portal. */
-export const ESTADO_CLIENTE: Record<EstadoAprovacao, string> = {
+export const ESTADO_CLIENTE: Record<EstadoEntregavel, string> = {
+  // "a fazer" é linguagem de quem produz. Para o cliente, o que importa é que
+  // ninguém está esperando nada dele ali — e dizer "em produção" o que ainda
+  // nem começou seria mentira pequena, do tipo que cobra caro depois.
+  a_fazer: 'ainda não começou',
   produzindo: 'em produção',
   em_aprovacao: 'esperando você',
   com_ajustes: 'ajuste pedido',

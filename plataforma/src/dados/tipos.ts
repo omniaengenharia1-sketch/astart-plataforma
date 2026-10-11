@@ -266,3 +266,35 @@ export interface ClienteNovo {
   slug: string;
   nome: string;
 }
+
+// --- o projeto (migration 0029) ---------------------------------------------
+
+export interface EntregavelNoProjeto {
+  id: string;
+  itemId: string | null;
+  fase: string;
+  titulo: string;
+  ordem: number;
+  estado: EstadoEntregavel;
+  prazo: string | null;
+  versaoAtual: number | null;
+  enviadoEm: string | null;
+  respondidoEm: string | null;
+  responsavelNome: string | null;
+}
+
+export interface MarcoNoProjeto {
+  id: string;
+  titulo: string;
+  prazo: string;
+  concluidoEm: string | null;
+}
+
+export interface ServicoNoProjeto {
+  clienteServicoId: string;
+  servico: ChaveServico;
+  servicoNome: string;
+  entregaEm: string | null;
+  entregaveis: EntregavelNoProjeto[];
+  marcos: MarcoNoProjeto[];
+}

@@ -5,6 +5,7 @@ import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { fichaCliente } from '../dados/api';
 import { diaMes, haQuanto, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
+import { Projeto } from './Projeto';
 import type { ChaveModulo, FichaCliente as Ficha, ServicoContratado } from '../dados/tipos';
 
 /** Como o contrato é lido numa linha: formato manda no que faz sentido mostrar. */
@@ -92,7 +93,9 @@ export function FichaCliente() {
         ))}
       </nav>
 
-      {aba !== '' ? (
+      {aba === 'entregaveis' || aba === 'marcos' ? (
+        <Projeto clienteId={clienteId} equipe />
+      ) : aba !== '' ? (
         <Vazio
           titulo={MODULO[aba as ChaveModulo] ?? 'Seção'}
           explica="Esta aba ainda não foi construída. O contrato deste cliente já a liga, e ela aparece aqui porque o serviço contratado pede."
