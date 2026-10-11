@@ -239,6 +239,22 @@ do $$ begin
     'cliente NAO ve custo da agencia');
   perform public.afirma((select count(*) from public.lancamento_rateios) = 0,
     'cliente NAO ve quanto foi rateado para ele');
+
+  -- O cliente le o ramo de receita para ter o rotulo da propria cobranca.
+  -- O de custo continua interno.
+  perform public.afirma(
+    (select count(*) from public.financeiro_grupos) = 1
+    and (select natureza from public.financeiro_grupos) = 'receita',
+    'cliente ve so o grupo Receita');
+  perform public.afirma(
+    not exists (select 1 from public.financeiro_categorias where nome = 'Freela'),
+    'cliente NAO ve a categoria Freela');
+  perform public.afirma(
+    not exists (select 1 from public.financeiro_subcategorias where nome = 'Pró-labore'),
+    'cliente NAO ve a taxonomia de custo da agencia');
+  perform public.afirma(
+    exists (select 1 from public.financeiro_subcategorias where nome = 'Recorrente'),
+    'mas ve o rotulo da cobranca dele');
 end $$;
 
 set "teste.uid" = '10000000-0000-0000-0000-000000000002';   -- operacao

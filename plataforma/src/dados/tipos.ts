@@ -1,56 +1,45 @@
-// Tipos do domínio. Espelham o schema Supabase; quando as tabelas novas forem
-// aprovadas, estes tipos passam a ser gerados a partir do banco.
+// =============================================================================
+// Os tipos espelham o schema de supabase/migrations. Quando um divergir, o
+// banco esta certo e este arquivo esta errado.
+// =============================================================================
 
-export type Papel = 'admin' | 'operacao' | 'financeiro' | 'leitura';
+export type PapelEquipe = 'admin' | 'operacao' | 'financeiro' | 'leitura';
+export type PapelCliente = 'principal' | 'financeiro' | 'leitura';
+export type FormatoContrato = 'projeto' | 'recorrente' | 'pontual';
+export type StatusServico = 'ativo' | 'pausado' | 'encerrado';
 
-export type PlataformaSocial = 'instagram' | 'facebook';
-
-export type OrigemToken = 'system_user' | 'oauth';
-
-export type AcessoParceiro = 'concedido' | 'pendente' | 'expirado';
-
-export type TipoPost = 'imagem' | 'carrossel' | 'reel' | 'story';
-
-export type StatusPost =
-  | 'rascunho'
-  | 'aguardando_aprovacao'
+export type EstadoAprovacao =
+  | 'produzindo'
+  | 'em_aprovacao'
+  | 'com_ajustes'
   | 'aprovado'
-  | 'agendado'
-  | 'publicando'
-  | 'publicado'
-  | 'publicado_parcial'
-  | 'falhou'
-  | 'cancelado';
+  | 'declinado';
 
-export type EstadoAlvo =
-  | 'pendente'
-  | 'container_criando'
-  | 'container_aguardando'
-  | 'container_pronto'
-  | 'publicando'
-  | 'publicado'
-  | 'falhou'
-  | 'cancelado';
+/** Entregavel sem item ainda nao comecou. A view do banco devolve 'a_fazer'. */
+export type EstadoEntregavel = EstadoAprovacao | 'a_fazer';
+
+export type TipoItem = 'peca' | 'entregavel';
+
+export type ChaveServico =
+  | 'branding'
+  | 'identidade_visual'
+  | 'audiovisual'
+  | 'website'
+  | 'sistemas'
+  | 'gestao_digital';
+
+export type ChaveModulo =
+  | 'marcos' | 'entregaveis' | 'acervo' | 'galeria'
+  | 'calendario' | 'grid' | 'publicacao' | 'campanhas'
+  | 'ambientes' | 'manutencao' | 'integracoes'
+  | 'financeiro' | 'contrato' | 'nps';
 
 export interface Perfil {
-  id: string;
-  nome: string;
-  papel: Papel;
-  cor: string;
-  ativo: boolean;
-}
-
-export interface ContaSocial {
-  id: string;
-  clienteId: string;
-  plataforma: PlataformaSocial;
-  nomeExibicao: string;
-  identificador: string;
-  origemToken: OrigemToken;
-  /** Nulo quando origemToken é system_user: esse token não expira. */
-  tokenExpiraEm: string | null;
-  tokenRef: string | null;
-  acessoParceiro: AcessoParceiro;
+  userId: string;
+  nome: string | null;
+  email: string;
+  papel: PapelEquipe;
+  cargo: string | null;
   ativo: boolean;
 }
 
@@ -58,48 +47,117 @@ export interface Cliente {
   id: string;
   nome: string;
   slug: string;
-  cor: string;
   fusoHorario: string;
   ativo: boolean;
-  desde: string;
-  contas: ContaSocial[];
-  linkAprovacao: { expiraEm: string; revogado: boolean } | null;
 }
 
-export interface Post {
+export interface ServicoContratado {
   id: string;
   clienteId: string;
-  tituloInterno: string;
-  tipo: TipoPost;
-  legenda: string;
-  primeiroComentario: string | null;
-  dia: number;
-  hora: string;
-  status: StatusPost;
+  servico: ChaveServico;
+  servicoNome: string;
+  formato: FormatoContrato;
+  status: StatusServico;
+  responsavelNome: string | null;
+  /** Centavos. Nunca float: centavo perdido em cobranca vira ligacao de cliente. */
+  valorCentavos: number;
+  diaVencimento: number | null;
+  parcelas: number | null;
+  inicio: string;
+  entregaEm: string | null;
 }
 
-export interface PostAlvo {
+export interface ItemAprovacao {
   id: string;
-  postId: string;
   clienteId: string;
-  contaSocialId: string;
-  estado: EstadoAlvo;
-  tentativas: number;
-  proximaTentativa: string;
-  erroCodigo: string | null;
-  erroMensagem: string | null;
-  mediaId: string | null;
+  clienteNome: string;
+  tipo: TipoItem;
+  estado: EstadoAprovacao;
+  titulo: string;
+  enviadoEm: string | null;
+  respondidoEm: string | null;
+  respondidoPor: string | null;
 }
 
-export interface EventoAlvo {
+/** Uma linha do "precisa de voce" do Inicio da equipe. */
+export interface Pendencia {
+  id: string;
+  clienteId: string;
+  clienteNome: string;
+  oQue: string;
+  quando: string;
+  rota: string;
+  acao: string;
+  urgente: boolean;
+}
+
+export interface SaidaDoDia {
+  id: string;
   hora: string;
-  evento: string;
-  tom: 'ok' | 'erro' | 'meta' | 'neutro';
-  detalhe: string;
+  clienteNome: string;
+  tipo: string;
 }
 
-export interface Aprovacao {
-  postId: string;
-  decisao: 'sim' | 'nao' | null;
-  comentario: string;
+export interface CompromissoDaSemana {
+  id: string;
+  data: string;
+  titulo: string;
+  responsavelNome: string | null;
 }
+
+export interface PainelEquipe {
+  hoje: string;
+  pendencias: Pendencia[];
+  saiHoje: SaidaDoDia[];
+  semana: CompromissoDaSemana[];
+  esperandoCliente: number;
+  vencidoCentavos: number;
+}
+
+export interface ResumoRedes {
+  publicados: number;
+  agendados: number;
+  esperandoVoce: number;
+  emProducao: number;
+}
+
+export interface ResumoProjeto {
+  servicoNome: string;
+  total: number;
+  entregues: number;
+  fase: string;
+  proximo: string | null;
+}
+
+export interface ResumoCaptacao {
+  proximaData: string | null;
+  proximoTitulo: string | null;
+  ultimaTitulo: string | null;
+  ultimaFotos: number;
+  ultimaVideos: number;
+}
+
+export interface Cobranca {
+  id: string;
+  descricao: string;
+  valorCentavos: number;
+  vencimento: string | null;
+  situacao: 'previsto' | 'atrasado' | 'recebido' | 'pago' | 'cancelado';
+}
+
+export interface PainelCliente {
+  cliente: Cliente;
+  modulos: ChaveModulo[];
+  paraAprovar: ItemAprovacao[];
+  proximaCobranca: Cobranca | null;
+  npsPendente: boolean;
+  redes: ResumoRedes | null;
+  projeto: ResumoProjeto | null;
+  captacao: ResumoCaptacao | null;
+}
+
+/** Quem esta logado. A plataforma inteira se decide por este tipo. */
+export type Sessao =
+  | { tipo: 'anonimo' }
+  | { tipo: 'equipe'; perfil: Perfil }
+  | { tipo: 'cliente'; nome: string; email: string; clientes: Cliente[]; clienteAtual: Cliente };

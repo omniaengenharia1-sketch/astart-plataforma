@@ -1,85 +1,58 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Layout } from './componentes/Layout';
-import { Toast } from './componentes/Toast';
-import { Entrada } from './paginas/Entrada';
-import { Inicio } from './paginas/Inicio';
-import { Clientes } from './paginas/Clientes';
-import { ClienteDetalhe } from './paginas/ClienteDetalhe';
-import { Calendario } from './paginas/Calendario';
-import { Editor } from './paginas/Editor';
-import { Fila } from './paginas/Fila';
-import { Portal } from './paginas/Portal';
-import { AFazer } from './paginas/AFazer';
-import { ALVOS, EVENTOS, POSTS } from './dados/mock';
-import type { CtxApp } from './contexto';
-import type { Aprovacao, EventoAlvo, Perfil, Post, PostAlvo } from './dados/tipos';
+import { CascaEquipe } from './componentes/Casca';
+import { Carregando, Vazio } from './componentes/Estado';
+import { useSessao } from './sessao';
+import { Entrar } from './paginas/Entrar';
+import { InicioEquipe } from './paginas/InicioEquipe';
+import { PortalCliente } from './paginas/PortalCliente';
 
-const A_FAZER = ['financeiro', 'contratos', 'crm'];
+function EmBreve({ titulo }: { titulo: string }) {
+  return (
+    <Vazio titulo={titulo} explica="Esta tela ainda não foi construída. A rota já existe." />
+  );
+}
 
 export default function App() {
-  const [operador, setOperador] = useState<Perfil | null>(null);
-  const [clienteAtivo, setClienteAtivo] = useState('mor');
-  const [posts, setPosts] = useState<Post[]>(POSTS);
-  const [alvos, setAlvos] = useState<PostAlvo[]>(ALVOS);
-  const [eventos, setEventos] = useState<Record<string, EventoAlvo[]>>(EVENTOS);
-  const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
-  const [aviso, setAviso] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  const { sessao, carregando } = useSessao();
 
-  const avisar = useCallback((mensagem: string) => {
-    setAviso(mensagem);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setAviso(null), 2800);
-  }, []);
+  if (carregando) return <Carregando oQue="a plataforma" />;
+  if (sessao.tipo === 'anonimo') return <Entrar />;
 
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-
-  if (!operador) return <Entrada aoEntrar={setOperador} />;
-
-  const contexto: CtxApp = {
-    operador,
-    clienteAtivo,
-    setClienteAtivo,
-    posts,
-    setPosts,
-    alvos,
-    setAlvos,
-    eventos,
-    setEventos,
-    aprovacoes,
-    setAprovacoes,
-    avisar,
-  };
+  // Depois da senha o sistema sabe quem e: equipe cai no painel, cliente no
+  // portal. Ninguem escolhe "sou cliente" ou "sou equipe" numa tela.
+  if (sessao.tipo === 'cliente') {
+    return (
+      <Routes>
+        <Route path="/portal/*" element={<PortalCliente />} />
+        <Route path="*" element={<Navigate to="/portal" replace />} />
+      </Routes>
+    );
+  }
 
   return (
-    <>
-      <Routes>
-        <Route
-          element={
-            <Layout
-              operador={operador}
-              aoTrocarOperador={() => setOperador(null)}
-              clienteAtivo={clienteAtivo}
-              setClienteAtivo={setClienteAtivo}
-              contexto={contexto}
-            />
-          }
-        >
-          <Route index element={<Inicio operador={operador} />} />
-          <Route path="calendario" element={<Calendario />} />
-          <Route path="editor" element={<Editor />} />
-          <Route path="fila" element={<Fila />} />
-          <Route path="aprovacao" element={<Portal />} />
-          <Route path="clientes" element={<Clientes operador={operador} />} />
-          <Route path="clientes/:id" element={<ClienteDetalhe operador={operador} />} />
-          {A_FAZER.map((k) => (
-            <Route key={k} path={k} element={<AFazer chave={k} />} />
-          ))}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-      <Toast mensagem={aviso} />
-    </>
+    <Routes>
+      <Route path="/portal/*" element={<Navigate to="/" replace />} />
+      <Route
+        path="*"
+        element={
+          <CascaEquipe>
+            <Routes>
+              <Route path="/" element={<InicioEquipe />} />
+              <Route path="/clientes/*" element={<EmBreve titulo="Clientes" />} />
+              <Route path="/aprovacoes" element={<EmBreve titulo="Aprovações" />} />
+              <Route path="/agenda" element={<EmBreve titulo="Agenda" />} />
+              <Route path="/fila" element={<EmBreve titulo="Fila de publicação" />} />
+              <Route path="/financeiro" element={<EmBreve titulo="Financeiro" />} />
+              <Route path="/comercial" element={<EmBreve titulo="Comercial" />} />
+              <Route path="/ajustes/*" element={<EmBreve titulo="Ajustes" />} />
+              <Route path="/feedbacks" element={<EmBreve titulo="Feedbacks" />} />
+              <Route path="/grid" element={<EmBreve titulo="Grid" />} />
+              <Route path="/entregaveis" element={<EmBreve titulo="Entregáveis" />} />
+              <Route path="*" element={<EmBreve titulo="Página não encontrada" />} />
+            </Routes>
+          </CascaEquipe>
+        }
+      />
+    </Routes>
   );
 }

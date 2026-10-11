@@ -417,4 +417,28 @@ create policy cobrancas_cliente_le on public.cobrancas
        and l.cliente_id in (select public.clientes_do_usuario())
        and public.cliente_tem_modulo(l.cliente_id, 'financeiro')));
 
+-- O cliente precisa do rotulo da propria cobranca ("Contrato > Recorrente"),
+-- entao le o ramo de RECEITA da hierarquia. O ramo de custo continua interno.
+--
+-- Repare que cada politica abaixo consulta a tabela de cima, que tambem tem
+-- RLS — e aqui isso funciona justamente porque o cliente PODE ver aquelas
+-- linhas. Quando ele nao pode, a subconsulta volta vazia e esconde tudo em
+-- silencio; foi o que aconteceu com a natureza do lancamento mais acima.
+drop policy if exists financeiro_grupos_receita_le on public.financeiro_grupos;
+create policy financeiro_grupos_receita_le on public.financeiro_grupos
+  for select to authenticated
+  using (natureza = 'receita');
+
+drop policy if exists financeiro_categorias_receita_le on public.financeiro_categorias;
+create policy financeiro_categorias_receita_le on public.financeiro_categorias
+  for select to authenticated
+  using (exists (select 1 from public.financeiro_grupos g
+                  where g.id = grupo_id and g.natureza = 'receita'));
+
+drop policy if exists financeiro_subcategorias_receita_le on public.financeiro_subcategorias;
+create policy financeiro_subcategorias_receita_le on public.financeiro_subcategorias
+  for select to authenticated
+  using (exists (select 1 from public.financeiro_categorias cat
+                  where cat.id = categoria_id));
+
 -- Rateio e custo interno: o cliente nunca ve quanto foi rateado para ele.

@@ -52,6 +52,10 @@ create or replace function net.http_post(url text, body jsonb default '{}', para
   headers jsonb default '{}', timeout_milliseconds int default 5000)
 returns bigint language sql as $$ select 1::bigint $$;
 
+-- No Supabase real os papeis alcancam auth.uid(); auth.users continua fechado.
+grant usage on schema auth to anon, authenticated, service_role;
+grant execute on function auth.uid() to anon, authenticated, service_role;
+
 -- Privilegios default equivalentes aos do Supabase.
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
