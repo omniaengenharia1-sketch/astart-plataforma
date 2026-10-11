@@ -55,3 +55,17 @@ export const valor = (centavos: number) =>
 export function plural(n: number, um: string, muitos: string): string {
   return `${n} ${n === 1 ? um : muitos}`;
 }
+
+/**
+ * O endereço do cliente a partir do nome — o mesmo resultado de
+ * `public.sluguificar()` no banco, que é quem vale na hora de gravar. Aqui
+ * serve para a tela mostrar o endereço antes de enviar.
+ */
+export function sluguificar(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}

@@ -370,6 +370,7 @@ O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do 
 | Entrar | `/` sem sessão | `minha_sessao()` |
 | Início da equipe | `/` | `painel_equipe()` |
 | Clientes | `/clientes` | `lista_clientes()` |
+| Novo cliente | `/clientes/novo` | `catalogo()` + `criar_cliente()` |
 | Ficha do cliente | `/clientes/:id` | `ficha_cliente()` |
 | Aprovações | `/aprovacoes` | `fila_aprovacoes()` |
 | Início do cliente | `/portal` | `painel_cliente()` |
@@ -377,6 +378,13 @@ O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do 
 
 As abas da ficha e as outras telas do portal já existem como rota e dizem que ainda
 não foram construídas, em vez de abrir em branco.
+
+O cadastro tem duas abas. A de preencher à mão está pronta: a barrinha de
+serviços abre a lista do que ainda não entrou, cada serviço escolhido abre o
+próprio valor, e o lado direito mostra em tempo real quanto fica por mês, quanto
+em projeto e **quais abas o contrato liga** — a mesma matriz que o RLS aplica.
+A aba de jogar a proposta diz o que falta para existir (a chave da Anthropic e a
+decisão sobre o documento sair da nossa infraestrutura) em vez de fingir.
 
 **Responder é a única escrita que o cliente faz.** A regra do comentário obrigatório
 está nos dois lados: a tela desabilita o botão e explica por quê, e `responder_item()`

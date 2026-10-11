@@ -217,3 +217,52 @@ export interface FichaCliente {
 
 /** As três respostas que `responder_item()` aceita. */
 export type Decisao = 'aprovado' | 'com_ajustes' | 'declinado';
+
+// --- o cadastro (migration 0028) --------------------------------------------
+
+export interface ModuloDoServico {
+  chave: ChaveModulo;
+  nome: string;
+  /** Opcional = só liga se for marcado no contrato. */
+  opcional: boolean;
+}
+
+export interface ServicoCatalogo {
+  chave: ChaveServico;
+  nome: string;
+  /** Nulo = o cadastro pergunta o formato. Hoje só o Audiovisual. */
+  formatoPadrao: FormatoContrato | null;
+  modulos: ModuloDoServico[];
+}
+
+export interface MembroEquipe {
+  userId: string;
+  nome: string | null;
+  papel: PapelEquipe;
+}
+
+export interface Catalogo {
+  servicos: ServicoCatalogo[];
+  modulosSempre: { chave: ChaveModulo; nome: string }[];
+  equipe: MembroEquipe[];
+}
+
+/** Uma linha do contrato, do jeito que `criar_cliente()` espera. */
+export interface ServicoEscolhido {
+  servico: ChaveServico;
+  formato: FormatoContrato | null;
+  valorCentavos: number;
+  diaVencimento: number | null;
+  parcelas: number | null;
+  inicio: string;
+  entregaEm: string | null;
+  responsavelId: string | null;
+  /** Só os módulos OPCIONAIS que ficam ligados. */
+  modulos: ChaveModulo[];
+}
+
+export interface ClienteNovo {
+  id: string;
+  slug: string;
+  nome: string;
+}

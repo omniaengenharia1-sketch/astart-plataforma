@@ -11,11 +11,12 @@
 import { ligado, sb } from './supabase';
 import {
   PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  fichaExemplo, filaExemplo, listaClientesExemplo, painelClienteExemplo, responderExemplo,
+  catalogoExemplo, criarClienteExemplo, fichaExemplo, filaExemplo, listaClientesExemplo,
+  painelClienteExemplo, responderExemplo,
 } from './mock';
 import type {
-  Cliente, ClienteNaLista, Decisao, FichaCliente, ItemNaFila,
-  PainelCliente, PainelEquipe, Perfil, Sessao,
+  Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, FichaCliente, ItemNaFila,
+  PainelCliente, PainelEquipe, Perfil, ServicoEscolhido, Sessao,
 } from './tipos';
 
 export { ligado };
@@ -220,4 +221,49 @@ export async function responderItem(
     // tela. Falha silenciosa e proibida, e falha traduzida duas vezes mente.
     throw new FalhaDados(error.message);
   }
+}
+
+export async function catalogo(): Promise<Catalogo> {
+  if (!sb) return catalogoExemplo();
+  const { data, error } = await sb.rpc('catalogo');
+  if (error) throw new FalhaDados(`Não consegui carregar os serviços: ${error.message}`);
+  return exija(data as Catalogo | null, 'O catálogo de serviços');
+}
+
+/**
+ * Cadastra cliente e contrato de uma vez. A funcao do banco grava os dois na
+ * mesma transacao: ou o cliente nasce inteiro, ou nao nasce. O endereco e unico,
+ * entao um segundo envio do mesmo formulario volta como "ja existe" em vez de
+ * abrir um cliente gemeo.
+ */
+export async function criarCliente(
+  nome: string,
+  servicos: ServicoEscolhido[],
+  slug?: string,
+  fuso = 'America/Sao_Paulo',
+): Promise<ClienteNovo> {
+  if (!sb) {
+    try {
+      return criarClienteExemplo(nome, servicos, slug);
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui cadastrar.');
+    }
+  }
+
+  const { data, error } = await sb.rpc('criar_cliente', {
+    p_nome: nome,
+    p_servicos: servicos,
+    p_slug: slug?.trim() || null,
+    p_fuso: fuso,
+  });
+  if (error) {
+    // RLS recusando vira uma mensagem que ninguem entende. As outras mensagens
+    // ja vem em portugues da propria funcao.
+    throw new FalhaDados(
+      /row-level security|permission denied/i.test(error.message)
+        ? 'Seu acesso não cadastra clientes. Fale com quem administra a plataforma.'
+        : error.message,
+    );
+  }
+  return exija(data as ClienteNovo | null, 'O cliente cadastrado');
 }

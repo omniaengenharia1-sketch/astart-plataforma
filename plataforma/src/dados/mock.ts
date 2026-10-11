@@ -8,9 +8,12 @@
 // tem a sua propria verdade engana quem esta avaliando o fluxo.
 // =============================================================================
 import type {
-  ChaveModulo, ChaveServico, Cliente, ClienteNaLista, Decisao, FichaCliente,
-  ItemNaFila, PainelCliente, PainelEquipe, Perfil, ServicoContratado, Sessao,
+  Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
+  FichaCliente, FormatoContrato, ItemNaFila, PainelCliente, PainelEquipe, Perfil,
+  ServicoContratado, ServicoEscolhido, Sessao,
 } from './tipos';
+
+import { sluguificar } from '../formato';
 
 const hoje = new Date().toISOString().slice(0, 10);
 const emDias = (n: number) => {
@@ -400,4 +403,107 @@ export function painelClienteExemplo(clienteId: string): PainelCliente {
       ultimaTitulo: 'Captação de setembro', ultimaFotos: 44, ultimaVideos: 6,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// O catalogo e o cadastro
+// ---------------------------------------------------------------------------
+const NOME_SERVICO: Record<ChaveServico, string> = {
+  branding: 'Branding',
+  identidade_visual: 'Identidade Visual',
+  audiovisual: 'Audiovisual',
+  website: 'Website',
+  sistemas: 'Sistemas',
+  gestao_digital: 'Gestão Digital',
+};
+
+const NOME_MODULO: Record<ChaveModulo, string> = {
+  marcos: 'Marcos', entregaveis: 'Entregáveis', acervo: 'Acervo', galeria: 'Galeria',
+  calendario: 'Calendário', grid: 'Grid', publicacao: 'Publicação', campanhas: 'Campanhas',
+  ambientes: 'Ambientes e acessos', manutencao: 'Manutenção', integracoes: 'Integrações',
+  financeiro: 'Financeiro', contrato: 'Contrato', nps: 'Feedbacks e NPS',
+};
+
+/** Opcional na matriz da 0014: hoje so as duas da Gestao Digital. */
+const OPCIONAIS: Partial<Record<ChaveServico, ChaveModulo[]>> = {
+  gestao_digital: ['campanhas', 'galeria'],
+};
+
+const PADRAO: Record<ChaveServico, FormatoContrato | null> = {
+  branding: 'projeto',
+  identidade_visual: 'projeto',
+  audiovisual: null,
+  website: 'projeto',
+  sistemas: 'projeto',
+  gestao_digital: 'recorrente',
+};
+
+const ORDEM_SERVICOS: ChaveServico[] = [
+  'branding', 'identidade_visual', 'audiovisual', 'website', 'sistemas', 'gestao_digital',
+];
+
+export function catalogoExemplo(): Catalogo {
+  return {
+    servicos: ORDEM_SERVICOS.map((chave) => {
+      const opcionais = OPCIONAIS[chave] ?? [];
+      return {
+        chave,
+        nome: NOME_SERVICO[chave],
+        formatoPadrao: PADRAO[chave],
+        modulos: [...MATRIZ[chave], ...opcionais]
+          .filter((m, i, todos) => todos.indexOf(m) === i)
+          .map((m) => ({ chave: m, nome: NOME_MODULO[m], opcional: opcionais.includes(m) })),
+      };
+    }),
+    modulosSempre: SEMPRE.map((m) => ({ chave: m, nome: NOME_MODULO[m] })),
+    equipe: [
+      { userId: 'exemplo-viviane', nome: 'Viviane', papel: 'admin' },
+      { userId: 'exemplo-layana', nome: 'Layana', papel: 'operacao' },
+      { userId: 'exemplo-beatriz', nome: 'Beatriz', papel: 'operacao' },
+      { userId: 'exemplo-camila', nome: 'Camila', papel: 'financeiro' },
+    ],
+  };
+}
+
+/** Mesmas recusas de criar_cliente(), para a tela de exemplo nao mentir. */
+export function criarClienteExemplo(
+  nome: string, servicos: ServicoEscolhido[], slug?: string,
+): ClienteNovo {
+  const alvo = sluguificar(slug?.trim() || nome);
+  if (!nome.trim()) throw new Error('O cliente precisa de um nome.');
+  if (!alvo) throw new Error(`Não consegui montar um endereço a partir de "${nome}". Escreva um.`);
+  if (CLIENTES.some((c) => c.cliente.slug === alvo)) {
+    throw new Error(`Já existe um cliente no endereço "${alvo}". Escolha outro.`);
+  }
+  if (servicos.length === 0) {
+    throw new Error('Escolha pelo menos um serviço: é o contrato que liga as telas do cliente.');
+  }
+
+  const cliente: Cliente = {
+    id: `exemplo-${alvo}`, nome: nome.trim(), slug: alvo,
+    fusoHorario: 'America/Sao_Paulo', ativo: true,
+  };
+  const equipe = catalogoExemplo().equipe;
+  const contratados: ServicoContratado[] = servicos.map((e) => {
+    const formato = e.formato ?? PADRAO[e.servico];
+    if (!formato) throw new Error(`Diga se ${NOME_SERVICO[e.servico]} é recorrente ou pontual.`);
+    if (formato === 'recorrente' && !e.diaVencimento) {
+      throw new Error(`Diga o dia de vencimento de ${NOME_SERVICO[e.servico]} (1 a 28).`);
+    }
+    return srv(cliente.id, e.servico, NOME_SERVICO[e.servico], formato, e.valorCentavos, {
+      diaVencimento: formato === 'recorrente' ? e.diaVencimento : null,
+      parcelas: formato === 'recorrente' ? null : (e.parcelas ?? 1),
+      inicio: e.inicio,
+      entregaEm: e.entregaEm,
+      responsavelNome: equipe.find((m) => m.userId === e.responsavelId)?.nome ?? null,
+    });
+  });
+
+  CLIENTES.push({
+    cliente,
+    servicos: contratados,
+    extras: servicos.flatMap((e) => e.modulos),
+    contatos: [],
+  });
+  return { id: cliente.id, slug: alvo, nome: cliente.nome };
 }

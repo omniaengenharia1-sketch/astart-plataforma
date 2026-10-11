@@ -7,6 +7,7 @@ import { Aprovacoes } from './paginas/Aprovacoes';
 import { Clientes } from './paginas/Clientes';
 import { FichaCliente } from './paginas/FichaCliente';
 import { InicioEquipe } from './paginas/InicioEquipe';
+import { NovoCliente } from './paginas/NovoCliente';
 import { PortalCliente } from './paginas/PortalCliente';
 
 function EmBreve({ titulo }: { titulo: string }) {
@@ -42,7 +43,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<InicioEquipe />} />
               <Route path="/clientes" element={<Clientes />} />
-              <Route path="/clientes/novo" element={<EmBreve titulo="Novo cliente" />} />
+              <Route path="/clientes/novo" element={<NovoCliente />} />
               <Route path="/clientes/:clienteId/*" element={<FichaCliente />} />
               <Route path="/aprovacoes" element={<Aprovacoes />} />
               <Route path="/agenda" element={<EmBreve titulo="Agenda" />} />
