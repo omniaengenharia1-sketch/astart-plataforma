@@ -10,3 +10,8 @@ verify_jwt = false
 [functions.renovar-tokens]
 # Autentica pelo header x-tick-secret, igual ao publicar-tick.
 verify_jwt = false
+
+[functions.convidar]
+# Ao contrario das duas acima, esta PRECISA do JWT: e por ele que a funcao
+# descobre quem esta convidando e confere se e admin.
+verify_jwt = true
