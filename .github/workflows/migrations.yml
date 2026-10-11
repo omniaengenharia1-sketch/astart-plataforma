@@ -1,0 +1,49 @@
+# Aplica as migrations no projeto Supabase a cada merge na main.
+#
+# Depois que isto estiver ligado, ninguem roda SQL na mao de novo: o banco de
+# producao e sempre o que esta em supabase/migrations, e nada mais.
+name: migrations
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**']
+  workflow_dispatch:
+
+concurrency:
+  group: migrations-producao
+  cancel-in-progress: false
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Conferir que os segredos estao configurados
+        run: |
+          faltam=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || faltam="$faltam SUPABASE_ACCESS_TOKEN"
+          [ -n "$SUPABASE_DB_PASSWORD" ]  || faltam="$faltam SUPABASE_DB_PASSWORD"
+          [ -n "${{ secrets.SUPABASE_PROJECT_REF }}" ] || faltam="$faltam SUPABASE_PROJECT_REF"
+          if [ -n "$faltam" ]; then
+            echo "Faltam estes segredos no repositorio:$faltam"
+            echo "Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
+      - name: Ligar ao projeto
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Mostrar o que vai mudar
+        run: supabase db diff --linked --schema public || true
+
+      - name: Aplicar
+        run: supabase db push
