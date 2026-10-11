@@ -377,6 +377,8 @@ O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do 
 | Para aprovar | `/portal/aprovar` | `painel_cliente()` + `responder_item()` |
 | Entregáveis (ficha) | `/clientes/:id/entregaveis` | `projeto_do_cliente()` + `enviar_para_aprovacao()` |
 | Meu projeto | `/portal/projeto` | `projeto_do_cliente()` |
+| Calendário (ficha) | `/clientes/:id/calendario` | `calendario_do_cliente()` + `criar_peca()` |
+| Calendário | `/portal/calendario` | `calendario_do_cliente()` |
 
 As abas da ficha e as outras telas do portal já existem como rota e dizem que ainda
 não foram construídas, em vez de abrir em branco.
@@ -393,6 +395,11 @@ a equipe marca etapas e manda o lote, o cliente lê o andamento. O item de
 aprovação nasce no envio — entregável sem item é "a fazer", e é por isso que
 começar a trabalhar e mandar para o cliente são dois momentos diferentes no
 banco.
+
+O calendário é a mesma tela nos dois lados, como o projeto. Grade de mês no
+desktop, agenda no celular — sete colunas de 50px não são um calendário. As
+datas chegam do banco **já convertidas para o fuso do cliente**: a peça das 23h
+de um cliente no Acre tem de cair no dia dela para quem abrir de qualquer lugar.
 
 **Responder é a única escrita que o cliente faz.** A regra do comentário obrigatório
 está nos dois lados: a tela desabilita o botão e explica por quê, e `responder_item()`

@@ -5,6 +5,7 @@ import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { fichaCliente } from '../dados/api';
 import { diaMes, haQuanto, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
+import { Calendario } from './Calendario';
 import { Projeto } from './Projeto';
 import type { ChaveModulo, FichaCliente as Ficha, ServicoContratado } from '../dados/tipos';
 
@@ -50,7 +51,7 @@ export function FichaCliente() {
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
         <Link to="/clientes" className="rotulo hover:text-pink">
-          ← clientes
+          &lt; clientes
         </Link>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -95,6 +96,8 @@ export function FichaCliente() {
 
       {aba === 'entregaveis' || aba === 'marcos' ? (
         <Projeto clienteId={clienteId} equipe />
+      ) : aba === 'calendario' || aba === 'publicacao' ? (
+        <Calendario clienteId={clienteId} equipe />
       ) : aba !== '' ? (
         <Vazio
           titulo={MODULO[aba as ChaveModulo] ?? 'Seção'}

@@ -9,8 +9,9 @@
 // =============================================================================
 import type {
   Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
-  EntregavelNoProjeto, FichaCliente, FormatoContrato, ItemNaFila, PainelCliente,
-  PainelEquipe, Perfil, ServicoContratado, ServicoEscolhido, ServicoNoProjeto, Sessao,
+  EntregavelNoProjeto, FichaCliente, FormatoContrato, ItemNaFila, MesDeConteudo,
+  PainelCliente, PainelEquipe, PecaNoMes, Perfil, ServicoContratado, ServicoEscolhido,
+  ServicoNoProjeto, Sessao, StatusPublicacao, TipoPeca,
 } from './tipos';
 
 import { sluguificar } from '../formato';
@@ -239,6 +240,8 @@ const ITENS: ItemNaFila[] = [
     estado: 'aprovado', enviadoEm: haHoras(60), respondidoEm: haHoras(52),
     respondidoPor: 'Bruna Melo',
   }),
+  // Rascunho: no banco todo post nasce com item, pelo gatilho da 0019.
+  item('i12', 'exemplo-mor', 'Depoimento da cliente', { estado: 'produzindo', enviadoEm: null }),
 ];
 
 const PESO: Record<string, number> = { com_ajustes: 0, em_aprovacao: 1 };
@@ -656,4 +659,135 @@ export function enviarExemplo(itemIds: string[]): number {
     i.respondidoPor = null;
   }
   return itens.length;
+}
+
+// ---------------------------------------------------------------------------
+// O calendario — as pecas do mes
+//
+// Cada peca aponta para um item de aprovacao, como no banco: o estado vem de
+// la, nao de uma copia aqui. Assim o calendario, a fila da equipe e o portal
+// do cliente nunca discordam.
+// ---------------------------------------------------------------------------
+interface PecaExemplo {
+  id: string;
+  clienteId: string;
+  itemId: string | null;
+  titulo: string;
+  tipo: TipoPeca;
+  legenda: string;
+  dia: string;
+  hora: string;
+  statusPublicacao: StatusPublicacao;
+  contas: string[];
+}
+
+const agora = new Date();
+const noMes = (dia: number) =>
+  `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+const PECAS: PecaExemplo[] = [
+  { id: 'pc1', clienteId: 'exemplo-mor', itemId: 'i11', titulo: 'Bastidores do estúdio',
+    tipo: 'reel', legenda: 'Um dia inteiro em 40 segundos.', dia: noMes(3), hora: '12:00',
+    statusPublicacao: 'publicado', contas: ['@mormarcas'] },
+  { id: 'pc2', clienteId: 'exemplo-mor', itemId: 'i5', titulo: 'Como a peça é feita',
+    tipo: 'carrossel', legenda: '', dia: noMes(6), hora: '12:00',
+    statusPublicacao: 'rascunho', contas: ['@mormarcas'] },
+  { id: 'pc3', clienteId: 'exemplo-mor', itemId: 'i1', titulo: 'Making of da campanha',
+    tipo: 'reel', legenda: '', dia: noMes(10), hora: '19:00',
+    statusPublicacao: 'aguardando_aprovacao', contas: ['@mormarcas'] },
+  { id: 'pc4', clienteId: 'exemplo-mor', itemId: 'i2', titulo: 'Frase da semana',
+    tipo: 'imagem', legenda: '', dia: noMes(13), hora: '12:00',
+    statusPublicacao: 'aguardando_aprovacao', contas: ['@mormarcas'] },
+  { id: 'pc5', clienteId: 'exemplo-mor', itemId: 'i3', titulo: 'Perguntas que mais recebemos',
+    tipo: 'carrossel', legenda: '', dia: noMes(17), hora: '19:00',
+    statusPublicacao: 'aguardando_aprovacao', contas: ['@mormarcas'] },
+  { id: 'pc6', clienteId: 'exemplo-mor', itemId: 'i12', titulo: 'Depoimento da cliente',
+    tipo: 'reel', legenda: '', dia: noMes(20), hora: '12:00',
+    statusPublicacao: 'rascunho', contas: ['@mormarcas'] },
+  { id: 'pc7', clienteId: 'exemplo-pub', itemId: 'i6', titulo: 'Carrossel do lançamento',
+    tipo: 'carrossel', legenda: '', dia: noMes(8), hora: '09:00',
+    statusPublicacao: 'aguardando_aprovacao', contas: ['@publika.ai'] },
+  { id: 'pc8', clienteId: 'exemplo-chopp', itemId: 'i8', titulo: 'Reels da fábrica',
+    tipo: 'reel', legenda: '', dia: noMes(5), hora: '18:00',
+    statusPublicacao: 'falhou', contas: ['@choppdobarbudo'] },
+];
+
+let seqPeca = 0;
+
+function comoNoMes(p: PecaExemplo): PecaNoMes {
+  const item = p.itemId ? ITENS.find((i) => i.id === p.itemId) : null;
+  return {
+    id: p.id,
+    itemId: p.itemId,
+    titulo: p.titulo,
+    tipo: p.tipo,
+    legenda: p.legenda,
+    dia: p.dia,
+    hora: p.hora,
+    statusPublicacao: p.statusPublicacao,
+    estadoAprovacao: item?.estado ?? 'produzindo',
+    erro: p.statusPublicacao === 'falhou' ? 'O token do Instagram venceu.' : null,
+    contas: p.contas,
+  };
+}
+
+export function calendarioExemplo(clienteId: string, mes: string): MesDeConteudo {
+  const prefixo = mes.slice(0, 7);
+  const doMes = PECAS.filter((p) => p.clienteId === clienteId && p.dia.startsWith(prefixo))
+    .map(comoNoMes)
+    .sort((a, b) => (a.dia + a.hora).localeCompare(b.dia + b.hora));
+
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  const gestao = c ? ativos(c).find((s) => s.servico === 'gestao_digital') : undefined;
+
+  return {
+    mes: `${prefixo}-01`,
+    fusoHorario: c?.cliente.fusoHorario ?? 'America/Sao_Paulo',
+    pecas: doMes,
+    plano: gestao
+      ? {
+          clienteServicoId: gestao.id,
+          diasSemana: [1, 3, 5],
+          horario: '12:00',
+          postsPorMes: 8,
+          reelsPorMes: 2,
+          cota: 10,
+        }
+      : null,
+    noMes: doMes.length,
+    esperandoCliente: doMes.filter((p) => p.estadoAprovacao === 'em_aprovacao').length,
+    comAjustes: doMes.filter((p) => p.estadoAprovacao === 'com_ajustes').length,
+    publicadas: doMes.filter((p) => p.statusPublicacao === 'publicado').length,
+    falhas: doMes.filter((p) => p.statusPublicacao === 'falhou').length,
+  };
+}
+
+export function criarPecaExemplo(
+  clienteId: string, titulo: string, tipo: TipoPeca, dia: string, hora: string, legenda: string,
+): { id: string; itemId: string } {
+  if (!titulo.trim()) {
+    throw new Error('A peça precisa de um nome interno — é por ele que a equipe acha ela.');
+  }
+  if (!dia) throw new Error('Diga que dia a peça sai.');
+
+  seqPeca += 1;
+  const id = `pc-nova-${seqPeca}`;
+  const itemId = `item-${id}`;
+  // O gatilho da 0019 cria o item junto com a peca; aqui e o mesmo contrato.
+  ITENS.push(item(itemId, clienteId, titulo.trim(), { tipo: 'peca', estado: 'produzindo', enviadoEm: null }));
+  PECAS.push({
+    id, clienteId, itemId, titulo: titulo.trim(), tipo, legenda,
+    dia, hora: hora || '12:00', statusPublicacao: 'rascunho', contas: [],
+  });
+  return { id, itemId };
+}
+
+export function moverPecaExemplo(pecaId: string, dia: string, hora?: string): void {
+  const p = PECAS.find((x) => x.id === pecaId);
+  if (!p) throw new Error('Peça não encontrada.');
+  if (p.statusPublicacao === 'publicado' || p.statusPublicacao === 'publicando') {
+    throw new Error('Esta peça já saiu. Não dá para mudar a data dela.');
+  }
+  p.dia = dia;
+  if (hora) p.hora = hora;
 }

@@ -6,6 +6,7 @@ import { painelCliente } from '../dados/api';
 import { useSessao } from '../sessao';
 import { InicioCliente } from './InicioCliente';
 import { PortalAprovar } from './PortalAprovar';
+import { Calendario } from './Calendario';
 import { Projeto } from './Projeto';
 import type { PainelCliente } from '../dados/tipos';
 
@@ -64,7 +65,15 @@ export function PortalCliente() {
             </div>
           }
         />
-        <Route path="calendario" element={<EmBreve titulo="Calendário" />} />
+        <Route
+          path="calendario"
+          element={
+            <div className="px-5 pb-16 sm:px-8 lg:px-12">
+              <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">Calendário</h1>
+              <Calendario clienteId={painel.cliente.id} equipe={false} />
+            </div>
+          }
+        />
         <Route path="grid" element={<EmBreve titulo="Grid" />} />
         <Route path="campanhas" element={<EmBreve titulo="Campanhas" />} />
         <Route path="galeria" element={<EmBreve titulo="Galeria" />} />

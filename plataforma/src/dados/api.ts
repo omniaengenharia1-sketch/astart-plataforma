@@ -11,13 +11,14 @@
 import { ligado, sb } from './supabase';
 import {
   PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  catalogoExemplo, criarClienteExemplo, enviarExemplo, fichaExemplo, filaExemplo,
-  itemDoEntregavelExemplo, listaClientesExemplo, painelClienteExemplo, projetoExemplo,
-  responderExemplo,
+  calendarioExemplo, catalogoExemplo, criarClienteExemplo, criarPecaExemplo, enviarExemplo,
+  fichaExemplo, filaExemplo, itemDoEntregavelExemplo, listaClientesExemplo, moverPecaExemplo,
+  painelClienteExemplo, projetoExemplo, responderExemplo,
 } from './mock';
 import type {
   Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, FichaCliente, ItemNaFila,
-  PainelCliente, PainelEquipe, Perfil, ServicoEscolhido, ServicoNoProjeto, Sessao,
+  MesDeConteudo, PainelCliente, PainelEquipe, Perfil, ServicoEscolhido, ServicoNoProjeto,
+  Sessao, TipoPeca,
 } from './tipos';
 
 export { ligado };
@@ -307,4 +308,68 @@ export async function enviarParaAprovacao(
   if (error) throw new FalhaDados(error.message);
   const r = data as { enviados?: number } | null;
   return r?.enviados ?? 0;
+}
+
+/** O mês de conteúdo. `mes` é qualquer dia do mês, no formato AAAA-MM-DD. */
+export async function calendarioDoCliente(
+  clienteId: string,
+  mes: string,
+): Promise<MesDeConteudo> {
+  if (!sb) return calendarioExemplo(clienteId, mes);
+  const { data, error } = await sb.rpc('calendario_do_cliente', {
+    p_cliente: clienteId,
+    p_mes: mes,
+  });
+  if (error) throw new FalhaDados(`Não consegui abrir o mês: ${error.message}`);
+  return exija(data as MesDeConteudo | null, 'O calendário deste cliente');
+}
+
+export async function criarPeca(
+  clienteId: string,
+  titulo: string,
+  tipo: TipoPeca,
+  dia: string,
+  hora: string,
+  legenda = '',
+): Promise<void> {
+  if (!sb) {
+    try {
+      criarPecaExemplo(clienteId, titulo, tipo, dia, hora, legenda);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui criar a peça.');
+    }
+  }
+  const { error } = await sb.rpc('criar_peca', {
+    p_cliente: clienteId,
+    p_titulo: titulo,
+    p_tipo: tipo,
+    p_dia: dia,
+    p_hora: hora || '12:00',
+    p_legenda: legenda,
+  });
+  if (error) {
+    throw new FalhaDados(
+      /row-level security|permission denied/i.test(error.message)
+        ? 'Seu acesso não cria peças.'
+        : error.message,
+    );
+  }
+}
+
+export async function moverPeca(pecaId: string, dia: string, hora?: string): Promise<void> {
+  if (!sb) {
+    try {
+      moverPecaExemplo(pecaId, dia, hora);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui mover a peça.');
+    }
+  }
+  const { error } = await sb.rpc('mover_peca', {
+    p_post: pecaId,
+    p_dia: dia,
+    p_hora: hora ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
 }

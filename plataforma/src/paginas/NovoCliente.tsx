@@ -295,7 +295,7 @@ export function NovoCliente() {
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
         <Link to="/clientes" className="rotulo hover:text-pink">
-          ← clientes
+          &lt; clientes
         </Link>
         <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">Novo cliente</h1>
         <p className="mt-3 max-w-xl text-tinta-2">

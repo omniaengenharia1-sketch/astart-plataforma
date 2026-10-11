@@ -298,3 +298,48 @@ export interface ServicoNoProjeto {
   entregaveis: EntregavelNoProjeto[];
   marcos: MarcoNoProjeto[];
 }
+
+// --- o calendario (migration 0030) ------------------------------------------
+
+export type StatusPublicacao =
+  | 'rascunho' | 'aguardando_aprovacao' | 'aprovado' | 'agendado'
+  | 'publicando' | 'publicado' | 'falhou' | 'cancelado';
+
+export type TipoPeca = 'imagem' | 'carrossel' | 'reel' | 'story';
+
+export interface PecaNoMes {
+  id: string;
+  itemId: string | null;
+  titulo: string;
+  tipo: TipoPeca;
+  legenda: string;
+  /** Dia e hora JÁ no fuso do cliente: quem converte é o banco. */
+  dia: string;
+  hora: string;
+  statusPublicacao: StatusPublicacao;
+  estadoAprovacao: EstadoAprovacao;
+  erro: string | null;
+  contas: string[];
+}
+
+export interface PlanoDeConteudo {
+  clienteServicoId: string;
+  /** 0 = domingo … 6 = sábado, como o `extract(dow)` do Postgres. */
+  diasSemana: number[];
+  horario: string;
+  postsPorMes: number;
+  reelsPorMes: number;
+  cota: number;
+}
+
+export interface MesDeConteudo {
+  mes: string;
+  fusoHorario: string;
+  pecas: PecaNoMes[];
+  plano: PlanoDeConteudo | null;
+  noMes: number;
+  esperandoCliente: number;
+  comAjustes: number;
+  publicadas: number;
+  falhas: number;
+}
