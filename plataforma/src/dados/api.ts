@@ -11,14 +11,15 @@
 import { ligado, sb } from './supabase';
 import {
   PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  calendarioExemplo, catalogoExemplo, criarClienteExemplo, criarPecaExemplo, enviarExemplo,
-  fichaExemplo, filaExemplo, itemDoEntregavelExemplo, listaClientesExemplo, moverPecaExemplo,
-  painelClienteExemplo, projetoExemplo, responderExemplo,
+  calendarioExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo, criarPecaExemplo,
+  enviarExemplo, equipeEConvitesExemplo, fichaExemplo, filaExemplo, itemDoEntregavelExemplo,
+  listaClientesExemplo, moverPecaExemplo, mudarAcessoExemplo, painelClienteExemplo,
+  projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
-  Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, FichaCliente, ItemNaFila,
-  MesDeConteudo, PainelCliente, PainelEquipe, Perfil, ServicoEscolhido, ServicoNoProjeto,
-  Sessao, TipoPeca,
+  Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, EquipeEConvites, FichaCliente,
+  ItemNaFila, MesDeConteudo, PainelCliente, PainelEquipe, PedidoDeConvite, Perfil,
+  ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
 } from './tipos';
 
 export { ligado };
@@ -370,6 +371,95 @@ export async function moverPeca(pecaId: string, dia: string, hora?: string): Pro
     p_post: pecaId,
     p_dia: dia,
     p_hora: hora ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function equipeEConvites(): Promise<EquipeEConvites> {
+  if (!sb) return equipeEConvitesExemplo();
+  const { data, error } = await sb.rpc('equipe_e_convites');
+  if (error) throw new FalhaDados(`Não consegui carregar a equipe: ${error.message}`);
+  return exija(data as EquipeEConvites | null, 'A equipe');
+}
+
+/**
+ * Convidar passa pela Edge Function, nao por RPC: criar conta no Auth exige a
+ * service role, e service role nunca chega ao navegador. A funcao confere pelo
+ * JWT que quem pediu e admin — nao por um parametro que o front mandaria.
+ */
+export async function convidar(pedido: PedidoDeConvite): Promise<void> {
+  if (!sb) {
+    try {
+      convidarExemplo(pedido);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui convidar.');
+    }
+  }
+
+  const { error } = await sb.functions.invoke('convidar', { body: pedido });
+  if (!error) return;
+
+  // A funcao responde { erro: "mensagem em portugues" } com status 4xx, e o
+  // supabase-js embrulha isso num erro generico. Sem abrir o corpo, a tela
+  // mostraria "Edge Function returned a non-2xx status code" para a pessoa.
+  let mensagem = error.message;
+  const contexto = (error as { context?: unknown }).context;
+  if (contexto instanceof Response) {
+    try {
+      const corpo: unknown = await contexto.json();
+      if (corpo && typeof corpo === 'object' && typeof (corpo as { erro?: unknown }).erro === 'string') {
+        mensagem = (corpo as { erro: string }).erro;
+      }
+    } catch {
+      /* fica a mensagem bruta, que e melhor que nada */
+    }
+  }
+  throw new FalhaDados(mensagem);
+}
+
+export async function revogarConvite(id: string): Promise<void> {
+  if (!sb) {
+    revogarConviteExemplo(id);
+    return;
+  }
+  const { error } = await sb.rpc('revogar_convite', { p_convite: id });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function mudarAcesso(userId: string, ativo: boolean): Promise<void> {
+  if (!sb) {
+    try {
+      mudarAcessoExemplo(userId, ativo);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui mudar o acesso.');
+    }
+  }
+  const { error } = await sb.rpc(ativo ? 'reativar_pessoa' : 'desativar_pessoa', {
+    p_user_id: userId,
+  });
+  if (error) {
+    throw new FalhaDados(
+      /row-level security|permission denied/i.test(error.message)
+        ? 'Só quem administra a plataforma muda acesso.'
+        : error.message,
+    );
+  }
+}
+
+export async function tirarAcessoDoCliente(
+  userId: string,
+  clienteId: string,
+  email: string,
+): Promise<void> {
+  if (!sb) {
+    tirarAcessoDoClienteExemplo(email, clienteId);
+    return;
+  }
+  const { error } = await sb.rpc('tirar_acesso_do_cliente', {
+    p_user_id: userId,
+    p_cliente: clienteId,
   });
   if (error) throw new FalhaDados(error.message);
 }

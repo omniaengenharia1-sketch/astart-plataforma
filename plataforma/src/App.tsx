@@ -3,6 +3,7 @@ import { CascaEquipe } from './componentes/Casca';
 import { Carregando, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
 import { Entrar } from './paginas/Entrar';
+import { Ajustes } from './paginas/Ajustes';
 import { Aprovacoes } from './paginas/Aprovacoes';
 import { Clientes } from './paginas/Clientes';
 import { FichaCliente } from './paginas/FichaCliente';
@@ -50,7 +51,7 @@ export default function App() {
               <Route path="/fila" element={<EmBreve titulo="Fila de publicação" />} />
               <Route path="/financeiro" element={<EmBreve titulo="Financeiro" />} />
               <Route path="/comercial" element={<EmBreve titulo="Comercial" />} />
-              <Route path="/ajustes/*" element={<EmBreve titulo="Ajustes" />} />
+              <Route path="/ajustes/*" element={<Ajustes />} />
               <Route path="/feedbacks" element={<EmBreve titulo="Feedbacks" />} />
               <Route path="/grid" element={<EmBreve titulo="Grid" />} />
               <Route path="/entregaveis" element={<EmBreve titulo="Entregáveis" />} />

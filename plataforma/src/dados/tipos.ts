@@ -186,6 +186,7 @@ export interface ItemNaFila extends ItemAprovacao {
 }
 
 export interface ContatoCliente {
+  userId: string;
   nome: string;
   email: string;
   papel: PapelCliente;
@@ -343,3 +344,45 @@ export interface MesDeConteudo {
   publicadas: number;
   falhas: number;
 }
+
+// --- acessos (migration 0031 + Edge Function `convidar`) ---------------------
+
+export interface PessoaDaEquipe {
+  userId: string;
+  nome: string | null;
+  email: string | null;
+  papel: PapelEquipe;
+  cargo: string | null;
+  ativo: boolean;
+  desativadoEm: string | null;
+}
+
+export interface ConviteAberto {
+  id: string;
+  destino: 'equipe' | 'cliente';
+  email: string;
+  nome: string | null;
+  papel: PapelEquipe | null;
+  cargo: string | null;
+  clienteId: string | null;
+  clienteNome: string | null;
+  papelCliente: PapelCliente | null;
+  criadoEm: string;
+}
+
+export interface EquipeEConvites {
+  pessoas: PessoaDaEquipe[];
+  convites: ConviteAberto[];
+  souAdmin: boolean;
+}
+
+/** O corpo que a Edge Function `convidar` espera. */
+export type PedidoDeConvite =
+  | { destino: 'equipe'; email: string; nome?: string; papel: PapelEquipe; cargo?: string }
+  | {
+      destino: 'cliente';
+      email: string;
+      nome?: string;
+      clienteId: string;
+      papelCliente: PapelCliente;
+    };

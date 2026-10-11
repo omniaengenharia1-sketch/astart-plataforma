@@ -389,6 +389,7 @@ O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do 
 | Meu projeto | `/portal/projeto` | `projeto_do_cliente()` |
 | Calendário (ficha) | `/clientes/:id/calendario` | `calendario_do_cliente()` + `criar_peca()` |
 | Calendário | `/portal/calendario` | `calendario_do_cliente()` |
+| Equipe e acessos | `/ajustes` | `equipe_e_convites()` + Edge Function `convidar` |
 
 As abas da ficha e as outras telas do portal já existem como rota e dizem que ainda
 não foram construídas, em vez de abrir em branco.
@@ -410,6 +411,13 @@ O calendário é a mesma tela nos dois lados, como o projeto. Grade de mês no
 desktop, agenda no celular — sete colunas de 50px não são um calendário. As
 datas chegam do banco **já convertidas para o fuso do cliente**: a peça das 23h
 de um cliente no Acre tem de cair no dia dela para quem abrir de qualquer lugar.
+
+Convidar não é RPC: criar conta no Auth exige a service role, que nunca pode
+chegar ao navegador. A tela chama a Edge Function `convidar`, que confere pelo
+JWT que quem pediu é admin. Como nada vence nesta plataforma, **cancelar
+convite e tirar acesso precisam existir de verdade** — e existem, nos Ajustes e
+na ficha do cliente. Tirar acesso não apaga ninguém: o histórico de quem
+aprovou o quê continua de pé.
 
 **Responder é a única escrita que o cliente faz.** A regra do comentário obrigatório
 está nos dois lados: a tela desabilita o botão e explica por quê, e `responder_item()`

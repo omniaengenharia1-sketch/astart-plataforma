@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Link, useParams } from 'react-router-dom';
 import { Bloco, Fita, Marca } from '../componentes/Bloco';
+import { Botao } from '../componentes/Botao';
+import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
-import { fichaCliente } from '../dados/api';
+import { convidar, fichaCliente, tirarAcessoDoCliente } from '../dados/api';
 import { diaMes, haQuanto, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
 import { Calendario } from './Calendario';
 import { Projeto } from './Projeto';
-import type { ChaveModulo, FichaCliente as Ficha, ServicoContratado } from '../dados/tipos';
+import type {
+  ChaveModulo, FichaCliente as Ficha, PapelCliente, ServicoContratado,
+} from '../dados/tipos';
+
+const PAPEIS_CLIENTE: { valor: PapelCliente; rotulo: string; explica: string }[] = [
+  { valor: 'principal', rotulo: 'Contato principal', explica: 'aprova e fala pelo cliente' },
+  { valor: 'financeiro', rotulo: 'Financeiro', explica: 'vê cobrança e contrato' },
+  { valor: 'leitura', rotulo: 'Só leitura', explica: 'acompanha, não responde' },
+];
 
 /** Como o contrato é lido numa linha: formato manda no que faz sentido mostrar. */
 function comoCobra(s: ServicoContratado): string {
@@ -28,6 +38,13 @@ export function FichaCliente() {
   const aba = (params['*'] ?? '').split('/')[0] ?? '';
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [abrindoAcesso, setAbrindoAcesso] = useState(false);
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [papelCliente, setPapelCliente] = useState<PapelCliente>('principal');
+  const [enviando, setEnviando] = useState(false);
+  const [erroAcesso, setErroAcesso] = useState<string | null>(null);
+  const [recado, setRecado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -41,6 +58,41 @@ export function FichaCliente() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  async function darAcesso() {
+    if (enviando) return;
+    setEnviando(true);
+    setErroAcesso(null);
+    setRecado(null);
+    try {
+      await convidar({
+        destino: 'cliente',
+        clienteId,
+        email: email.trim(),
+        nome: nome.trim(),
+        papelCliente,
+      });
+      setRecado(`Convite enviado para ${email.trim()}.`);
+      setNome('');
+      setEmail('');
+      setAbrindoAcesso(false);
+      await carregar();
+    } catch (x) {
+      setErroAcesso(x instanceof Error ? x.message : 'Não consegui dar o acesso.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function tirar(userId: string, emailDele: string) {
+    setErroAcesso(null);
+    try {
+      await tirarAcessoDoCliente(userId, clienteId, emailDele);
+      await carregar();
+    } catch (x) {
+      setErroAcesso(x instanceof Error ? x.message : 'Não consegui tirar o acesso.');
+    }
+  }
 
   if (erro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!ficha) return <Carregando oQue="o cliente" />;
@@ -179,7 +231,73 @@ export function FichaCliente() {
         </div>
 
         <aside>
-          <Fita>Quem responde</Fita>
+          <Fita
+            acao={
+              <Botao tamanho="pequeno" onClick={() => setAbrindoAcesso((v) => !v)}>
+                {abrindoAcesso ? 'Fechar' : 'Dar acesso'}
+              </Botao>
+            }
+          >
+            Quem responde
+          </Fita>
+
+          {abrindoAcesso && (
+            <div className="bloco mt-3 bg-superficie p-3">
+              <p className="rotulo normal-case">
+                ele recebe um e-mail para criar a senha. o convite não vence.
+              </p>
+              <div className="mt-3 grid gap-3">
+                <Campo id="ac-nome" rotulo="Nome">
+                  <Entrada id="ac-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+                </Campo>
+                <Campo id="ac-email" rotulo="E-mail">
+                  <Entrada
+                    id="ac-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </Campo>
+                <Campo
+                  id="ac-papel"
+                  rotulo="Pode o quê"
+                  dica={PAPEIS_CLIENTE.find((p) => p.valor === papelCliente)?.explica}
+                >
+                  <Escolha
+                    id="ac-papel"
+                    value={papelCliente}
+                    onChange={(e) => setPapelCliente(e.target.value as PapelCliente)}
+                  >
+                    {PAPEIS_CLIENTE.map((p) => (
+                      <option key={p.valor} value={p.valor}>
+                        {p.rotulo}
+                      </option>
+                    ))}
+                  </Escolha>
+                </Campo>
+                <Botao
+                  variante="primario"
+                  disabled={enviando || !email.trim()}
+                  onClick={() => void darAcesso()}
+                >
+                  {enviando ? 'Enviando…' : 'Enviar convite'}
+                </Botao>
+              </div>
+            </div>
+          )}
+
+          {recado && (
+            <p role="status" className="rotulo-forte mt-3">
+              {recado}
+            </p>
+          )}
+          {erroAcesso && (
+            <div role="alert" className="bloco mt-3 border-4 bg-alerta-fundo p-3">
+              <span className="rotulo-forte">não deu certo</span>
+              <p className="mt-1 text-[13.5px] font-medium">{erroAcesso}</p>
+            </div>
+          )}
+
           {ficha.contatos.length === 0 ? (
             <p className="py-4 text-tinta-3">Ninguém com acesso ainda.</p>
           ) : (
@@ -191,7 +309,18 @@ export function FichaCliente() {
                     {!c.ativo && <Marca>sem acesso</Marca>}
                   </div>
                   <div className="mt-0.5 font-mono text-[11.5px] break-all text-tinta-2">{c.email}</div>
-                  <div className="rotulo mt-0.5">{PAPEL_CLIENTE[c.papel]}</div>
+                  <div className="mt-0.5 flex items-center justify-between gap-2">
+                    <span className="rotulo">{PAPEL_CLIENTE[c.papel]}</span>
+                    {c.ativo && (
+                      <Botao
+                        variante="texto"
+                        tamanho="pequeno"
+                        onClick={() => void tirar(c.userId, c.email)}
+                      >
+                        Tirar
+                      </Botao>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

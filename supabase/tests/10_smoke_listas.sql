@@ -119,6 +119,8 @@ begin
   perform public.afirma(not (f->'modulos' @> '["campanhas"]'::jsonb),
     'campanhas desligado: nao contratou trafego');
   perform public.afirma(jsonb_array_length(f->'contatos') = 1, 'a Bruna como contato');
+  perform public.afirma(f->'contatos'->0->>'userId' = '20000000-0000-0000-0000-00000000000a',
+    'com o user_id, que e o que a tela precisa para tirar o acesso dele');
   perform public.afirma(jsonb_array_length(f->'pendencias') = 0, 'sem pendencia ainda');
   perform public.afirma((f->>'mensalCentavos')::bigint = 280000, 'o mensal bate');
 end $$;

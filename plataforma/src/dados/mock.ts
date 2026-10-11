@@ -9,9 +9,10 @@
 // =============================================================================
 import type {
   Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
-  EntregavelNoProjeto, FichaCliente, FormatoContrato, ItemNaFila, MesDeConteudo,
-  PainelCliente, PainelEquipe, PecaNoMes, Perfil, ServicoContratado, ServicoEscolhido,
-  ServicoNoProjeto, Sessao, StatusPublicacao, TipoPeca,
+  ConviteAberto, EntregavelNoProjeto, EquipeEConvites, FichaCliente, FormatoContrato,
+  ItemNaFila, MesDeConteudo, PainelCliente, PainelEquipe, PecaNoMes, Perfil,
+  PedidoDeConvite, PessoaDaEquipe, ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
+  Sessao, StatusPublicacao, TipoPeca,
 } from './tipos';
 
 import { sluguificar } from '../formato';
@@ -131,8 +132,10 @@ const CLIENTES: ClienteExemplo[] = [
     ],
     extras: ['galeria'],
     contatos: [
-      { nome: 'Bruna Melo', email: 'bruna@mormarcas.com.br', papel: 'principal', ativo: true },
-      { nome: 'Ricardo Mor', email: 'financeiro@mormarcas.com.br', papel: 'financeiro', ativo: true },
+      { userId: 'u-bruna', nome: 'Bruna Melo', email: 'bruna@mormarcas.com.br',
+        papel: 'principal', ativo: true },
+      { userId: 'u-ricardo', nome: 'Ricardo Mor', email: 'financeiro@mormarcas.com.br',
+        papel: 'financeiro', ativo: true },
     ],
   },
   {
@@ -144,7 +147,7 @@ const CLIENTES: ClienteExemplo[] = [
     ],
     extras: ['campanhas'],
     contatos: [
-      { nome: 'Thiago Prado', email: 'thiago@publika.ai', papel: 'principal', ativo: true },
+      { userId: 'u-thiago', nome: 'Thiago Prado', email: 'thiago@publika.ai', papel: 'principal', ativo: true },
     ],
   },
   {
@@ -158,7 +161,7 @@ const CLIENTES: ClienteExemplo[] = [
       }),
     ],
     contatos: [
-      { nome: 'Ana Paula', email: 'ana@choppdobarbudo.com.br', papel: 'principal', ativo: true },
+      { userId: 'u-ana', nome: 'Ana Paula', email: 'ana@choppdobarbudo.com.br', papel: 'principal', ativo: true },
     ],
   },
   {
@@ -169,7 +172,7 @@ const CLIENTES: ClienteExemplo[] = [
       }),
     ],
     contatos: [
-      { nome: 'Karla Bernardo', email: 'contato@karlabernardo.com', papel: 'principal', ativo: true },
+      { userId: 'u-karla', nome: 'Karla Bernardo', email: 'contato@karlabernardo.com', papel: 'principal', ativo: true },
     ],
   },
   {
@@ -183,7 +186,7 @@ const CLIENTES: ClienteExemplo[] = [
       }),
     ],
     contatos: [
-      { nome: 'Marcos Lopes', email: 'marcos@omniaengenharia.com.br', papel: 'principal', ativo: true },
+      { userId: 'u-marcos', nome: 'Marcos Lopes', email: 'marcos@omniaengenharia.com.br', papel: 'principal', ativo: true },
     ],
   },
   {
@@ -194,7 +197,7 @@ const CLIENTES: ClienteExemplo[] = [
       }),
     ],
     contatos: [
-      { nome: 'Pamela Dantas', email: 'pamela@pameladantas.com', papel: 'principal', ativo: true },
+      { userId: 'u-pamela', nome: 'Pamela Dantas', email: 'pamela@pameladantas.com', papel: 'principal', ativo: true },
     ],
   },
 ];
@@ -790,4 +793,92 @@ export function moverPecaExemplo(pecaId: string, dia: string, hora?: string): vo
   }
   p.dia = dia;
   if (hora) p.hora = hora;
+}
+
+// ---------------------------------------------------------------------------
+// Acessos
+// ---------------------------------------------------------------------------
+const PESSOAS: PessoaDaEquipe[] = [
+  { userId: 'exemplo-viviane', nome: 'Viviane', email: 'viviane@astartstudio.com.br',
+    papel: 'admin', cargo: 'Direção', ativo: true, desativadoEm: null },
+  { userId: 'exemplo-layana', nome: 'Layana', email: 'layana@astartstudio.com.br',
+    papel: 'operacao', cargo: 'Social Media', ativo: true, desativadoEm: null },
+  { userId: 'exemplo-beatriz', nome: 'Beatriz', email: 'beatriz@astartstudio.com.br',
+    papel: 'operacao', cargo: 'Audiovisual', ativo: true, desativadoEm: null },
+  { userId: 'exemplo-camila', nome: 'Camila', email: 'camila@astartstudio.com.br',
+    papel: 'financeiro', cargo: 'Financeiro', ativo: true, desativadoEm: null },
+  { userId: 'exemplo-rafa', nome: 'Rafael', email: null,
+    papel: 'leitura', cargo: 'Estágio', ativo: false, desativadoEm: haHoras(900) },
+];
+
+const CONVITES: ConviteAberto[] = [
+  { id: 'cv1', destino: 'equipe', email: 'nova@astartstudio.com.br', nome: 'Nova pessoa',
+    papel: 'operacao', cargo: 'Designer', clienteId: null, clienteNome: null,
+    papelCliente: null, criadoEm: haHoras(30) },
+];
+
+let seqConvite = 0;
+
+export function equipeEConvitesExemplo(): EquipeEConvites {
+  return {
+    pessoas: PESSOAS.slice().sort((a, b) =>
+      a.ativo === b.ativo ? (a.nome ?? '').localeCompare(b.nome ?? '', 'pt-BR') : a.ativo ? -1 : 1),
+    convites: CONVITES.slice(),
+    // Em modo exemplo quem entra pela equipe entra como operacao; para a tela
+    // de Ajustes ser navegavel, aqui ela ve como admin.
+    souAdmin: true,
+  };
+}
+
+export function convidarExemplo(p: PedidoDeConvite): void {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email)) throw new Error('E-mail inválido.');
+  if (PESSOAS.some((x) => x.email === p.email && x.ativo)) {
+    throw new Error('Já existe gente da equipe com esse e-mail.');
+  }
+  if (CONVITES.some((c) => c.email === p.email)) {
+    throw new Error('Já existe um convite aberto para esse e-mail.');
+  }
+  seqConvite += 1;
+  CONVITES.push({
+    id: `cv-${seqConvite}`,
+    destino: p.destino,
+    email: p.email,
+    nome: p.nome ?? null,
+    papel: p.destino === 'equipe' ? p.papel : null,
+    cargo: p.destino === 'equipe' ? (p.cargo ?? null) : null,
+    clienteId: p.destino === 'cliente' ? p.clienteId : null,
+    clienteNome: p.destino === 'cliente'
+      ? (CLIENTES.find((c) => c.cliente.id === p.clienteId)?.cliente.nome ?? null)
+      : null,
+    papelCliente: p.destino === 'cliente' ? p.papelCliente : null,
+    criadoEm: new Date().toISOString(),
+  });
+
+  // No banco o contato so existe quando o convite e aceito; no exemplo ele ja
+  // aparece na ficha como "sem acesso ainda", que e o que a tela mostraria.
+  if (p.destino === 'cliente') {
+    const c = CLIENTES.find((x) => x.cliente.id === p.clienteId);
+    c?.contatos.push({
+      userId: `u-${p.email}`,
+      nome: p.nome ?? p.email, email: p.email, papel: p.papelCliente, ativo: false,
+    });
+  }
+}
+
+export function revogarConviteExemplo(id: string): void {
+  const i = CONVITES.findIndex((c) => c.id === id);
+  if (i >= 0) CONVITES.splice(i, 1);
+}
+
+export function mudarAcessoExemplo(userId: string, ativo: boolean): void {
+  const p = PESSOAS.find((x) => x.userId === userId);
+  if (!p) throw new Error('Pessoa não encontrada.');
+  p.ativo = ativo;
+  p.desativadoEm = ativo ? null : new Date().toISOString();
+}
+
+export function tirarAcessoDoClienteExemplo(email: string, clienteId: string): void {
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  const contato = c?.contatos.find((x) => x.email === email);
+  if (contato) contato.ativo = false;
 }
