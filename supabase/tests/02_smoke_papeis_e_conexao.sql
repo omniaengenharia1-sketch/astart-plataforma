@@ -5,7 +5,7 @@
 
 insert into auth.users (id) values ('11111111-0000-0000-0000-000000000001');
 insert into clientes (id, nome, slug) values ('aaaa1111-0000-0000-0000-000000000001','Cliente A','cliente-a');
-insert into perfis (user_id, nome) values ('11111111-0000-0000-0000-000000000001','Rafael');
+insert into perfis (user_id, nome, email) values ('11111111-0000-0000-0000-000000000001','Rafael','rafael@astartstudio.com.br');
 
 insert into contas_sociais (id, cliente_id, plataforma, nome_exibicao, ig_user_id, origem_token, acesso_parceiro, token_expira_em, token_ref) values
   ('bbbb1111-0000-0000-0000-000000000001','aaaa1111-0000-0000-0000-000000000001','instagram','@system','1780000001','system_user','concedido',null,null),

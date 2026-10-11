@@ -262,10 +262,47 @@ ajuste de uma peça.
 | Asaas | falta confirmar que é essa integração e obter a chave (sandbox primeiro) |
 | Pixieset | API pública limitada; pode virar link de galeria + metadados nossos |
 | Google Drive | faltam credenciais e a decisão entre ler a pasta ou só linkar |
-| Aprovar em lote | não desenhado; cliente com 10 peças clica 10 vezes |
-| Estados vazios | nenhuma tela do primeiro dia foi desenhada |
-| Tela de Equipe | cadastro de membro ainda sem wireframe |
-| Comercial / CRM | 13 etapas mapeadas no Notion, nenhuma tela |
+| Aprovar em lote | decidido que entra, como ação secundária; ainda sem tela |
+
+## 14. Estado do banco
+
+Migrations `0001`–`0012` são o módulo de agendamento na Meta. A fundação da
+plataforma são as cinco seguintes:
+
+| Migration | O que entrega |
+|---|---|
+| `0013` | equipe e convites — papel separado de cargo, convite como única porta de entrada |
+| `0014` | os seis serviços, os catorze módulos e a matriz entre eles |
+| `0015` | contrato por serviço, chaves opcionais, documentos e o portão `cliente_tem_modulo()` |
+| `0016` | login do cliente, `clientes_usuarios` e o RLS que separa um cliente do outro |
+| `0017` | motor de aprovação: `itens_aprovacao`, envios em lote, link sem validade |
+
+Decisões que viraram regra no banco, não só na tela:
+
+- **Dinheiro em centavos inteiros.** `valor_centavos bigint`. Ponto flutuante
+  perde centavo, e centavo perdido em cobrança vira ligação de cliente.
+- **Dia de vencimento só até 28.** Dia 29, 30 e 31 não existem em todo mês.
+- **Ninguém é equipe e cliente ao mesmo tempo.** Trigger nas duas tabelas.
+- **Pedir ajuste exige comentário.** `responder_item()` recusa sem texto; a tela
+  também barra, mas quem garante é a função.
+- **Item já respondido não aceita nova resposta**, e ninguém responde item de
+  cliente que não enxerga.
+- **Nada tem coluna de validade.** Nem convite, nem link. O link fecha quando o
+  último item do lote é respondido, ou quando alguém revoga.
+- **Módulo obrigatório não pode ser desligado na mão** — só os marcados como
+  opcionais na matriz aceitam chave no contrato.
+
+O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
+cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
+primeiro no segundo para o worker seguir funcionando sem alteração.
+
+### Rodar os testes
+
+```bash
+initdb -D /tmp/pgdata -A trust -U postgres
+pg_ctl -D /tmp/pgdata -o "-k /tmp -p 5444" start
+supabase/tests/rodar.sh
+```
 
 ## 13. Telas
 
