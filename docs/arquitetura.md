@@ -277,6 +277,19 @@ plataforma são as cinco seguintes:
 | `0016` | login do cliente, `clientes_usuarios` e o RLS que separa um cliente do outro |
 | `0017` | motor de aprovação: `itens_aprovacao`, envios em lote, link sem validade |
 
+E os módulos:
+
+| Migration | O que entrega |
+|---|---|
+| `0018` | entregáveis, versões, arquivos, marcos e os modelos por serviço |
+| `0019` | plano de conteúdo, `gerar_slots()` e o banco de ideias |
+| `0020` | financeiro: hierarquia de 3 níveis, rateio exato, cobranças |
+| `0021` | campanhas de tráfego, relatórios e métricas chave/valor |
+| `0022` | captação, galerias e itens |
+| `0023` | ambientes, domínios, acessos, integrações e chamados |
+| `0024` | NPS |
+| `0025` | comercial (CRM) com as 13 etapas |
+
 Decisões que viraram regra no banco, não só na tela:
 
 - **Dinheiro em centavos inteiros.** `valor_centavos bigint`. Ponto flutuante
@@ -295,6 +308,22 @@ Decisões que viraram regra no banco, não só na tela:
 O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
+
+### Três armadilhas de RLS que já custaram caro aqui
+
+Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
+de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha.
+
+1. **Política de RLS não pode consultar tabela que também tem RLS.** A
+   subconsulta roda como o próprio usuário, volta vazia e esconde tudo em
+   silêncio. Quando precisar de um dado de outra tabela protegida, passe por
+   uma função `SECURITY DEFINER`.
+2. **View sem `security_invoker` fura o portão**, porque lê como dono.
+3. **`SECURITY DEFINER` sem `search_path` fixo** aceita sequestro por função
+   homônima plantada num schema anterior no caminho.
+
+E uma de teste: o dono das tabelas passa por cima de toda política. Teste de
+RLS que não faz `set role authenticated` não testou nada.
 
 ### Rodar os testes
 

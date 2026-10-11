@@ -18,6 +18,11 @@ supabase/tests/rodar.sh          # PGPORT/PGHOST/PGUSER sobrescrevem o padrao
 | `01_smoke_worker.sql` | promocao de posts, lease, reconciliacao, redacao de segredos no log, append-only, permissoes |
 | `02_smoke_papeis_e_conexao.sql` | papeis do perfil e estado do token das contas da Meta |
 | `03_smoke_fundacao.sql` | portao de modulo, coerencia do contrato, separacao equipe/cliente, convites, motor de aprovacao e isolamento entre clientes |
+| `04_smoke_entregaveis.sql` | criacao pelo modelo, estado vindo do item, versoes sem buraco, portao de entregavel e marco |
+| `05_smoke_plano_conteudo.sql` | geracao de slots no fuso do cliente, limite do escopo, item por peca, banco de ideias |
+| `06_smoke_financeiro.sql` | rateio exato, situacao derivada, parcelas sem centavo perdido, sugestao da IA que nao se aplica sozinha |
+| `07_smoke_modulos.sql` | campanhas, galeria, ambientes, chamados, NPS e CRM — com foco no que o cliente NAO ve |
+| `08_auditoria_rls.sql` | varre o catalogo: RLS ligado, politica existente, anon sem privilegio, SECURITY DEFINER fechado e com search_path, view com security_invoker |
 
 `03` redefine `auth.uid()` para ler uma variavel de sessao e usa `set role
 authenticated`, que e o que faz o RLS valer de verdade — como dono das tabelas,
