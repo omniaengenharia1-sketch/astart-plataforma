@@ -2,10 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { Botao } from '../componentes/Botao';
 import { Bloco as Caixa } from '../componentes/Bloco';
 import { Vazio } from '../componentes/Estado';
+import { reais } from '../formato';
 import type { PainelCliente } from '../dados/tipos';
-
-const reais = (centavos: number) =>
-  (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function diasAte(iso: string | null): string {
   if (!iso) return 'sem data';

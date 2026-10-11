@@ -4,28 +4,8 @@ import { Botao } from '../componentes/Botao';
 import { Bloco, Fita } from '../componentes/Bloco';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { painelEquipe } from '../dados/api';
+import { haQuanto, porExtenso, reais } from '../formato';
 import type { PainelEquipe } from '../dados/tipos';
-
-const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
-const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-
-function porExtenso(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
-}
-
-function haQuanto(iso: string | null): string {
-  if (!iso) return '—';
-  // Data sem hora e lida como meia-noite UTC e escorrega um dia no Brasil.
-  const quando = iso.includes('T') ? new Date(iso) : new Date(`${iso}T12:00:00`);
-  const dias = Math.round((Date.now() - quando.getTime()) / 86_400_000);
-  if (dias <= 0) return 'hoje';
-  if (dias === 1) return 'há 1 dia';
-  return `há ${dias} dias`;
-}
-
-const reais = (centavos: number) =>
-  (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function InicioEquipe() {
   const [painel, setPainel] = useState<PainelEquipe | null>(null);
@@ -61,7 +41,7 @@ export function InicioEquipe() {
         </h1>
       </div>
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco rotulo="Precisa de você" destaque={String(n)} alerta={n > 0} sombra={n > 0} />
         <Bloco rotulo="Sai hoje" destaque={String(painel.saiHoje.length)} />
         <Bloco rotulo="Esperando o cliente" destaque={String(painel.esperandoCliente)} />

@@ -3,6 +3,9 @@ import { CascaEquipe } from './componentes/Casca';
 import { Carregando, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
 import { Entrar } from './paginas/Entrar';
+import { Aprovacoes } from './paginas/Aprovacoes';
+import { Clientes } from './paginas/Clientes';
+import { FichaCliente } from './paginas/FichaCliente';
 import { InicioEquipe } from './paginas/InicioEquipe';
 import { PortalCliente } from './paginas/PortalCliente';
 
@@ -38,8 +41,10 @@ export default function App() {
           <CascaEquipe>
             <Routes>
               <Route path="/" element={<InicioEquipe />} />
-              <Route path="/clientes/*" element={<EmBreve titulo="Clientes" />} />
-              <Route path="/aprovacoes" element={<EmBreve titulo="Aprovações" />} />
+              <Route path="/clientes" element={<Clientes />} />
+              <Route path="/clientes/novo" element={<EmBreve titulo="Novo cliente" />} />
+              <Route path="/clientes/:clienteId/*" element={<FichaCliente />} />
+              <Route path="/aprovacoes" element={<Aprovacoes />} />
               <Route path="/agenda" element={<EmBreve titulo="Agenda" />} />
               <Route path="/fila" element={<EmBreve titulo="Fila de publicação" />} />
               <Route path="/financeiro" element={<EmBreve titulo="Financeiro" />} />

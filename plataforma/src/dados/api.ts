@@ -9,8 +9,14 @@
 // em modo exemplo; nada finge estar ligado.
 // =============================================================================
 import { ligado, sb } from './supabase';
-import { PAINEL_CLIENTE, PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE } from './mock';
-import type { Cliente, PainelCliente, PainelEquipe, Perfil, Sessao } from './tipos';
+import {
+  PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
+  fichaExemplo, filaExemplo, listaClientesExemplo, painelClienteExemplo, responderExemplo,
+} from './mock';
+import type {
+  Cliente, ClienteNaLista, Decisao, FichaCliente, ItemNaFila,
+  PainelCliente, PainelEquipe, Perfil, Sessao,
+} from './tipos';
 
 export { ligado };
 
@@ -20,8 +26,36 @@ export class FalhaDados extends Error {}
  * Em modo exemplo, qual persona esta aberta. Comeca nula de proposito: a tela
  * de entrada tem de aparecer igual, senao a primeira tela da plataforma nunca
  * e exercitada por quem esta avaliando.
+ *
+ * Fica no sessionStorage porque recarregar a pagina nao pode derrubar a sessao:
+ * em modo exemplo isso jogava de volta para o login a cada F5, e quem estava
+ * avaliando lia como "a plataforma me deslogou". Com Supabase ligado quem
+ * guarda a sessao e o proprio supabase-js.
  */
-let personaExemplo: 'equipe' | 'cliente' | null = null;
+type Persona = 'equipe' | 'cliente';
+const CHAVE_PERSONA = 'astart.exemplo.persona';
+
+function lerPersona(): Persona | null {
+  try {
+    const v = sessionStorage.getItem(CHAVE_PERSONA);
+    return v === 'equipe' || v === 'cliente' ? v : null;
+  } catch {
+    // Navegador com armazenamento bloqueado: a plataforma continua, so nao
+    // lembra a persona entre recargas.
+    return null;
+  }
+}
+
+function gravarPersona(v: Persona | null): void {
+  try {
+    if (v) sessionStorage.setItem(CHAVE_PERSONA, v);
+    else sessionStorage.removeItem(CHAVE_PERSONA);
+  } catch {
+    /* idem */
+  }
+}
+
+let personaExemplo: Persona | null = lerPersona();
 
 function exija<T>(valor: T | null | undefined, oQue: string): T {
   if (valor === null || valor === undefined) {
@@ -91,6 +125,7 @@ export async function sessaoAtual(): Promise<Sessao> {
 export async function entrar(email: string, senha: string): Promise<void> {
   if (!sb) {
     personaExemplo = email.includes('@astartstudio') ? 'equipe' : 'cliente';
+    gravarPersona(personaExemplo);
     return;
   }
   const { error } = await sb.auth.signInWithPassword({ email, password: senha });
@@ -103,12 +138,14 @@ export async function entrar(email: string, senha: string): Promise<void> {
   }
 }
 
-export async function entrarComoExemplo(persona: 'equipe' | 'cliente'): Promise<void> {
+export async function entrarComoExemplo(persona: Persona): Promise<void> {
   personaExemplo = persona;
+  gravarPersona(persona);
 }
 
 export async function sair(): Promise<void> {
   personaExemplo = null;
+  gravarPersona(null);
   if (sb) await sb.auth.signOut();
 }
 
@@ -120,8 +157,67 @@ export async function painelEquipe(): Promise<PainelEquipe> {
 }
 
 export async function painelCliente(clienteId: string): Promise<PainelCliente> {
-  if (!sb) return PAINEL_CLIENTE;
+  if (!sb) return painelClienteExemplo(clienteId);
   const { data, error } = await sb.rpc('painel_cliente', { p_cliente: clienteId });
   if (error) throw new FalhaDados(`Não consegui montar o painel: ${error.message}`);
   return exija(data as PainelCliente | null, 'O painel deste cliente');
+}
+
+export async function listaClientes(): Promise<ClienteNaLista[]> {
+  if (!sb) return listaClientesExemplo();
+  const { data, error } = await sb.rpc('lista_clientes');
+  if (error) throw new FalhaDados(`Não consegui carregar os clientes: ${error.message}`);
+  return exija(data as ClienteNaLista[] | null, 'A lista de clientes');
+}
+
+export async function filaAprovacoes(): Promise<ItemNaFila[]> {
+  if (!sb) return filaExemplo();
+  const { data, error } = await sb.rpc('fila_aprovacoes');
+  if (error) throw new FalhaDados(`Não consegui carregar a fila: ${error.message}`);
+  return exija(data as ItemNaFila[] | null, 'A fila de aprovações');
+}
+
+export async function fichaCliente(clienteId: string): Promise<FichaCliente> {
+  if (!sb) return exija(fichaExemplo(clienteId), 'A ficha deste cliente');
+  const { data, error } = await sb.rpc('ficha_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir o cliente: ${error.message}`);
+  return exija(data as FichaCliente | null, 'A ficha deste cliente');
+}
+
+/**
+ * Responder e a unica escrita que o cliente faz na plataforma. A regra do
+ * comentario obrigatorio esta aqui E na funcao do banco: a tela avisa antes,
+ * a funcao recusa de todo jeito.
+ */
+export async function responderItem(
+  itemId: string,
+  decisao: Decisao,
+  autorNome: string,
+  comentario?: string,
+): Promise<void> {
+  if (decisao === 'com_ajustes' && !comentario?.trim()) {
+    throw new FalhaDados('Escreva o que precisa mudar para pedir ajuste.');
+  }
+
+  if (!sb) {
+    try {
+      responderExemplo(itemId, decisao, autorNome, comentario);
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui registrar a resposta.');
+    }
+    return;
+  }
+
+  const { error } = await sb.rpc('responder_item', {
+    p_item_id: itemId,
+    p_decisao: decisao,
+    p_autor_nome: autorNome,
+    p_autor_tipo: 'cliente',
+    p_comentario: comentario?.trim() ?? null,
+  });
+  if (error) {
+    // A mensagem do banco ja vem em portugues e legivel: ela e a mensagem da
+    // tela. Falha silenciosa e proibida, e falha traduzida duas vezes mente.
+    throw new FalhaDados(error.message);
+  }
 }

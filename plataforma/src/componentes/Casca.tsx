@@ -80,8 +80,10 @@ function Nameplate({ marca, sub, quem }: { marca: string; sub: string; quem: str
         <div className="titulao text-[clamp(1.5rem,4vw,2.1rem)]">{marca}</div>
         <div className="rotulo mt-1">{sub}</div>
       </div>
-      <button onClick={() => void sair()} className="rotulo hidden hover:text-pink sm:block">
-        {quem} · sair
+      {/* No celular so a palavra: o botao de sair existia apenas em sm+, e quem
+          entrasse pelo telefone nao tinha como sair da propria conta. */}
+      <button onClick={() => void sair()} className="rotulo shrink-0 hover:text-pink">
+        <span className="hidden sm:inline">{quem} · </span>sair
       </button>
     </header>
   );

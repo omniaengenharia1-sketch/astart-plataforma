@@ -5,6 +5,7 @@ import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { painelCliente } from '../dados/api';
 import { useSessao } from '../sessao';
 import { InicioCliente } from './InicioCliente';
+import { PortalAprovar } from './PortalAprovar';
 import type { PainelCliente } from '../dados/tipos';
 
 /** Tela ainda não construída. Diz isso, em vez de mostrar uma página em branco. */
@@ -43,7 +44,16 @@ export function PortalCliente() {
     <CascaCliente modulos={painel.modulos} aprovacoesAbertas={painel.paraAprovar.length}>
       <Routes>
         <Route index element={<InicioCliente painel={painel} nome={sessao.nome} />} />
-        <Route path="aprovar" element={<EmBreve titulo="Para aprovar" />} />
+        <Route
+          path="aprovar"
+          element={
+            <PortalAprovar
+              itens={painel.paraAprovar}
+              nome={sessao.nome}
+              recarregar={carregar}
+            />
+          }
+        />
         <Route path="projeto" element={<EmBreve titulo="Meu projeto" />} />
         <Route path="calendario" element={<EmBreve titulo="Calendário" />} />
         <Route path="grid" element={<EmBreve titulo="Grid" />} />

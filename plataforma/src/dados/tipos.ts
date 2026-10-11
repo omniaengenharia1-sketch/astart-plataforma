@@ -161,3 +161,59 @@ export type Sessao =
   | { tipo: 'anonimo' }
   | { tipo: 'equipe'; perfil: Perfil }
   | { tipo: 'cliente'; nome: string; email: string; clientes: Cliente[]; clienteAtual: Cliente };
+
+// --- as listas de dentro (migration 0027) ------------------------------------
+
+/** Uma linha da tela Clientes. */
+export interface ClienteNaLista {
+  id: string;
+  nome: string;
+  slug: string;
+  servicos: string[];
+  responsaveis: string[];
+  /** Itens que voltaram com ajuste: a bola está com a equipe. */
+  precisaDeVoce: number;
+  /** Itens enviados e sem resposta: a bola está com o cliente. */
+  esperandoCliente: number;
+  mensalCentavos: number;
+  unicoCentavos: number;
+}
+
+/** Uma linha da fila de aprovações, de qualquer cliente, dos dois tipos. */
+export interface ItemNaFila extends ItemAprovacao {
+  /** O último comentário do item, para a fila não precisar abrir o item. */
+  comentario: string | null;
+}
+
+export interface ContatoCliente {
+  nome: string;
+  email: string;
+  papel: PapelCliente;
+  ativo: boolean;
+}
+
+export interface PendenciaCurta {
+  id: string;
+  tipo: TipoItem;
+  titulo: string;
+  quando: string | null;
+}
+
+export interface Movimento {
+  quando: string;
+  oQue: string;
+}
+
+export interface FichaCliente {
+  cliente: Cliente;
+  modulos: ChaveModulo[];
+  servicos: ServicoContratado[];
+  contatos: ContatoCliente[];
+  pendencias: PendenciaCurta[];
+  movimentos: Movimento[];
+  mensalCentavos: number;
+  unicoCentavos: number;
+}
+
+/** As três respostas que `responder_item()` aceita. */
+export type Decisao = 'aprovado' | 'com_ajustes' | 'declinado';

@@ -14,6 +14,12 @@ interface Props<T> {
   linhas: T[];
   colunas: Coluna<T>[];
   chaveDe: (linha: T) => string;
+  /**
+   * Como a linha aparece no celular. Sem isto, o cartão repete coluna por
+   * coluna com o título em cima — honesto, mas comprido: sete rótulos por
+   * cliente viram uma rolagem que ninguém lê.
+   */
+  resumo?: (linha: T) => ReactNode;
   aoClicar?: (linha: T) => void;
   selecionada?: string | null;
   vazio?: string;
@@ -25,6 +31,7 @@ export function Tabela<T>({
   linhas,
   colunas,
   chaveDe,
+  resumo,
   aoClicar,
   selecionada,
   vazio = 'Nada por aqui.',
@@ -114,14 +121,16 @@ export function Tabela<T>({
           <div
             key={chaveDe(l)}
             onClick={aoClicar ? () => aoClicar(l) : undefined}
-            className={"bloco bg-superficie p-4 " + (aoClicar ? "cursor-pointer" : "")}
+            className={'bloco bg-superficie p-4 ' + (aoClicar ? 'cursor-pointer' : '')}
           >
-            {colunas.map((c) => (
-              <div key={c.chave} className="border-b border-linha-fraca py-2 last:border-0">
-                <div className="rotulo">{c.titulo}</div>
-                <div className="mt-1 text-[13px]">{c.render(l)}</div>
-              </div>
-            ))}
+            {resumo
+              ? resumo(l)
+              : colunas.map((c) => (
+                  <div key={c.chave} className="border-b border-linha-fraca py-2 last:border-0">
+                    <div className="rotulo">{c.titulo}</div>
+                    <div className="mt-1 text-[13px]">{c.render(l)}</div>
+                  </div>
+                ))}
           </div>
         ))}
         {filtradas.length === 0 && (

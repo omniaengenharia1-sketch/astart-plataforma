@@ -1,8 +1,8 @@
 # Astart — Plataforma interna
 
 Plataforma de operação da **Astart Studio**, agência de social media. Uso interno:
-os usuários são a equipe da Astart, e os clientes da agência entram apenas por
-links de aprovação, sem login.
+os usuários são a equipe da Astart e os clientes da agência, cada lado com o seu
+acesso. Quem não tem conta ainda pode responder por link de aprovação, que não vence.
 
 Projeto independente — conta, banco, repositório e deploy próprios.
 
@@ -20,13 +20,14 @@ função nunca entra na conta.
 
 | # | Módulo | Estado |
 |---|---|---|
-| — | Fundação: layout, navegação, tabelas, formulários | front pronto |
-| — | Clientes | tela desenhada, sem gravação |
+| — | Fundação: banco inteiro em 27 migrations, RLS em todas as tabelas | pronto |
+| — | Entrada, início da equipe e início do cliente | front pronto |
+| — | Clientes e ficha do cliente | front pronto, leitura |
 | 1 | Agendamento de posts (Meta) | worker em produção; front a fazer |
-| 2 | Aprovação de cronograma e artes pelo cliente | schema pronto; front a fazer |
-| 3 | Financeiro | a fazer |
-| 4 | Contratos | a fazer |
-| 5 | CRM comercial | a fazer |
+| 2 | Aprovação de peça e entregável | banco e as duas pontas do front prontos |
+| 3 | Financeiro | banco pronto; front a fazer |
+| 4 | Contratos | banco pronto; front a fazer |
+| 5 | CRM comercial | banco pronto; front a fazer |
 
 O trabalho vai módulo a módulo: primeiro o visual e as regras, depois a API.
 
@@ -35,7 +36,7 @@ O trabalho vai módulo a módulo: primeiro o visual e as regras, depois a API.
 ```
 plataforma/                 front React — ver plataforma/README.md
 supabase/
-  migrations/               9 migrations versionadas, RLS em todas as tabelas
+  migrations/               27 migrations versionadas, RLS em todas as tabelas
   functions/publicar-tick/  worker disparado por pg_cron a cada minuto
   functions/_shared/        adapter da Meta, classificação de erro, log
   tests/                    smoke test local do schema

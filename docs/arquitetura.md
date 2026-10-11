@@ -359,3 +359,25 @@ Cobre a entrada, o painel da equipe inteiro (Início, Clientes, Aprovações, Ag
 Fila, Financeiro, Comercial, Ajustes), o cadastro de cliente, as 14 abas da ficha
 do cliente, o editor de peça, as 12 telas do portal e o link de quem não tem conta.
 Inclui o estado vazio do primeiro dia.
+
+### O que já está construído em `plataforma/`
+
+O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do banco
+(e os dados de exemplo enquanto não há Supabase configurado):
+
+| Tela | Rota | Lê |
+|---|---|---|
+| Entrar | `/` sem sessão | `minha_sessao()` |
+| Início da equipe | `/` | `painel_equipe()` |
+| Clientes | `/clientes` | `lista_clientes()` |
+| Ficha do cliente | `/clientes/:id` | `ficha_cliente()` |
+| Aprovações | `/aprovacoes` | `fila_aprovacoes()` |
+| Início do cliente | `/portal` | `painel_cliente()` |
+| Para aprovar | `/portal/aprovar` | `painel_cliente()` + `responder_item()` |
+
+As abas da ficha e as outras telas do portal já existem como rota e dizem que ainda
+não foram construídas, em vez de abrir em branco.
+
+**Responder é a única escrita que o cliente faz.** A regra do comentário obrigatório
+está nos dois lados: a tela desabilita o botão e explica por quê, e `responder_item()`
+recusa de todo jeito — tela é conveniência, função é garantia.
