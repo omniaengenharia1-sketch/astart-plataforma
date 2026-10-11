@@ -314,7 +314,10 @@ primeiro no segundo para o worker seguir funcionando sem alteração.
 ### Três armadilhas de RLS que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
-de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha.
+de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
+auditoria genérica só vê que existe política; **o que a política deixa fazer é
+outra pergunta**, e essa só um teste escrito à mão responde (a quarta armadilha
+abaixo passou batido por toda a auditoria).
 
 1. **Política de RLS não pode consultar tabela que também tem RLS.** A
    subconsulta roda como o próprio usuário, volta vazia e esconde tudo em
@@ -323,6 +326,13 @@ de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha.
 2. **View sem `security_invoker` fura o portão**, porque lê como dono.
 3. **`SECURITY DEFINER` sem `search_path` fixo** aceita sequestro por função
    homônima plantada num schema anterior no caminho.
+4. **Política de RLS é por LINHA, não por COLUNA.** `perfis_edita_proprio`
+   existia para a pessoa trocar o próprio nome e cargo — e deixava trocar o
+   próprio `papel` junto. Uma linha de SQL e qualquer pessoa da equipe virava
+   admin, com o financeiro e os convites de brinde. Fechado na `0032` com um
+   gatilho, porque privilégio de coluna (`grant update (nome, …)`) tiraria o
+   direito do admin também. O teste `15_escalada_de_privilegio.sql` tenta a
+   promoção e mais cinco caminhos, e falha se a `0032` sair.
 
 E duas de teste:
 
