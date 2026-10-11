@@ -39,7 +39,7 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
     <nav
       aria-label="Seções"
       className="flex gap-6 overflow-x-auto border-b border-linha px-5 py-2.5 sm:px-8 lg:px-12
-                 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+ [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {visiveis.map((i) => {
         const ativo = i.para === '/' ? pathname === '/' : pathname.startsWith(i.para);
@@ -49,13 +49,21 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
             to={i.para}
             aria-current={ativo ? 'page' : undefined}
             className={
-              'rotulo flex shrink-0 items-center gap-2 whitespace-nowrap pb-0.5 ' +
-              (ativo ? 'border-b-2 border-tinta text-tinta' : 'text-tinta-3 hover:text-tinta')
+              'flex shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 font-mono ' +
+              'text-[10px] font-semibold tracking-[0.16em] uppercase ' +
+              (ativo ? 'bg-tinta text-papel' : 'text-tinta-3 hover:bg-superficie-2 hover:text-tinta')
             }
           >
             {i.rotulo}
             {i.selo !== undefined && i.selo > 0 && (
-              <span className="bg-tinta px-1.5 py-px text-[9px] text-papel">{i.selo}</span>
+              <span
+                className={
+                  'px-1.5 py-px text-[9px] ' +
+                  (ativo ? 'bg-pink text-sobre-pink' : 'bg-pink text-sobre-pink')
+                }
+              >
+                {i.selo}
+              </span>
             )}
           </NavLink>
         );
@@ -69,10 +77,10 @@ function Nameplate({ marca, sub, quem }: { marca: string; sub: string; quem: str
   return (
     <header className="flex items-end justify-between gap-4 border-b-2 border-tinta px-5 pt-5 pb-3 sm:px-8 lg:px-12">
       <div>
-        <div className="font-display text-2xl leading-tight font-semibold tracking-tight">{marca}</div>
+        <div className="titulao text-[clamp(1.5rem,4vw,2.1rem)]">{marca}</div>
         <div className="rotulo mt-1">{sub}</div>
       </div>
-      <button onClick={() => void sair()} className="rotulo hidden hover:text-pink-tinta sm:block">
+      <button onClick={() => void sair()} className="rotulo hidden hover:text-pink sm:block">
         {quem} · sair
       </button>
     </header>
@@ -83,8 +91,8 @@ function AvisoExemplo() {
   const { ligado } = useSessao();
   if (ligado) return null;
   return (
-    <div className="border-b border-linha bg-superficie-2 px-5 py-2 sm:px-8 lg:px-12">
-      <span className="rotulo">
+    <div className="border-b-2 border-linha bg-pink px-5 py-2 sm:px-8 lg:px-12">
+      <span className="rotulo-forte text-sobre-pink">
         modo exemplo — sem Supabase configurado, os dados desta tela são fictícios
       </span>
     </div>

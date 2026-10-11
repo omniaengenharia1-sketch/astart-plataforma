@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 export interface Coluna<T> {
   chave: string;
   titulo: string;
-  /** Conteúdo da célula. Recebe a linha inteira. */
   render: (linha: T) => ReactNode;
   /** Texto usado pela busca. Sem isto, a coluna não é pesquisável. */
   busca?: (linha: T) => string;
@@ -18,9 +17,7 @@ interface Props<T> {
   aoClicar?: (linha: T) => void;
   selecionada?: string | null;
   vazio?: string;
-  /** Barra de busca acima da tabela. */
   placeholderBusca?: string;
-  /** Nó extra à direita da barra (filtros, botão de ação). */
   acoes?: ReactNode;
 }
 
@@ -39,15 +36,13 @@ export function Tabela<T>({
   const filtradas = useMemo(() => {
     const t = termo.trim().toLowerCase();
     if (!t) return linhas;
-    return linhas.filter((l) =>
-      colunas.some((c) => (c.busca ? c.busca(l).toLowerCase().includes(t) : false)),
-    );
+    return linhas.filter((l) => colunas.some((c) => c.busca?.(l).toLowerCase().includes(t)));
   }, [linhas, colunas, termo]);
 
   return (
     <div className="flex flex-col gap-3">
       {(placeholderBusca || acoes) && (
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           {placeholderBusca && (
             <input
               type="search"
@@ -55,22 +50,24 @@ export function Tabela<T>({
               onChange={(e) => setTermo(e.target.value)}
               placeholder={placeholderBusca}
               aria-label={placeholderBusca}
-              className="w-full max-w-64 border-0 border-b border-linha-forte bg-transparent px-0 py-1.5 text-[12px] text-tinta placeholder:text-tinta-3 focus:border-pink focus:outline-none"
+              className="min-h-10 w-full max-w-72 border-2 border-linha bg-superficie px-3 font-mono text-[12px] placeholder:text-tinta-3 focus:outline-none"
             />
           )}
           {acoes && <div className="ml-auto flex flex-wrap items-center gap-2">{acoes}</div>}
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] border-collapse">
+      {/* No celular a tabela vira lista de blocos: rolagem horizontal é o
+          jeito mais rápido de uma tabela virar inútil no telefone. */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full border-collapse">
           <thead>
             <tr>
               {colunas.map((c) => (
                 <th
                   key={c.chave}
                   scope="col"
-                  className="rotulo border-b border-tinta px-3 py-2.5 text-left first:pl-0"
+                  className="rotulo-forte border-b-4 border-linha px-3 py-2.5 text-left first:pl-0"
                   style={c.larguraMin ? { minWidth: c.larguraMin } : undefined}
                 >
                   {c.titulo}
@@ -88,13 +85,13 @@ export function Tabela<T>({
                   aria-selected={ativa}
                   onClick={aoClicar ? () => aoClicar(l) : undefined}
                   className={
-                    'border-b border-linha ' +
+                    'border-b-2 border-linha-fraca ' +
                     (aoClicar ? 'cursor-pointer ' : '') +
-                    (ativa ? 'bg-pink-suave' : 'hover:bg-superficie-2')
+                    (ativa ? 'bg-pink text-sobre-pink' : 'hover:bg-superficie-2')
                   }
                 >
                   {colunas.map((c) => (
-                    <td key={c.chave} className="px-3 py-3 align-top text-[12.5px] first:pl-0">
+                    <td key={c.chave} className="px-3 py-3.5 align-top text-[13px] first:pl-0">
                       {c.render(l)}
                     </td>
                   ))}
@@ -103,13 +100,35 @@ export function Tabela<T>({
             })}
             {filtradas.length === 0 && (
               <tr>
-                <td colSpan={colunas.length} className="px-3 py-9 text-center text-[13px] text-tinta-3">
-                  {termo ? `Nada encontrado para "${termo}".` : vazio}
+                <td colSpan={colunas.length} className="rotulo px-3 py-12 text-center">
+                  {termo ? `nada encontrado para “${termo}”` : vazio}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-col gap-3 md:hidden">
+        {filtradas.map((l) => (
+          <div
+            key={chaveDe(l)}
+            onClick={aoClicar ? () => aoClicar(l) : undefined}
+            className={"bloco bg-superficie p-4 " + (aoClicar ? "cursor-pointer" : "")}
+          >
+            {colunas.map((c) => (
+              <div key={c.chave} className="border-b border-linha-fraca py-2 last:border-0">
+                <div className="rotulo">{c.titulo}</div>
+                <div className="mt-1 text-[13px]">{c.render(l)}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+        {filtradas.length === 0 && (
+          <p className="rotulo py-10 text-center">
+            {termo ? `nada encontrado para “${termo}”` : vazio}
+          </p>
+        )}
       </div>
     </div>
   );

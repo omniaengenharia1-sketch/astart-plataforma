@@ -32,10 +32,10 @@ export function Entrar() {
     <div className="grid min-h-dvh bg-papel text-tinta lg:grid-cols-2">
       <aside className="flex flex-col justify-between gap-10 border-b border-linha bg-superficie-2 px-6 py-6 sm:px-10 lg:border-r lg:border-b-0 lg:py-12">
         <div>
-          <div className="font-display text-3xl font-semibold tracking-tight">Astart</div>
+          <div className="titulao text-[clamp(2.2rem,6vw,3.4rem)]">Astart</div>
           <div className="rotulo mt-1">Plataforma</div>
         </div>
-        <div className="hidden flex-1 items-center justify-center border border-dashed border-linha-forte lg:flex">
+        <div className="hidden flex-1 items-center justify-center border border-dashed border-linha lg:flex">
           <span className="rotulo">imagem de marca</span>
         </div>
         <div className="rotulo">astartstudio.com.br</div>
@@ -43,7 +43,7 @@ export function Entrar() {
 
       <section className="flex items-center justify-center px-6 py-12 sm:px-10">
         <div className="w-full max-w-sm">
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Entrar</h1>
+          <h1 className="titulao text-[clamp(2rem,6vw,3rem)]">Entrar</h1>
           <p className="mt-2 text-tinta-2">Equipe e clientes, mesmo acesso.</p>
 
           <form onSubmit={(e) => void enviar(e)} className="mt-8 flex flex-col gap-4" noValidate>
@@ -55,7 +55,7 @@ export function Entrar() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                className="min-h-11 border border-linha-forte bg-superficie px-3 text-tinta focus:border-pink focus:outline-none"
+                className="min-h-12 border-2 border-linha bg-superficie px-3 font-mono text-[14px] text-tinta focus:outline-none"
               />
             </label>
 
@@ -67,12 +67,12 @@ export function Entrar() {
                 onChange={(e) => setSenha(e.target.value)}
                 autoComplete="current-password"
                 required
-                className="min-h-11 border border-linha-forte bg-superficie px-3 text-tinta focus:border-pink focus:outline-none"
+                className="min-h-12 border-2 border-linha bg-superficie px-3 font-mono text-[14px] text-tinta focus:outline-none"
               />
             </label>
 
             {erro && (
-              <p role="alert" className="border border-falha bg-falha-suave px-3 py-2 text-[12.5px] text-falha">
+              <p role="alert" className="border border-linha bg-alerta-fundo px-3 py-2 text-[12.5px] text-tinta">
                 {erro}
               </p>
             )}
@@ -82,7 +82,7 @@ export function Entrar() {
             </Botao>
           </form>
 
-          <div className="mt-10 border-t border-linha pt-4">
+          <div className="mt-10 border-t-2 border-linha pt-5">
             <p className="text-[12px] text-tinta-3">
               Primeiro acesso? Use o link do convite e crie sua senha aqui mesmo.
             </p>
@@ -90,10 +90,10 @@ export function Entrar() {
             {!ligado && (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <span className="rotulo">modo exemplo</span>
-                <button onClick={() => void comoExemplo('equipe')} className="rotulo underline underline-offset-4 hover:text-pink-tinta">
+                <button onClick={() => void comoExemplo('equipe')} className="rotulo underline underline-offset-4 hover:text-pink">
                   entrar como equipe
                 </button>
-                <button onClick={() => void comoExemplo('cliente')} className="rotulo underline underline-offset-4 hover:text-pink-tinta">
+                <button onClick={() => void comoExemplo('cliente')} className="rotulo underline underline-offset-4 hover:text-pink">
                   entrar como cliente
                 </button>
               </div>

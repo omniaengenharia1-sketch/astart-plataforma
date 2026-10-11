@@ -9,23 +9,36 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-// Retangular e de canto vivo: o botão-pílula é a marca do template genérico.
+// A sombra dura encolhe quando o botao e pressionado: o bloco afunda no lugar.
 const BASE =
-  'inline-flex items-center justify-center gap-2 font-semibold uppercase tracking-[0.13em] ' +
-  'transition-colors disabled:opacity-40 disabled:pointer-events-none';
+  'inline-flex items-center justify-center gap-2 border-2 border-linha font-mono font-semibold ' +
+  'uppercase tracking-[0.16em] transition-[transform,box-shadow] duration-75 ' +
+  'disabled:opacity-35 disabled:pointer-events-none select-none';
+
+const COM_SOMBRA =
+  'shadow-[3px_3px_0_var(--sombra)] hover:translate-x-[1px] hover:translate-y-[1px] ' +
+  'hover:shadow-[2px_2px_0_var(--sombra)] active:translate-x-[3px] active:translate-y-[3px] ' +
+  'active:shadow-none';
 
 const VARIANTES: Record<Variante, string> = {
-  primario: 'bg-pink text-white border border-pink hover:bg-tinta hover:border-tinta',
-  secundario: 'bg-transparent text-tinta border border-tinta hover:bg-tinta hover:text-papel',
-  texto: 'bg-transparent text-tinta-2 border-0 underline underline-offset-4 hover:text-pink-tinta',
+  // Preto sobre o pink: 4,87:1. Branco sobre o pink seria 4,31:1 e reprovaria.
+  primario: `bg-pink text-sobre-pink ${COM_SOMBRA}`,
+  secundario: `bg-superficie text-tinta ${COM_SOMBRA}`,
+  texto: 'border-0 border-b-2 bg-transparent px-0 text-tinta hover:text-pink',
 };
 
 const TAMANHOS: Record<Tamanho, string> = {
-  normal: 'px-4 py-2 text-[10.5px]',
-  pequeno: 'px-3 py-1.5 text-[9.5px]',
+  normal: 'min-h-11 px-4 text-[10px]',
+  pequeno: 'min-h-9 px-3 text-[9.5px]',
 };
 
-export function Botao({ variante = 'secundario', tamanho = 'normal', className = '', children, ...resto }: Props) {
+export function Botao({
+  variante = 'secundario',
+  tamanho = 'normal',
+  className = '',
+  children,
+  ...resto
+}: Props) {
   return (
     <button className={`${BASE} ${VARIANTES[variante]} ${TAMANHOS[tamanho]} ${className}`} {...resto}>
       {children}

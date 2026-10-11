@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Botao } from '../componentes/Botao';
+import { Bloco as Caixa } from '../componentes/Bloco';
 import { Vazio } from '../componentes/Estado';
 import type { PainelCliente } from '../dados/tipos';
 
@@ -27,11 +28,9 @@ function Cartao({
   forte?: boolean;
 }) {
   return (
-    <section className={`bg-superficie p-5 ${forte ? 'border-2 border-tinta' : 'border border-linha'}`}>
-      <div className="rotulo">{rotulo}</div>
-      {destaque && <div className="mt-1.5 text-2xl font-semibold tracking-tight">{destaque}</div>}
+    <Caixa rotulo={rotulo} destaque={destaque} alerta={forte} sombra={forte}>
       {children}
-    </section>
+    </Caixa>
   );
 }
 
@@ -46,7 +45,7 @@ export function InicioCliente({ painel, nome }: { painel: PainelCliente; nome: s
         <div className="rotulo">
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </div>
-        <h1 className="font-display mt-2 text-[clamp(1.6rem,5vw,2.5rem)] leading-tight font-semibold tracking-tight">
+        <h1 className="titulao mt-3 text-[clamp(1.9rem,6vw,3.2rem)]">
           {aprovar === 0
             ? `${primeiroNome}, nada esperando você.`
             : `${primeiroNome}, ${aprovar} ${aprovar === 1 ? 'item espera' : 'itens esperam'} você.`}
@@ -135,7 +134,10 @@ export function InicioCliente({ painel, nome }: { painel: PainelCliente; nome: s
               {Array.from({ length: painel.projeto.total }, (_, i) => (
                 <span
                   key={i}
-                  className={`h-2 flex-1 ${i < painel.projeto!.entregues ? 'bg-tinta' : 'bg-superficie-3'}`}
+                  className={
+                    'h-3 flex-1 border-2 border-linha ' +
+                    (i < painel.projeto!.entregues ? 'bg-pink' : 'bg-superficie')
+                  }
                 />
               ))}
             </div>

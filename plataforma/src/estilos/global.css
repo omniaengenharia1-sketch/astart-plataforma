@@ -1,88 +1,75 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Identidade Astart Studio: branco, preto e pink.
-   O pink é reservado para marca e interação. As cores semânticas de estado são
-   separadas dele de propósito — senão "falhou" se confunde com um botão.
+   Astart — brutalista.
+
+   Preto, branco e o pink da marca. Nada de meio-tom decorativo: o cinza existe
+   só para texto secundário e para o que está desligado.
+
+   Texto PRETO sobre o pink, não branco: dá 4,87:1 contra 4,31:1, e é o único
+   dos dois que passa em AA para texto normal. De quebra, é mais duro.
+
+   Nada de canto arredondado, nada de sombra difusa. A única sombra é dura e
+   deslocada — ela é estrutura, não profundidade.
    --------------------------------------------------------------------------- */
 :root {
-  --papel: #f7f4f6;
+  --papel: #ffffff;
   --superficie: #ffffff;
-  --superficie-2: #f2edf0;
-  --superficie-3: #e9e2e6;
-  --linha: #e6dfe3;
-  --linha-forte: #cfc5cb;
-  --tinta: #111111;
-  --tinta-2: #4a4247;
-  --tinta-3: #7a7076;
+  --superficie-2: #f2f2f2;
+  --superficie-3: #e4e4e4;
+  --linha: #000000;
+  --linha-fraca: #cccccc;
+  --tinta: #000000;
+  --tinta-2: #3d3d3d;
+  --tinta-3: #767676;
   --pink: #ea1a6e;
-  --pink-tinta: #c4145c;
-  --pink-suave: #fde7f0;
-  --pink-linha: #f7b9d3;
-  --ok: #0f7b4f;
-  --ok-suave: #e3f2ea;
-  --espera: #98620a;
-  --espera-suave: #faefdc;
-  --falha: #b3261e;
-  --falha-suave: #fbe4e2;
-  --falha-solido: #b3261e;
-  --falha-texto: #ffffff;
-  --neutro: #7a7076;
-  --neutro-suave: #ede8eb;
+  --pink-fundo: #ffd9e7;
+  --sobre-pink: #000000;
+  --sombra: #000000;
+  /* Estado: desenhado com peso e rótulo, não com paleta de semáforo. */
+  --alerta: #ea1a6e;
+  --alerta-fundo: #ffd9e7;
+  --calmo: #767676;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
-    --papel: #0d0a0c;
-    --superficie: #161113;
-    --superficie-2: #1e1719;
-    --superficie-3: #271e22;
-    --linha: #2a2225;
-    --linha-forte: #3e3338;
-    --tinta: #f2edef;
-    --tinta-2: #b7acb1;
-    --tinta-3: #857a7f;
-    --pink: #ff5c9d;
-    --pink-tinta: #ff87b6;
-    --pink-suave: #2c1220;
-    --pink-linha: #5a2340;
-    --ok: #4fc98d;
-    --ok-suave: #0f2a1e;
-    --espera: #e0a63f;
-    --espera-suave: #2b2113;
-    --falha: #ff7b6b;
-    --falha-suave: #2e1614;
-    --falha-solido: #8e2018;
-    --falha-texto: #ffe9e6;
-    --neutro: #8f8489;
-    --neutro-suave: #211a1d;
+    --papel: #000000;
+    --superficie: #0b0b0b;
+    --superficie-2: #141414;
+    --superficie-3: #1f1f1f;
+    --linha: #ffffff;
+    --linha-fraca: #3a3a3a;
+    --tinta: #ffffff;
+    --tinta-2: #c4c4c4;
+    --tinta-3: #8a8a8a;
+    --pink: #ff2d7e;
+    --pink-fundo: #3d0a1f;
+    --sobre-pink: #000000;
+    --sombra: #ffffff;
+    --alerta: #ff2d7e;
+    --alerta-fundo: #3d0a1f;
+    --calmo: #8a8a8a;
   }
 }
 
 :root[data-tema="escuro"] {
-  --papel: #0d0a0c;
-  --superficie: #161113;
-  --superficie-2: #1e1719;
-  --superficie-3: #271e22;
-  --linha: #2a2225;
-  --linha-forte: #3e3338;
-  --tinta: #f2edef;
-  --tinta-2: #b7acb1;
-  --tinta-3: #857a7f;
-  --pink: #ff5c9d;
-  --pink-tinta: #ff87b6;
-  --pink-suave: #2c1220;
-  --pink-linha: #5a2340;
-  --ok: #4fc98d;
-  --ok-suave: #0f2a1e;
-  --espera: #e0a63f;
-  --espera-suave: #2b2113;
-  --falha: #ff7b6b;
-  --falha-suave: #2e1614;
-  --falha-solido: #8e2018;
-  --falha-texto: #ffe9e6;
-  --neutro: #8f8489;
-  --neutro-suave: #211a1d;
+  --papel: #000000;
+  --superficie: #0b0b0b;
+  --superficie-2: #141414;
+  --superficie-3: #1f1f1f;
+  --linha: #ffffff;
+  --linha-fraca: #3a3a3a;
+  --tinta: #ffffff;
+  --tinta-2: #c4c4c4;
+  --tinta-3: #8a8a8a;
+  --pink: #ff2d7e;
+  --pink-fundo: #3d0a1f;
+  --sobre-pink: #000000;
+  --sombra: #ffffff;
+  --alerta: #ff2d7e;
+  --alerta-fundo: #3d0a1f;
+  --calmo: #8a8a8a;
 }
 
 @theme inline {
@@ -91,69 +78,109 @@
   --color-superficie-2: var(--superficie-2);
   --color-superficie-3: var(--superficie-3);
   --color-linha: var(--linha);
-  --color-linha-forte: var(--linha-forte);
+  --color-linha-fraca: var(--linha-fraca);
   --color-tinta: var(--tinta);
   --color-tinta-2: var(--tinta-2);
   --color-tinta-3: var(--tinta-3);
   --color-pink: var(--pink);
-  --color-pink-tinta: var(--pink-tinta);
-  --color-pink-suave: var(--pink-suave);
-  --color-pink-linha: var(--pink-linha);
-  --color-ok: var(--ok);
-  --color-ok-suave: var(--ok-suave);
-  --color-espera: var(--espera);
-  --color-espera-suave: var(--espera-suave);
-  --color-falha: var(--falha);
-  --color-falha-suave: var(--falha-suave);
-  --color-falha-solido: var(--falha-solido);
-  --color-falha-texto: var(--falha-texto);
-  --color-neutro: var(--neutro);
-  --color-neutro-suave: var(--neutro-suave);
+  --color-pink-fundo: var(--pink-fundo);
+  --color-sobre-pink: var(--sobre-pink);
+  --color-alerta: var(--alerta);
+  --color-alerta-fundo: var(--alerta-fundo);
+  --color-calmo: var(--calmo);
 
-  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   --font-sans: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-none: 0;
 }
 
-html {
-  color-scheme: light dark;
-}
+html { color-scheme: light dark; }
 
 body {
   margin: 0;
   background: var(--papel);
   color: var(--tinta);
   font-family: var(--font-sans);
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Canto vivo em tudo. Brutalismo com borda arredondada é contradição. */
+*, *::before, *::after { border-radius: 0 !important; }
+
 :focus-visible {
-  outline: 2px solid var(--pink);
+  outline: 3px solid var(--pink);
   outline-offset: 2px;
-  border-radius: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* Rótulo em caixa alta espaçada, como o menu do site da Astart. */
+/* --- utilitários ---------------------------------------------------------- */
+
+/** Rótulo: mono, caixa alta, espaçado. É a voz estrutural da interface. */
 @utility rotulo {
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tinta-3);
+}
+
+@utility rotulo-forte {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tinta);
 }
 
 @utility numeros {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/** Título: grotesca preta, caixa alta, bem apertada. */
+@utility titulao {
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+/** A sombra é dura e deslocada: estrutura, não profundidade. */
+@utility sombra-dura {
+  box-shadow: 5px 5px 0 var(--sombra);
+}
+@utility sombra-dura-p {
+  box-shadow: 3px 3px 0 var(--sombra);
+}
+
+/** Bloco: a caixa padrão. Borda grossa, fundo chapado, sombra deslocada. */
+/* Sem `background` de proposito: se o bloco pintasse o fundo, brigaria com
+   um `bg-*` na mesma tag e venceria em silencio. Quem usa escolhe o fundo. */
+@utility bloco {
+  border: 2px solid var(--linha);
+}
+
+/** Fita: barra chapada preta com texto do papel. Separa seção. */
+@utility fita {
+  background: var(--tinta);
+  color: var(--papel);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.7rem;
 }
