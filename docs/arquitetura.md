@@ -289,6 +289,8 @@ E os módulos:
 | `0023` | ambientes, domínios, acessos, integrações e chamados |
 | `0024` | NPS |
 | `0025` | comercial (CRM) com as 13 etapas |
+| `0026` | `minha_sessao()`, `painel_equipe()` e `painel_cliente()` — o que cada início lê |
+| `0027` | `lista_clientes()`, `fila_aprovacoes()` e `ficha_cliente()` — o que as telas de dentro leem |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -322,8 +324,18 @@ de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha.
 3. **`SECURITY DEFINER` sem `search_path` fixo** aceita sequestro por função
    homônima plantada num schema anterior no caminho.
 
-E uma de teste: o dono das tabelas passa por cima de toda política. Teste de
-RLS que não faz `set role authenticated` não testou nada.
+E duas de teste:
+
+- O dono das tabelas passa por cima de toda política. Teste de RLS que não faz
+  `set role authenticated` não testou nada.
+- Teste que não roda é pior que teste que falha. O `rodar.sh` casava
+  `[0-9][1-9]_*.sql` e pulou o `10_` em silêncio por uma rodada inteira. Agora
+  casa `[0-9][0-9]_`, tira só o stub e imprime quantos rodaram.
+
+Toda função nova de leitura entra com o par: o papel certo recebe o dado e o
+papel errado recebe `null`, não uma versão reduzida. E cada guarda nova é
+quebrada de propósito uma vez, para ver o teste falhar — guarda cujo teste
+passa com ela removida não é guarda.
 
 ### Rodar os testes
 

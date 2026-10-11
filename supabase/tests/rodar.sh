@@ -39,7 +39,15 @@ done
 echo "OK  $n migrations"
 
 falhou=0
-for t in "$REPO"/supabase/tests/[0-9][1-9]_*.sql; do
+# Todo arquivo NN_*.sql roda, menos o stub. O glob antigo era [0-9][1-9]_, que
+# pulava o 10 em silencio — teste que nao roda e pior que teste que falha.
+testes=()
+for t in "$REPO"/supabase/tests/[0-9][0-9]_*.sql; do
+  [ "$(basename "$t")" = "00_stubs_supabase.sql" ] || testes+=("$t")
+done
+if [ ${#testes[@]} -eq 0 ]; then echo "FALHOU: nenhum teste encontrado"; exit 1; fi
+
+for t in "${testes[@]}"; do
   q "drop database if exists astart_t"
   q "create database astart_t template astart"
   if out=$("${PSQL[@]}" -d astart_t -f "$t" 2>&1); then
@@ -49,4 +57,5 @@ for t in "$REPO"/supabase/tests/[0-9][1-9]_*.sql; do
   fi
 done
 q "drop database if exists astart_t"
+echo "OK  ${#testes[@]} testes rodados"
 exit $falhou
