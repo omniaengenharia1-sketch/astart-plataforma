@@ -611,3 +611,43 @@ export interface AmbientesDoCliente {
   dominios: { dominio: string; registrador: string | null; titular: string | null; venceEm: string | null }[];
   chamados: { id: string; titulo: string; prioridade: string; status: string; abertoEm: string }[];
 }
+
+// --- aprovar sem conta (migration 0041) -------------------------------------
+
+export interface ItemDoLote {
+  id: string;
+  tipo: TipoItem;
+  titulo: string;
+  estado: EstadoAprovacao;
+  respondidoPor: string | null;
+  respondidoEm: string | null;
+  comentario: string | null;
+}
+
+/** O que a página do link mostra. Nada aqui depende de ter conta. */
+export interface LoteDoLink {
+  cliente: string;
+  mensagem: string | null;
+  quando: string;
+  /** Todos os itens respondidos: o link vira leitura, sem botão nenhum. */
+  fechado: boolean;
+  itens: ItemDoLote[];
+}
+
+export interface LinkDeAprovacao {
+  id: string;
+  criadoEm: string;
+  acessos: number;
+  ultimoAcessoEm: string | null;
+}
+
+/** Um lote enviado, do lado da equipe: quantos responderam e se abriram. */
+export interface EnvioNaFicha {
+  id: string;
+  mensagem: string | null;
+  quando: string;
+  fechadoEm: string | null;
+  itens: number;
+  respondidos: number;
+  links: LinkDeAprovacao[];
+}

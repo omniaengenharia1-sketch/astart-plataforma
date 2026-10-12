@@ -269,6 +269,36 @@ No front isso vive em `src/permissao.ts`, em duas funções, e serve apenas para
 tela não OFERECER o que o banco vai recusar — menu que abre numa recusa é pior
 que menu que não tem o item. Quando as duas discordarem, o banco está certo.
 
+## 10c. Os dois links sem conta
+
+Galeria (`/g/:token`) e aprovação (`/a/:token`). Mesma arquitetura, e pelos
+mesmos motivos:
+
+1. **O banco guarda o hash, nunca o token.** Vazou o banco, não vazou o acesso.
+   O valor em claro existe uma vez, no retorno da função que cria o link — por
+   isso a tela copia na hora e avisa que não aparece de novo.
+2. **Quem lê é `service_role`, ou seja a Edge Function.** O navegador de quem
+   recebeu o link nunca fala com o Postgres: `envio_por_token` e
+   `responder_por_token` são revogadas de `anon` **e** de `authenticated`.
+3. **Nada vence por relógio.** O link de aprovação vira leitura quando o lote
+   fecha (último item respondido) e morre quando alguém revoga. Validade por
+   data vence sempre na hora errada: no meio de uma aprovação.
+4. **Token vazado responde aquele lote, não o cliente.** `responder_por_token`
+   confere que o item pertence ao envio daquele link antes de gravar. Sem essa
+   linha, um endereço que escapou no WhatsApp seria chave permanente.
+5. **Token errado, link revogado e lote apagado respondem a mesma coisa.** Dizer
+   "este lote existe, mas o link foi revogado" já conta demais a quem está
+   adivinhando endereços.
+
+A resposta entra pela mesma porta do portal (`responder_item`), que desde a
+`0017` aceita `auth.uid()` nulo exatamente para este caminho — ali quem validou
+o token foi a função, antes de chegar lá. O nome de quem respondeu vem digitado
+na tela: sem conta não há de onde tirar, e "respondido por: alguém" não serve
+para quem vai refazer o material.
+
+O contador de acessos existe porque **"ele não respondeu" é diferente de "ele
+nem abriu"** — a primeira é cobrança, a segunda é conferir se o link chegou.
+
 ## 11. Stack
 
 | Camada | O quê |
@@ -332,6 +362,7 @@ E os módulos:
 | `0038` | o cliente lê a mídia do próprio post — sem isso o Grid do portal era um grid vazio |
 | `0039` | o dinheiro é só de quem cuida dele, o comercial fecha junto, e o admin ganha mudar papel e tirar cliente do ar |
 | `0040` | `primeiro_admin()` — a porta do primeiro dia, que se fecha sozinha |
+| `0041` | aprovar **sem conta**: `envio_por_token()`, `responder_por_token()`, revogar e os lotes na ficha |
 
 Decisões que viraram regra no banco, não só na tela:
 

@@ -159,6 +159,7 @@ Ou um por um:
 |---|---|
 | `telas` | cada tela abre com dado dentro, nas duas larguras — e o que a operação **não** vê |
 | `tema` | as 16 telas nos dois temas: fundo, texto, logo, barra do navegador e a cor do reflexo |
+| `link` | o link sem conta: a equipe manda, alguém sem login abre e responde |
 | `olhar` | jornada da equipe + ciclo de aprovação de peça |
 | `projeto` | entregável: envia, cliente responde, a volta aparece na ficha |
 | `cadastro` | cadastra cliente com contrato, bate na trava de endereço repetido |
@@ -203,6 +204,26 @@ Três coisas que esse roteiro ensinou:
   a continuidade que o teste existia para provar.
 
 ---
+
+## 4b. Aprovar sem ter conta
+
+O caminho mais curto que existe na plataforma, e o que mais muda o dia: a equipe
+copia um endereço, manda no WhatsApp, e a pessoa responde. Sem convite, sem
+senha, sem "esqueci minha senha" na sexta à noite.
+
+A tela não tem casca: nem menu, nem logo grande da Astart, nem botão de sair.
+Quem abriu não é usuária de nada — é alguém que recebeu um link. A marca grande
+é a do cliente; a nossa assina pequeno no rodapé.
+
+Uma coisa é pedida antes de qualquer botão funcionar: **o nome**. Sem conta não
+há de onde tirar quem respondeu, e "respondido por: alguém" não serve para a
+equipe que vai refazer o material. Fica guardado na sessão do navegador, então
+ela digita uma vez.
+
+O roteiro `link` abre a página num **contexto limpo**, sem a sessão da equipe —
+reaproveitar a aba logada provaria o caminho do portal, que já tem teste. Ele
+cobra também o que **não** pode aparecer ali: nada de "plataforma interna",
+"ajustes", "sair" nem campo de senha vazando da casca da equipe.
 
 ## 5a. O tema segue o aparelho
 

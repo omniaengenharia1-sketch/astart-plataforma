@@ -1,130 +1,10 @@
 import { useState } from 'react';
-import { Bloco, Fita, Marca } from '../componentes/Bloco';
+import { Bloco, Fita } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Falhou, Vazio } from '../componentes/Estado';
+import { ItemAprovavel } from '../componentes/ItemAprovavel';
 import { responderItem } from '../dados/api';
-import { haQuanto } from '../formato';
-import { TIPO_ITEM } from '../rotulos';
-import type { Decisao, ItemAprovacao } from '../dados/tipos';
-
-/** Qual formulário está aberto num item. Fechado = só os três botões. */
-type Aberto = null | 'ajuste' | 'declinar';
-
-function Item({
-  item,
-  nome,
-  aoResponder,
-}: {
-  item: ItemAprovacao;
-  nome: string;
-  aoResponder: () => Promise<void>;
-}) {
-  const [aberto, setAberto] = useState<Aberto>(null);
-  const [texto, setTexto] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  async function responder(decisao: Decisao) {
-    if (enviando) return; // Clique duplo não manda duas respostas.
-    setEnviando(true);
-    setErro(null);
-    try {
-      await responderItem(item.id, decisao, nome, texto.trim() || undefined);
-      setTexto('');
-      setAberto(null);
-      await aoResponder();
-    } catch (x) {
-      setErro(x instanceof Error ? x.message : 'Não consegui registrar a sua resposta.');
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  const faltaTexto = aberto === 'ajuste' && texto.trim().length === 0;
-
-  return (
-    <li className="bloco erguer p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Marca>{TIPO_ITEM[item.tipo]}</Marca>
-            <span className="rotulo">enviado {haQuanto(item.enviadoEm)}</span>
-          </div>
-          <h3 className="titulao mt-2 text-[clamp(1.1rem,3.5vw,1.5rem)]">{item.titulo}</h3>
-        </div>
-      </div>
-
-      {/* O preview do conteúdo entra aqui quando a mídia estiver no Storage.
-          Até lá, a tela não finge ter imagem: diz o que ainda não tem. */}
-      <div className="aurora mt-4 border border-dashed border-linha px-4 py-8 text-center">
-        <span className="rotulo-forte rounded-full bg-superficie-2 px-3 py-1.5 text-tinta">prévia do material</span>
-      </div>
-
-      {aberto === null && (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Botao variante="primario" disabled={enviando} onClick={() => void responder('aprovado')}>
-            {enviando ? 'Enviando…' : 'Aprovar'}
-          </Botao>
-          <Botao disabled={enviando} onClick={() => setAberto('ajuste')}>
-            Pedir ajuste
-          </Botao>
-          <Botao variante="texto" disabled={enviando} onClick={() => setAberto('declinar')}>
-            Não vai usar
-          </Botao>
-        </div>
-      )}
-
-      {aberto !== null && (
-        <div className="mt-4 border-t border-linha-fraca pt-4">
-          <label htmlFor={`texto-${item.id}`} className="rotulo-forte">
-            {aberto === 'ajuste' ? 'o que mudar' : 'motivo (opcional)'}
-          </label>
-          <textarea
-            id={`texto-${item.id}`}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            rows={3}
-            autoFocus
-            placeholder={
-              aberto === 'ajuste'
-                ? 'Ex.: trocar a foto do primeiro quadro.'
-                : 'Ex.: a promoção foi cancelada.'
-            }
-            className="mt-2 w-full resize-y border border-linha bg-superficie px-3 py-2 text-[14px] placeholder:text-tinta-3 focus:outline-none"
-          />
-          {aberto === 'ajuste' && <p className="rotulo mt-1.5">obrigatório</p>}
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Botao
-              variante="primario"
-              disabled={enviando || faltaTexto}
-              onClick={() => void responder(aberto === 'ajuste' ? 'com_ajustes' : 'declinado')}
-            >
-              {enviando ? 'Enviando…' : aberto === 'ajuste' ? 'Enviar o ajuste' : 'Confirmar'}
-            </Botao>
-            <Botao
-              variante="texto"
-              disabled={enviando}
-              onClick={() => {
-                setAberto(null);
-                setTexto('');
-                setErro(null);
-              }}
-            >
-              Cancelar
-            </Botao>
-          </div>
-        </div>
-      )}
-
-      {erro && (
-        <div role="alert" className="bloco mt-4 bg-alerta-fundo px-3.5 py-2.5">
-          <span className="rotulo-forte text-pink-texto">não deu certo</span>
-          <p className="mt-1 text-[13.5px] font-medium">{erro}</p>
-        </div>
-      )}
-    </li>
-  );
-}
+import type { ItemAprovacao } from '../dados/tipos';
 
 export function PortalAprovar({
   itens,
@@ -220,7 +100,17 @@ export function PortalAprovar({
           </div>
           <ul className="escada mt-4 grid gap-5 xl:grid-cols-2">
             {itens.map((i) => (
-              <Item key={i.id} item={i} nome={nome} aoResponder={recarregar} />
+              <ItemAprovavel
+                key={i.id}
+                id={i.id}
+                tipo={i.tipo}
+                titulo={i.titulo}
+                enviadoEm={i.enviadoEm}
+                responder={async (decisao, texto) => {
+                  await responderItem(i.id, decisao, nome, texto);
+                  await recarregar();
+                }}
+              />
             ))}
           </ul>
         </>

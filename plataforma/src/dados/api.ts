@@ -14,7 +14,8 @@ import {
   abrirChamadoExemplo, agendaExemplo, ambientesExemplo, definirPapelExemplo,
   painelEquipeExemplo,
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
-  criarGaleriaExemplo, criarLinkExemplo, criarPecaExemplo, desativarClienteExemplo,
+  criarGaleriaExemplo, criarLinkAprovacaoExemplo, criarLinkExemplo, criarPecaExemplo,
+  desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
@@ -25,7 +26,8 @@ import {
 } from './mock';
 import type {
   Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao,
-  EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente, FinanceiroDoCliente, Funil,
+  EnvioNaFicha, EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente,
+  FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
   RelatorioDeCampanha, ResumoNps, ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
@@ -326,7 +328,7 @@ export async function enviarParaAprovacao(
 ): Promise<number> {
   if (!sb) {
     try {
-      return enviarExemplo(itemIds);
+      return enviarExemplo(itemIds, mensagem);
     } catch (x) {
       throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui enviar.');
     }
@@ -954,5 +956,44 @@ export async function removerCliente(clienteId: string): Promise<void> {
     }
   }
   const { error } = await sb.rpc('remover_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Os links de aprovação (o lado da equipe)
+// ---------------------------------------------------------------------------
+
+export async function enviosDoCliente(clienteId: string): Promise<EnvioNaFicha[]> {
+  if (!sb) return enviosExemplo(clienteId);
+  const { data, error } = await sb.rpc('envios_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui carregar os envios: ${error.message}`);
+  return exija(data as EnvioNaFicha[] | null, 'Os envios deste cliente');
+}
+
+/**
+ * Cria o link que o cliente abre sem conta. O token aparece UMA vez, agora:
+ * depois disto só existe o hash no banco. Por isso a tela copia na hora.
+ */
+export async function criarLinkAprovacao(envioId: string): Promise<string> {
+  if (!sb) {
+    try {
+      return criarLinkAprovacaoExemplo(envioId).token;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui criar o link.');
+    }
+  }
+  const { data, error } = await sb.rpc('criar_link_aprovacao', { p_envio_id: envioId });
+  if (error) throw new FalhaDados(error.message);
+  const linha = (data as { link_id: string; token: string }[] | null)?.[0];
+  if (!linha) throw new FalhaDados('O link não voltou do servidor.');
+  return linha.token;
+}
+
+export async function revogarLinkAprovacao(linkId: string): Promise<void> {
+  if (!sb) {
+    revogarLinkAprovacaoExemplo(linkId);
+    return;
+  }
+  const { error } = await sb.rpc('revogar_link_aprovacao', { p_link: linkId });
   if (error) throw new FalhaDados(error.message);
 }

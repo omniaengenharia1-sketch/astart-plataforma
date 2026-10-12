@@ -12,7 +12,8 @@ import type {
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
   EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria,
-  ItemNaFila, LancamentoNaLista, LeadNoFunil, MesDeConteudo, NpsDoCliente, PainelCliente,
+  EnvioNaFicha, ItemDoLote, ItemNaFila, LancamentoNaLista, LeadNoFunil, LinkDeAprovacao,
+  LoteDoLink, MesDeConteudo, NpsDoCliente, PainelCliente,
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
   PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, ServicoContratado,
   ServicoEscolhido, ServicoNoProjeto,
@@ -713,7 +714,7 @@ export function itemDoEntregavelExemplo(entregavelId: string): string {
   return id;
 }
 
-export function enviarExemplo(itemIds: string[]): number {
+export function enviarExemplo(itemIds: string[], mensagem?: string): number {
   if (itemIds.length === 0) throw new Error('Escolha o que enviar.');
   const itens = itemIds.map((id) => {
     const i = ITENS.find((x) => x.id === id);
@@ -737,6 +738,11 @@ export function enviarExemplo(itemIds: string[]): number {
     i.respondidoEm = null;
     i.respondidoPor = null;
   }
+  // O lote nasce aqui, como nasce no banco: e dele que sai o link sem conta.
+  // `registrarEnvioExemplo` esta definido mais abaixo no arquivo; na hora em
+  // que esta funcao roda, o modulo ja carregou inteiro.
+  const primeiro = itens[0];
+  if (primeiro) registrarEnvioExemplo(primeiro.clienteId, itemIds, mensagem);
   return itens.length;
 }
 
@@ -1834,4 +1840,138 @@ export function removerClienteExemplo(clienteId: string): void {
     throw new Error(`Este cliente já tem ${quanto} registros. Tire do ar em vez de apagar.`);
   }
   CLIENTES.splice(i, 1);
+}
+
+// ---------------------------------------------------------------------------
+// O link de aprovação sem conta
+//
+// Os lotes nascem dos mesmos ITENS que a fila da equipe e o portal leem. Em
+// modo exemplo há um lote pronto no cliente de exemplo, para o endereço
+// /a/exemplo abrir sem ninguém ter de enviar nada primeiro.
+// ---------------------------------------------------------------------------
+interface EnvioExemplo {
+  id: string;
+  clienteId: string;
+  mensagem: string | null;
+  quando: string;
+  itens: string[];
+  links: (LinkDeAprovacao & { token: string; revogado: boolean })[];
+}
+
+const ENVIOS: EnvioExemplo[] = [
+  {
+    id: 'env-1',
+    clienteId: 'exemplo-mor',
+    mensagem: 'Separei as três dessa semana. Qualquer coisa me fala.',
+    quando: haHoras(30),
+    itens: ['i1', 'i2', 'i3'],
+    links: [
+      { id: 'lk-ap-1', token: 'exemplo', criadoEm: haHoras(30), acessos: 2, ultimoAcessoEm: haHoras(4), revogado: false },
+    ],
+  },
+];
+
+let seqEnvio = 0;
+
+function envioDoToken(token: string): EnvioExemplo | null {
+  return ENVIOS.find((e) => e.links.some((l) => l.token === token && !l.revogado)) ?? null;
+}
+
+function comoItemDoLote(id: string): ItemDoLote | null {
+  const i = ITENS.find((x) => x.id === id);
+  if (!i) return null;
+  return {
+    id: i.id,
+    tipo: i.tipo,
+    titulo: i.titulo,
+    estado: i.estado,
+    respondidoPor: i.respondidoPor,
+    respondidoEm: i.respondidoEm,
+    comentario: i.comentario,
+  };
+}
+
+function montarLote(e: EnvioExemplo): LoteDoLink {
+  const itens = e.itens.map(comoItemDoLote).filter((x): x is ItemDoLote => x !== null);
+  return {
+    cliente: nomeDe(e.clienteId),
+    mensagem: e.mensagem,
+    quando: e.quando,
+    // Mesma regra do banco: o lote fecha quando o último item é respondido.
+    fechado: itens.length > 0 && itens.every((i) => i.estado !== 'em_aprovacao'),
+    itens,
+  };
+}
+
+/** Token errado ou revogado erra igual: não conta se o lote existe. */
+export function loteExemplo(token: string): LoteDoLink {
+  const e = envioDoToken(token);
+  if (!e) throw new Error('Este link não vale mais.');
+  const link = e.links.find((l) => l.token === token);
+  if (link) {
+    link.acessos += 1;
+    link.ultimoAcessoEm = new Date().toISOString();
+  }
+  return montarLote(e);
+}
+
+export function responderLoteExemplo(
+  token: string,
+  item: string,
+  decisao: Decisao,
+  quem: string,
+  comentario?: string,
+): LoteDoLink {
+  const e = envioDoToken(token);
+  if (!e) throw new Error('Este link não vale mais.');
+  // A trava que importa: token vazado responde aquele lote, não o cliente todo.
+  if (!e.itens.includes(item)) throw new Error('Este item não é deste link.');
+  responderExemplo(item, decisao, quem, comentario);
+  return montarLote(e);
+}
+
+export function enviosExemplo(clienteId: string): EnvioNaFicha[] {
+  return ENVIOS.filter((e) => e.clienteId === clienteId).map((e) => {
+    const itens = e.itens.map(comoItemDoLote).filter((x): x is ItemDoLote => x !== null);
+    const respondidos = itens.filter((i) => i.estado !== 'em_aprovacao').length;
+    return {
+      id: e.id,
+      mensagem: e.mensagem,
+      quando: e.quando,
+      fechadoEm: respondidos === itens.length && itens.length > 0 ? e.quando : null,
+      itens: itens.length,
+      respondidos,
+      links: e.links.filter((l) => !l.revogado).map((l) => ({
+        id: l.id, criadoEm: l.criadoEm, acessos: l.acessos, ultimoAcessoEm: l.ultimoAcessoEm,
+      })),
+    };
+  });
+}
+
+export function criarLinkAprovacaoExemplo(envioId: string): { linkId: string; token: string } {
+  const e = ENVIOS.find((x) => x.id === envioId);
+  if (!e) throw new Error('Envio não encontrado.');
+  seqEnvio += 1;
+  const token = `exemplo-${envioId}-${seqEnvio}`;
+  const linkId = `lk-ap-${seqEnvio + 1}`;
+  e.links.push({ id: linkId, token, criadoEm: new Date().toISOString(), acessos: 0, ultimoAcessoEm: null, revogado: false });
+  return { linkId, token };
+}
+
+export function revogarLinkAprovacaoExemplo(linkId: string): void {
+  for (const e of ENVIOS) {
+    const l = e.links.find((x) => x.id === linkId);
+    if (l) l.revogado = true;
+  }
+}
+
+/** O lote que `enviar_para_aprovacao()` cria, para a ficha mostrar na hora. */
+export function registrarEnvioExemplo(clienteId: string, itens: string[], mensagem?: string): string {
+  seqEnvio += 1;
+  const id = `env-novo-${seqEnvio}`;
+  ENVIOS.unshift({
+    id, clienteId, mensagem: mensagem?.trim() || null,
+    quando: new Date().toISOString(), itens, links: [],
+  });
+  return id;
 }

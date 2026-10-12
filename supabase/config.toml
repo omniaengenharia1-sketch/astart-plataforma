@@ -20,3 +20,8 @@ verify_jwt = true
 # A porta do link sem conta: quem abre nao tem login nenhum. Quem autoriza e o
 # token, conferido dentro do banco contra o hash guardado.
 verify_jwt = false
+
+[functions.aprovar]
+# Mesmo caso da galeria: o cliente recebe o endereco no WhatsApp e responde sem
+# conta. Quem autoriza e o token, conferido no banco contra o hash.
+verify_jwt = false

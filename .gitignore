@@ -4,3 +4,6 @@ deno.lock
 .env
 .env.local
 .DS_Store
+
+# Gerados por scripts/gerar-blocos.mjs: saem do repositorio, nao entram nele.
+supabase/blocos/

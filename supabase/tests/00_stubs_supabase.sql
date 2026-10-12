@@ -4,7 +4,11 @@ create database astart;
 
 create role anon nologin;
 create role authenticated nologin;
-create role service_role nologin;
+-- No Supabase de verdade o service_role passa por cima do RLS: e com ele que a
+-- Edge Function le o que o visitante sem conta nao pode ler. Sem `bypassrls`
+-- aqui, um teste do caminho da Edge Function falharia por RLS e daria a
+-- impressao de bug no produto — foi o que aconteceu com o link de aprovacao.
+create role service_role nologin bypassrls;
 
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;

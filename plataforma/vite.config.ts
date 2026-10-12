@@ -16,6 +16,22 @@ const previa = process.env['VITE_PREVIA'] === '1';
 
 export default defineConfig({
   base: previa ? './' : '/',
+  // A prévia é uma demonstração, e demonstração NÃO fala com o banco de
+  // verdade. Sem isto, um `.env.local` na máquina de quem builda a prévia
+  // publicaria uma página que escreve na conta do cliente — e quem abrisse o
+  // link acharia que está mexendo em dados fictícios.
+  //
+  // `define` sobrescreve o que o .env tiver: o modo exemplo vira garantia de
+  // build, não disciplina de quem roda o comando.
+  ...(previa
+    ? {
+        define: {
+          'import.meta.env.VITE_SUPABASE_URL': 'undefined',
+          'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': 'undefined',
+          'import.meta.env.VITE_SUPABASE_ANON_KEY': 'undefined',
+        },
+      }
+    : {}),
   plugins: [react(), tailwindcss()],
   build: { outDir: 'dist', sourcemap: false },
 });

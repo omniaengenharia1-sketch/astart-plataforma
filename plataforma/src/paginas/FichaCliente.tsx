@@ -3,6 +3,7 @@ import { NavLink, Link, useParams } from 'react-router-dom';
 import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
+import { LinksDeAprovacao } from '../componentes/LinksDeAprovacao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
   convidar, desativarCliente, fichaCliente, reativarCliente, removerCliente,
@@ -355,6 +356,9 @@ export function FichaCliente() {
               ))}
             </ul>
           )}
+
+          <div className="mt-9" />
+          <LinksDeAprovacao clienteId={clienteId} />
 
           <div className="mt-9" />
           <Fita>O que já andou</Fita>

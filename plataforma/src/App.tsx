@@ -4,6 +4,7 @@ import { Carregando, NaoEAqui, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
 import { veDinheiro } from './permissao';
 import { AlbumPublico } from './paginas/AlbumPublico';
+import { Aprovar } from './paginas/Aprovar';
 import { Entrar } from './paginas/Entrar';
 import { Agenda } from './paginas/Agenda';
 import { Ajustes } from './paginas/Ajustes';
@@ -30,12 +31,16 @@ export default function App() {
 
   if (carregando) return <Carregando oQue="a plataforma" principal />;
 
-  // A galeria por link vem ANTES de qualquer checagem de sessao: quem recebeu
-  // o endereco nao tem conta, e nao vai criar uma para ver as proprias fotos.
-  if (window.location.pathname.startsWith('/g/') || window.location.hash.startsWith('#/g/')) {
+  // Os dois links sem conta vem ANTES de qualquer checagem de sessao: quem
+  // recebeu o endereco nao tem conta, e nao vai criar uma para ver as proprias
+  // fotos nem para aprovar uma peca. Se a sessao decidisse primeiro, a tela de
+  // entrada apareceria para quem nunca vai ter login.
+  const caminho = window.location.pathname + window.location.hash;
+  if (/(^|#)\/(g|a)\//.test(caminho)) {
     return (
       <Routes>
         <Route path="/g/:token" element={<AlbumPublico />} />
+        <Route path="/a/:token" element={<Aprovar />} />
       </Routes>
     );
   }
