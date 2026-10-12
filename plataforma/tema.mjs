@@ -52,6 +52,54 @@ async function luminanciaDe(p, seletor, prop) {
   );
 }
 
+/**
+ * O reflexo que segue a mão, medido na cor que o navegador calculou.
+ *
+ * Isto existe por causa de um bug que durou semanas: a regra do tema claro
+ * tinha o comentário "o reflexo é sombra, não luz" e pintava branco a 85% na
+ * linha seguinte. Em lâmina branca ninguém via; em cima do cartão rosa era um
+ * borrão branco no meio da única caixa da tela que tinha de ficar limpa.
+ *
+ * Nem contraste nem axe veem isso: o texto continua legível, e a cor errada
+ * está num pseudo-elemento decorativo. Então a asserção é sobre a cor em si.
+ */
+async function conferirReflexo(p, tema) {
+  const stops = (txt) =>
+    [...txt.matchAll(/rgba\(\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\)/g)]
+      .map((m) => ({ r: +m[1], g: +m[2], b: +m[3], a: +m[4] }))
+      .filter((c) => c.a > 0.01);
+
+  const rosa = p.locator('.lamina-pink').first();
+  if (await rosa.count() === 0) {
+    problemas.push(`[${tema}] não achei a lâmina rosa para medir o reflexo`);
+    return;
+  }
+
+  // Sobre rosa chapado a luz branca faz sentido — mas pouca, e igual nos dois
+  // temas, porque o rosa é escuro no claro também.
+  const noRosa = stops(await rosa.evaluate((e) => getComputedStyle(e, '::after').backgroundImage));
+  const forte = noRosa.find((c) => c.a > 0.2);
+  if (forte) {
+    problemas.push(`[${tema}] o reflexo no cartão rosa está forte demais (alfa ${forte.a})`);
+  }
+
+  // E na lâmina de vidro comum: no claro o reflexo escurece, no escuro acende.
+  const comum = p.locator('.bloco:not(.lamina-pink)').first();
+  const noVidro = stops(await comum.evaluate((e) => getComputedStyle(e, '::after').backgroundImage));
+  const primeiro = noVidro[0];
+  if (!primeiro) {
+    problemas.push(`[${tema}] a lâmina comum ficou sem reflexo nenhum`);
+  } else {
+    const claro = (primeiro.r + primeiro.g + primeiro.b) / 3 > 128;
+    if (tema === 'light' && claro) {
+      problemas.push(`[${tema}] o reflexo é branco no tema claro — de dia o vidro escurece, não acende`);
+    }
+    if (tema === 'dark' && !claro) {
+      problemas.push(`[${tema}] o reflexo é escuro no tema escuro: não aparece`);
+    }
+  }
+}
+
 async function entrar(p, email) {
   await p.fill('input[type="email"]', email);
   await p.fill('input[type="password"]', 'x');
@@ -122,9 +170,16 @@ async function conferir(p, tema, onde) {
 }
 
 for (const tema of ['dark', 'light']) {
+  // `reducedMotion: reduce` não é atalho: o CSS já desliga a escada de entrada
+  // nesse modo, então a tela nasce assentada e a medição deixa de disputar com
+  // a animação. Uma espera que compete com o relógio da máquina é um falso
+  // positivo esperando a hora — e falso positivo custa mais caro que o bug,
+  // porque ensina a ignorar o vermelho. Que a animação TERMINA é cobrado uma
+  // vez, com movimento ligado, no fim deste arquivo.
   const ctx = await navegador.newContext({
     viewport: { width: 1440, height: 1000 },
     colorScheme: tema,
+    reducedMotion: 'reduce',
   });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => problemas.push(`[${tema}] erro: ${e.message}`));
@@ -162,6 +217,7 @@ for (const tema of ['dark', 'light']) {
   await p.waitForTimeout(300);
   await entrar(p, 'bruna@mormarcas.com.br');
   await conferir(p, tema, 'portal-inicio');
+  await conferirReflexo(p, tema);
 
   const menuCliente = p.getByRole('navigation', { name: 'Seções', exact: true });
   for (const item of ['Para aprovar', 'Grid', 'Financeiro', 'Contrato', 'Meu site', 'Feedback']) {
@@ -171,6 +227,21 @@ for (const tema of ['dark', 'light']) {
     await conferir(p, tema, `portal-${item.toLowerCase().replace(/ /g, '-')}`);
   }
 
+  await ctx.close();
+}
+
+// A animação de entrada tem de TERMINAR — com movimento ligado, uma vez. Se ela
+// travasse, o resto do roteiro não veria: ele mede com movimento desligado.
+{
+  const ctx = await navegador.newContext({ viewport: { width: 1440, height: 1000 } });
+  const p = await ctx.newPage();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await entrar(p, 'viviane@astartstudio.com.br');
+  await assentar(p);
+  const sumidos = await p.evaluate(`(${AINDA_SUMIDO})()`);
+  if (sumidos.length) {
+    problemas.push(`[movimento ligado] a animação de entrada não terminou: ${sumidos.slice(0, 3).join(', ')}`);
+  }
   await ctx.close();
 }
 

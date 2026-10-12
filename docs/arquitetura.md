@@ -469,8 +469,19 @@ com auroras. O vidro é material, não enfeite — e material tem regra:
    telefone de qualquer um.
 3. **A iridescência mora em 1px.** O fio da borda do painel é um degradê
    pink → violeta → ciano com máscara. Em bloco, violeta e ciano nunca aparecem:
-   o palco é preto, branco e pink.
-4. **Dois pinks.** `--pink` preenche (vive atrás de texto escuro) e
+   o palco é preto, branco e pink. No tema claro o fio inteiro cai para alfa
+   baixo (`--iris-a/b/c`), porque sobre lâmina branca o trecho ciano virava um
+   risco azul na borda de baixo — a regra existia e o CSS a furava.
+4. **De dia o vidro não acende, escurece.** O reflexo que segue a mão é branco
+   no escuro e uma sombra no claro. Por um tempo esta regra tinha o comentário
+   certo e o código invertido: branco a 85%. Em lâmina branca ninguém via; em
+   cima do cartão rosa era um borrão branco no meio da única caixa da tela que
+   precisava ficar limpa. O `tema.mjs` agora mede a cor do reflexo.
+5. **O rosa chapado é a caixa que grita, então é a que menos aceita enfeite.**
+   `.lamina-pink` tem reflexo próprio (branco a 12%, igual nos dois temas, porque
+   o rosa é escuro no claro também), fio de cima mais fraco e queda de sombra em
+   vinho, não halo rosa claro.
+6. **Dois pinks.** `--pink` preenche (vive atrás de texto escuro) e
    `--pink-texto` escreve (precisa dos 4,5:1 sozinho). Um só não serve aos dois,
    e o degradê dos botões tem outras duas pontas, que escurecem no tema claro
    porque lá o texto em cima é branco.
@@ -479,6 +490,7 @@ com auroras. O vidro é material, não enfeite — e material tem regra:
 |---|---|---|
 | `bloco` | painel | a lâmina: desfoque, brilho interno, queda longa, fio iridescente |
 | `erguer` | cartão clicável | sobe 3px e o halo cresce |
+| reflexo | lâmina sob o ponteiro | no escuro acende (branco a 14%), no claro **escurece** (preto a 7%) |
 | `empurra` | linha de lista que abre algo | acende e ganha um fio pink à esquerda |
 | `aurora` | vazio, prévia que não existe, dia livre do calendário | névoa: "cabe coisa aqui" |
 | `piscando` | carregando | ponto pink que pulsa, não spinner |

@@ -158,7 +158,7 @@ Ou um por um:
 | Script | O que percorre |
 |---|---|
 | `telas` | cada tela abre com dado dentro, nas duas larguras — e o que a operação **não** vê |
-| `tema` | as 16 telas nos dois temas: fundo, texto, logo e barra do navegador |
+| `tema` | as 16 telas nos dois temas: fundo, texto, logo, barra do navegador e a cor do reflexo |
 | `olhar` | jornada da equipe + ciclo de aprovação de peça |
 | `projeto` | entregável: envia, cliente responde, a volta aparece na ficha |
 | `cadastro` | cadastra cliente com contrato, bate na trava de endereço repetido |
@@ -242,11 +242,26 @@ animação mais 300 de atraso no último cartão). Então escrevi o roteiro dorm
 máquina estava ocupada com os outros nove roteiros: a aba Contrato ainda tinha
 três cartões a meio caminho.
 
-Agora ele espera a **condição**, não o relógio: fica perguntando se sobrou algo
-abaixo de 0,9 de opacidade, até 8 segundos. Se assentar em 300 ms, segue em
-300 ms; se nunca assentar, acusa dizendo qual elemento ficou. Teste que depende
-de a máquina estar folgada não é teste, é sorte — e o falso positivo custa mais
-caro que o bug, porque ensina a ignorar o vermelho.
+Esperar a **condição** em vez do relógio ajudou, mas não bastou: sob pico de CPU
+a escada ainda passava dos 8 segundos de orçamento. A medição então deixou de
+disputar com a animação — o roteiro varre as telas com `reducedMotion: reduce`,
+que é o modo em que o próprio CSS desliga a escada, e a tela nasce assentada.
+Que a animação **termina** é cobrado uma vez, no fim do arquivo, com movimento
+ligado. Teste que depende de a máquina estar folgada não é teste, é sorte — e o
+falso positivo custa mais caro que o bug, porque ensina a ignorar o vermelho.
+
+### O reflexo, que nenhum outro roteiro vê
+
+A Vi apontou um borrão branco em cima do cartão rosa do portal. A regra do tema
+claro tinha o comentário "o reflexo é sombra, não luz" e pintava **branco a 85%**
+na linha seguinte. Em lâmina branca ninguém via; sobre o rosa era uma mancha no
+meio da única caixa da tela que precisava ficar limpa.
+
+Nem o contraste nem o axe pegariam: o texto continua legível e a cor errada vive
+num pseudo-elemento decorativo. Então o `tema.mjs` passou a ler a cor calculada
+do `::after` e cobrar duas coisas: no cartão rosa nenhum ponto do reflexo passa
+de 12% de alfa, e na lâmina comum o reflexo é claro no tema escuro e escuro no
+tema claro. Reintroduzi o bug exato para ver as duas asserções acusarem.
 
 ## 5b. As três personas do modo exemplo
 

@@ -24,7 +24,7 @@ export function Bloco({
       className={
         'bloco p-4 sm:p-5 ' +
         (alerta
-          ? 'bg-[linear-gradient(160deg,var(--pink-topo),var(--pink-base))] text-sobre-pink '
+          ? 'lamina-pink bg-[linear-gradient(160deg,var(--pink-topo),var(--pink-base))] text-sobre-pink '
           : '') +
         (sombra || alerta ? 'brilho-p ' : '') +
         className
