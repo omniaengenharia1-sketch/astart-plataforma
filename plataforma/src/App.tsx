@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { CascaEquipe } from './componentes/Casca';
-import { Carregando, Vazio } from './componentes/Estado';
+import { Carregando, NaoEAqui, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
+import { veDinheiro } from './permissao';
 import { AlbumPublico } from './paginas/AlbumPublico';
 import { Entrar } from './paginas/Entrar';
 import { Agenda } from './paginas/Agenda';
@@ -25,6 +26,7 @@ function EmBreve({ titulo }: { titulo: string }) {
 
 export default function App() {
   const { sessao, carregando } = useSessao();
+  const dinheiro = veDinheiro(sessao);
 
   if (carregando) return <Carregando oQue="a plataforma" principal />;
 
@@ -66,8 +68,16 @@ export default function App() {
               <Route path="/aprovacoes" element={<Aprovacoes />} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/fila" element={<Fila />} />
-              <Route path="/financeiro" element={<Financeiro />} />
-              <Route path="/comercial" element={<Comercial />} />
+              {/* Quem digitou o endereço na barra recebe uma lâmina que
+                  explica, não a mensagem crua de uma função que devolveu null. */}
+              <Route
+                path="/financeiro"
+                element={dinheiro ? <Financeiro /> : <NaoEAqui oQue="Financeiro" />}
+              />
+              <Route
+                path="/comercial"
+                element={dinheiro ? <Comercial /> : <NaoEAqui oQue="Comercial" />}
+              />
               <Route path="/feedbacks" element={<Feedbacks />} />
               <Route path="/ajustes/*" element={<Ajustes />} />
               {/* Grid, calendário e entregáveis são de um cliente: moram na

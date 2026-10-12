@@ -66,7 +66,8 @@ async function conferir(p, nome, esperados, arquivo) {
 for (const [larg, alt, largura] of [[1440, 900, 'desktop'], [390, 844, 'celular']]) {
   const ctx = await navegador.newContext({ viewport: { width: larg, height: alt } });
   const p = await pagina(ctx, largura);
-  await abrir(p, 'layana@astartstudio.com.br');
+  // Direcao: e quem ve o dinheiro. A operacao tem o seu proprio bloco, no fim.
+  await abrir(p, 'viviane@astartstudio.com.br');
 
   const equipe = [
     ['Financeiro', ['atrasado', 'entrou', 'lançamentos', 'por cliente', 'karla bernardo'], 'financeiro'],
@@ -149,6 +150,58 @@ for (const [larg, alt, largura] of [[1280, 900, 'portal'], [390, 844, 'portal-ce
     problemas.push(`[${largura}] o comentario do NPS nao chegou na tela da equipe`);
   }
   await p.screenshot({ path: `${SAIDA}/${largura}-nps-na-equipe.png`, fullPage: true });
+
+  await ctx.close();
+}
+
+// --- e o que a operacao NAO ve ----------------------------------------------
+//
+// O inverso importa tanto quanto: a 0039 fecha o dinheiro, e tela que abre num
+// painel de zeros foi exatamente o bug que ela conserta.
+{
+  const ctx = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
+  const p = await pagina(ctx, 'operacao');
+  await abrir(p, 'layana@astartstudio.com.br');
+
+  const menuTexto = (await menu(p).innerText()).toLowerCase();
+  for (const item of ['financeiro', 'comercial']) {
+    if (menuTexto.includes(item)) problemas.push(`[operacao] "${item}" aparece no menu dela`);
+  }
+  for (const item of ['clientes', 'aprovações', 'agenda', 'fila', 'feedbacks']) {
+    if (!menuTexto.includes(item)) problemas.push(`[operacao] perdeu "${item}" do menu`);
+  }
+
+  const inicio = (await p.locator('body').innerText()).toLowerCase();
+  if (inicio.includes('vencido')) problemas.push('[operacao] o cartao de vencido aparece no Inicio dela');
+  if (inicio.includes('cobrança vencida')) problemas.push('[operacao] ve cobranca vencida nas pendencias');
+  await p.screenshot({ path: `${SAIDA}/operacao-01-inicio.png`, fullPage: true });
+
+  // Digitar o endereco na barra nao abre: encontra uma lamina que explica.
+  await p.goto(`${BASE}/financeiro`, { waitUntil: 'networkidle' });
+  const negado = (await p.locator('body').innerText()).toLowerCase();
+  if (!negado.includes('área restrita')) problemas.push('[operacao] /financeiro nao explicou a recusa');
+  if (negado.includes('lançamentos')) problemas.push('[operacao] /financeiro abriu mesmo assim');
+  await p.screenshot({ path: `${SAIDA}/operacao-02-restrito.png`, fullPage: true });
+
+  // A lista de clientes perde as duas colunas de dinheiro, e so elas.
+  await p.goto(`${BASE}/clientes`, { waitUntil: 'networkidle' });
+  const lista = (await p.locator('body').innerText()).toLowerCase();
+  if (lista.includes('por mês')) problemas.push('[operacao] a coluna "por mes" continua na lista');
+  if (!lista.includes('mor marcas')) problemas.push('[operacao] perdeu os clientes da lista');
+  if (!lista.includes('de quem é a bola')) problemas.push('[operacao] perdeu a coluna que ela usa');
+  await p.screenshot({ path: `${SAIDA}/operacao-03-clientes.png`, fullPage: true });
+
+  // E a ficha mostra o contrato sem o preco.
+  await vis(p, '.font-bold:has-text("Mor Marcas")').click();
+  await p.waitForLoadState('networkidle');
+  const ficha = (await p.locator('body').innerText()).toLowerCase();
+  if (ficha.includes('r$')) problemas.push('[operacao] tem valor em reais na ficha que ela abre');
+  if (!ficha.includes('gestão digital')) problemas.push('[operacao] perdeu o serviço contratado');
+  if (!ficha.includes('website')) problemas.push('[operacao] perdeu o segundo serviço');
+  const abasTexto = (await abas(p).innerText()).toLowerCase();
+  if (abasTexto.includes('financeiro')) problemas.push('[operacao] a aba Financeiro da ficha aparece');
+  if (!abasTexto.includes('contrato')) problemas.push('[operacao] perdeu a aba Contrato, que fica sem preço');
+  await p.screenshot({ path: `${SAIDA}/operacao-04-ficha.png`, fullPage: true });
 
   await ctx.close();
 }

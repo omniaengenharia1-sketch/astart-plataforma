@@ -14,7 +14,7 @@ import type {
   GaleriaNaLista, ItemDoGrid, ItemGaleria,
   ItemNaFila, LancamentoNaLista, LeadNoFunil, MesDeConteudo, NpsDoCliente, PainelCliente,
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
-  PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, ServicoContratado,
+  PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, ServicoContratado,
   ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
 } from './tipos';
@@ -47,7 +47,37 @@ export const CLIENTE_EXEMPLO: Cliente = {
   ativo: true,
 };
 
+/**
+ * A dona da agencia. Existe porque a Layana e operacao: sem uma persona de
+ * admin, o modo exemplo nao teria como mostrar o Financeiro, o Comercial nem a
+ * troca de papel — e quem esta avaliando concluiria que as telas nao existem.
+ */
+export const PERFIL_DONO: Perfil = {
+  userId: 'exemplo-viviane',
+  nome: 'Viviane',
+  email: 'viviane@astartstudio.com.br',
+  papel: 'admin',
+  cargo: 'Direção',
+  ativo: true,
+};
+
 export const SESSAO_EQUIPE: Sessao = { tipo: 'equipe', perfil: PERFIL_EXEMPLO };
+export const SESSAO_DONO: Sessao = { tipo: 'equipe', perfil: PERFIL_DONO };
+
+/**
+ * Qual persona esta aberta. Espelha a 0039 no modo exemplo: so admin e
+ * financeiro veem valor, e o cliente ve o do proprio contrato. Com Supabase
+ * ligado quem responde e o banco — aqui e so para a demonstracao nao mentir.
+ */
+let papelDaVez: 'admin' | 'operacao' | 'cliente' | null = null;
+
+export function definirPapelExemplo(p: 'admin' | 'operacao' | 'cliente' | null): void {
+  papelDaVez = p;
+}
+
+function veDinheiroExemplo(): boolean {
+  return papelDaVez === 'admin' || papelDaVez === 'cliente';
+}
 
 export const SESSAO_CLIENTE: Sessao = {
   tipo: 'cliente',
@@ -310,11 +340,13 @@ export function responderExemplo(
 const ativos = (c: ClienteExemplo) => c.servicos.filter((s) => s.status === 'ativo');
 const soma = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
 
-function mensalDe(c: ClienteExemplo) {
-  return soma(ativos(c).filter((s) => s.formato === 'recorrente').map((s) => s.valorCentavos));
+function mensalDe(c: ClienteExemplo): number | null {
+  if (!veDinheiroExemplo()) return null;
+  return soma(ativos(c).filter((s) => s.formato === 'recorrente').map((s) => s.valorCentavos ?? 0));
 }
-function unicoDe(c: ClienteExemplo) {
-  return soma(ativos(c).filter((s) => s.formato !== 'recorrente').map((s) => s.valorCentavos));
+function unicoDe(c: ClienteExemplo): number | null {
+  if (!veDinheiroExemplo()) return null;
+  return soma(ativos(c).filter((s) => s.formato !== 'recorrente').map((s) => s.valorCentavos ?? 0));
 }
 function conta(clienteId: string, estado: string) {
   return ITENS.filter((i) => i.clienteId === clienteId && i.estado === estado).length;
@@ -344,7 +376,12 @@ export function fichaExemplo(clienteId: string): FichaCliente | null {
   return {
     cliente: c.cliente,
     modulos: modulosDe(c.servicos, c.extras),
-    servicos: c.servicos,
+    // Mesmo corte da `contrato_valores()`: o servico fica, o preco sai.
+    servicos: veDinheiroExemplo()
+      ? c.servicos
+      : c.servicos.map((s) => ({
+          ...s, valorCentavos: null, diaVencimento: null, parcelas: null,
+        })),
     contatos: c.contatos,
     pendencias: ITENS.filter((i) => i.clienteId === clienteId && i.estado === 'com_ajustes')
       .map((i) => ({ id: i.id, tipo: i.tipo, titulo: i.titulo, quando: i.respondidoEm })),
@@ -364,6 +401,21 @@ export function fichaExemplo(clienteId: string): FichaCliente | null {
 // ---------------------------------------------------------------------------
 // Os paineis
 // ---------------------------------------------------------------------------
+/**
+ * O painel da equipe no modo exemplo. Funcao, nao constante: o cartao do
+ * vencido e a pendencia de cobranca dependem de quem esta olhando.
+ */
+export function painelEquipeExemplo(): PainelEquipe {
+  const dinheiro = veDinheiroExemplo();
+  return {
+    ...PAINEL_EQUIPE,
+    vencidoCentavos: dinheiro ? PAINEL_EQUIPE.vencidoCentavos : null,
+    // No banco quem tira esta linha e o RLS: a pendencia nasce de um
+    // lancamento que a operacao nao alcanca.
+    pendencias: PAINEL_EQUIPE.pendencias.filter((p) => dinheiro || p.rota !== 'financeiro'),
+  };
+}
+
 export const PAINEL_EQUIPE: PainelEquipe = {
   hoje,
   esperandoCliente: 7,
@@ -1166,7 +1218,9 @@ function mensalidadesDo(competencia: string, situacao: SituacaoLancamento): Lanc
     ativos(c)
       .filter((s) => s.formato === 'recorrente')
       .map((s) =>
-        lanc(competencia, `${s.servicoNome} — ${c.cliente.nome}`, s.valorCentavos, {
+        // O contrato de exemplo sempre tem valor; o nulo do tipo e do corte da
+        // 0039 na LEITURA, nao do dado.
+        lanc(competencia, `${s.servicoNome} — ${c.cliente.nome}`, s.valorCentavos ?? 0, {
           clienteId: c.cliente.id,
           clienteNome: c.cliente.nome,
           categoria: s.servicoNome,
@@ -1242,6 +1296,11 @@ const LANCAMENTOS: LancamentoExemplo[] = [
 ];
 
 export function painelFinanceiroExemplo(mes?: string): PainelFinanceiro {
+  // Mesma recusa da funcao do banco, e com a mesma cara: quem nao cuida do
+  // dinheiro nao recebe um painel de zeros, recebe uma recusa.
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') {
+    throw new Error('O financeiro é de quem cuida do dinheiro da agência.');
+  }
   const competencia = mes ? `${mes.slice(0, 7)}-01` : mesAtual;
   const doMes = LANCAMENTOS.filter((l) => l.competencia === competencia);
   const soma2 = (f: (l: LancamentoExemplo) => boolean) =>
@@ -1573,6 +1632,9 @@ const LEADS: (LeadNoFunil & { convertidoEm: string | null })[] = [
 ];
 
 export function funilExemplo(): Funil {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') {
+    throw new Error('O comercial é de quem cuida do dinheiro da agência.');
+  }
   const abertos = LEADS.filter((l) => !FECHADAS.includes(l.etapa));
   const inicioDoMes = mesAtual;
   return {
@@ -1587,6 +1649,9 @@ export function funilExemplo(): Funil {
 
 /** Mesma trava do banco: perdido exige motivo. */
 export function moverLeadExemplo(leadId: string, etapa: EtapaLead, motivo?: string): void {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') {
+    throw new Error('O comercial é de quem cuida do dinheiro da agência.');
+  }
   const l = LEADS.find((x) => x.id === leadId);
   if (!l) throw new Error('Lead não encontrado.');
   if (etapa === 'perdido' && !motivo?.trim()) throw new Error('Lead perdido precisa de motivo.');
@@ -1712,4 +1777,61 @@ export function abrirChamadoExemplo(
   // `descricao` existe no banco e aparece quando a equipe abre o chamado; a
   // lista do cliente mostra só o título.
   void descricao;
+}
+
+// ---------------------------------------------------------------------------
+// O que só o admin faz
+// ---------------------------------------------------------------------------
+
+/** Mesmas travas de `mudar_papel()`: só admin, e a casa não fica sem admin. */
+export function mudarPapelExemplo(userId: string, papel: PapelEquipe): void {
+  if (papelDaVez !== 'admin') {
+    throw new Error('Só quem administra a plataforma muda papel.');
+  }
+  const p = PESSOAS.find((x) => x.userId === userId);
+  if (!p) throw new Error('Essa pessoa não está na equipe.');
+  if (p.papel === papel) return;
+  if (p.papel === 'admin' && papel !== 'admin'
+      && PESSOAS.filter((x) => x.papel === 'admin' && x.ativo).length <= 1) {
+    throw new Error('Precisa de outra pessoa administrando antes de sair.');
+  }
+  p.papel = papel;
+}
+
+export function desativarClienteExemplo(clienteId: string): void {
+  if (papelDaVez !== 'admin') {
+    throw new Error('Só quem administra a plataforma tira um cliente do ar.');
+  }
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  if (!c) throw new Error('Cliente não encontrado.');
+  c.cliente.ativo = false;
+  for (const s of c.servicos) if (s.status === 'ativo') s.status = 'encerrado';
+  for (const u of c.contatos) u.ativo = false;
+}
+
+export function reativarClienteExemplo(clienteId: string): void {
+  if (papelDaVez !== 'admin') {
+    throw new Error('Só quem administra a plataforma reativa um cliente.');
+  }
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  if (!c) throw new Error('Cliente não encontrado.');
+  c.cliente.ativo = true;
+  // Os serviços não voltam sozinhos, igual à função do banco: quanto custa o
+  // contrato novo é decisão de alguém, não de um clique.
+}
+
+export function removerClienteExemplo(clienteId: string): void {
+  if (papelDaVez !== 'admin') {
+    throw new Error('Só quem administra a plataforma remove um cliente.');
+  }
+  const i = CLIENTES.findIndex((x) => x.cliente.id === clienteId);
+  if (i < 0) throw new Error('Cliente não encontrado.');
+  const quanto = ITENS.filter((x) => x.clienteId === clienteId).length
+    + PECAS.filter((x) => x.clienteId === clienteId).length
+    + LANCAMENTOS.filter((x) => x.clienteId === clienteId).length
+    + GALERIAS.filter((x) => x.clienteId === clienteId).length;
+  if (quanto > 0) {
+    throw new Error(`Este cliente já tem ${quanto} registros. Tire do ar em vez de apagar.`);
+  }
+  CLIENTES.splice(i, 1);
 }

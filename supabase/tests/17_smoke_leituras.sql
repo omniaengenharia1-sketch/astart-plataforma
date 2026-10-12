@@ -87,8 +87,13 @@ set "teste.uid" = '10000000-0000-0000-0000-000000000002';   -- operacao
 do $$
 declare f jsonb := public.painel_financeiro();
 begin
-  perform public.afirma((f->>'receitaCentavos')::bigint = 0,
-    'operacao nao ve dinheiro nenhum — e o RLS, nao um if na funcao');
+  -- Antes da 0039 isto vinha 0: o RLS filtrava as linhas e a soma zerava, e a
+  -- tela abria dizendo que a agencia nao faturou nada. Agora a funcao fecha a
+  -- porta — null — e a aba deixa de existir para quem nao cuida do dinheiro.
+  perform public.afirma(f is null,
+    'operacao nao abre o financeiro: null, nao um painel de zeros');
+  perform public.afirma(public.funil() is null,
+    'nem o comercial, que carrega o valor de cada proposta');
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -131,15 +136,24 @@ set "teste.uid" = '10000000-0000-0000-0000-000000000002';
 -- ---------------------------------------------------------------------------
 -- 3. NPS e funil
 -- ---------------------------------------------------------------------------
+-- O NPS continua sendo da equipe inteira: quem atende precisa saber que o
+-- cliente reclamou. O funil, nao — ele carrega o valor de cada proposta.
 do $$
-declare n jsonb := public.nps_resumo(); f jsonb := public.funil();
+declare n jsonb := public.nps_resumo();
 begin
   perform public.afirma((n->>'promotores')::int = 1 and (n->>'nps')::int = 100, 'o NPS do mes');
+end $$;
+
+set "teste.uid" = '10000000-0000-0000-0000-000000000003';   -- financeiro
+do $$
+declare f jsonb := public.funil();
+begin
   perform public.afirma((f->>'abertos')::int = 1, 'um lead em aberto');
   perform public.afirma((f->>'valorAbertoCentavos')::bigint = 450000, 'com o valor dele');
   perform public.afirma((f->>'fechadosNoMes')::int = 0,
     'e o fechado so conta quando convertido_em for preenchido');
 end $$;
+set "teste.uid" = '10000000-0000-0000-0000-000000000002';   -- volta para a operacao
 
 -- ---------------------------------------------------------------------------
 -- 4. o cliente: ve o seu, nao ve o que nao contratou
@@ -228,12 +242,16 @@ do $$ begin
   end;
 end $$;
 
--- O funil, do lado da equipe.
-set "teste.uid" = '10000000-0000-0000-0000-000000000002';
+-- O funil, de quem cuida do dinheiro.
+set "teste.uid" = '10000000-0000-0000-0000-000000000003';   -- financeiro
 do $$
 declare v_lead uuid;
 begin
   select id into v_lead from public.leads where nome = 'Marina';
+  perform public.afirma(v_lead is not null, 'o financeiro acha o lead');
+  -- Guarda o id: a operacao nao enxerga a linha, e um teste em que ela
+  -- "nao consegue" porque recebeu nulo nao testa a recusa, testa o nulo.
+  perform set_config('teste.lead', v_lead::text, false);
   begin
     perform public.mover_lead(v_lead, 'perdido');
     raise exception 'FALHOU: perdeu o lead sem motivo';
@@ -245,6 +263,22 @@ begin
     (select etapa::text from public.leads where id = v_lead) = 'perdido',
     'com motivo, o lead sai do funil');
   perform public.afirma((public.funil()->>'abertos')::int = 0, 'e o funil esvazia');
+end $$;
+
+-- E a operacao nao move nada: a recusa e da funcao, com mensagem que diz o
+-- motivo. Antes da 0039 o `update` nao achava a linha e ela ouvia
+-- "Lead nao encontrado" — verdade pela metade.
+set "teste.uid" = '10000000-0000-0000-0000-000000000002';   -- operacao
+do $$
+declare v_lead uuid;
+begin
+  v_lead := current_setting('teste.lead', true)::uuid;
+  begin
+    perform public.mover_lead(v_lead, 'qualificado');
+    raise exception 'FALHOU: operacao moveu lead';
+  exception when others then
+    if position('cuida do dinheiro' in sqlerrm) = 0 then raise; end if;
+  end;
 end $$;
 
 reset role;

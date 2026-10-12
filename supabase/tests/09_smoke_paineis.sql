@@ -121,8 +121,11 @@ begin
     not exists (select 1 from jsonb_array_elements(p->'pendencias') x
                  where x->>'oQue' like 'Cobrança vencida%'),
     'operacao NAO ve cobranca vencida — e o RLS escondendo, nao um if na funcao');
-  perform public.afirma((p->>'vencidoCentavos')::bigint = 0,
-    'e o total vencido dela e zero pelo mesmo motivo');
+  -- O RLS esconde as LINHAS, e a soma delas vinha 0. Desde a 0039 o total vem
+  -- nulo: "R$ 0,00 vencido" no Inicio da operacao nao e discricao, e numero
+  -- errado. Nulo a tela esconde o cartao.
+  perform public.afirma(p->'vencidoCentavos' = 'null'::jsonb,
+    'e o total vencido nao aparece para ela — nulo, nao zero');
   perform public.afirma((p->>'esperandoCliente')::int = 1, 'um item esperando o cliente');
 end $$;
 

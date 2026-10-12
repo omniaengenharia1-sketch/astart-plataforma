@@ -3,7 +3,9 @@ import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou } from '../componentes/Estado';
-import { convidar, equipeEConvites, mudarAcesso, revogarConvite } from '../dados/api';
+import {
+  convidar, equipeEConvites, mudarAcesso, mudarPapel, revogarConvite,
+} from '../dados/api';
 import { haQuanto } from '../formato';
 import type { EquipeEConvites, PapelEquipe } from '../dados/tipos';
 
@@ -218,7 +220,28 @@ export function Ajustes() {
               <span className="min-w-44 flex-1 font-mono text-[12.5px] break-all">
                 {p.email ?? 'sem e-mail'}
               </span>
-              <Marca>{NOME_PAPEL[p.papel]}</Marca>
+              {dados.souAdmin && p.ativo ? (
+                // O papel e o que decide o que a pessoa ve — inclusive o
+                // dinheiro. Trocar e aqui, numa linha, nao num novo convite.
+                <label className="shrink-0">
+                  <span className="sr-only">Papel de {p.nome ?? p.email}</span>
+                  <Escolha
+                    value={p.papel}
+                    onChange={(e) =>
+                      void acao(() => mudarPapel(p.userId, e.target.value as PapelEquipe))
+                    }
+                    className="min-h-9 w-40 py-0"
+                  >
+                    {PAPEIS.map((o) => (
+                      <option key={o.valor} value={o.valor}>
+                        {o.rotulo}
+                      </option>
+                    ))}
+                  </Escolha>
+                </label>
+              ) : (
+                <Marca>{NOME_PAPEL[p.papel]}</Marca>
+              )}
               {p.cargo && <span className="rotulo w-28 shrink-0">{p.cargo}</span>}
               {p.ativo ? (
                 dados.souAdmin && (
@@ -245,7 +268,10 @@ export function Ajustes() {
             </li>
           ))}
         </ul>
-        <p className="rotulo mt-2 normal-case">tirar o acesso não apaga o histórico.</p>
+        <p className="rotulo mt-2 normal-case">
+          tirar o acesso não apaga o histórico.
+          {dados.souAdmin && ' direção e financeiro veem o dinheiro da agência.'}
+        </p>
       </section>
     </div>
   );

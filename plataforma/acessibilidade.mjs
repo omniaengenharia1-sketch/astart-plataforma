@@ -35,7 +35,7 @@ async function varre(p, onde) {
 for (const [larg, alt, nome] of [[1440, 980, 'desktop'], [390, 844, 'celular']]) {
   for (const claro of [false, true]) {
     for (const [papel, email, abas] of [
-      ['equipe', 'layana@astartstudio.com.br',
+      ['equipe', 'viviane@astartstudio.com.br',
         ['Clientes', 'Aprovações', 'Agenda', 'Fila', 'Financeiro', 'Comercial', 'Feedbacks', 'Ajustes']],
       ['cliente', 'bruna@mormarcas.com.br',
         ['Para aprovar', 'Meu projeto', 'Calendário', 'Grid', 'Financeiro', 'Contrato', 'Meu site', 'Feedback']],

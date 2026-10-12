@@ -154,6 +154,7 @@ npm run contraste       # contraste composto, dois temas, 15 telas
 npm run acessibilidade  # axe-core, 2 larguras × 2 temas × 2 papéis
 npm run olhar           # jornada da equipe + ciclo de aprovação
 npm run telas           # cada tela abre, com dado dentro, nas duas larguras
+                        # — e o que a operação NÃO vê
 ```
 
 Os quatro acham o Chromium do ambiente por conta (`navegador.mjs`): o
@@ -166,16 +167,40 @@ breve" sobrando, e nenhum `NaN`, `undefined` ou `Invalid Date` escapando para a
 tela. Ele também fecha um ciclo: o cliente dá a nota do NPS, sai, a equipe entra
 e o comentário dele tem de estar lá.
 
-Duas coisas que esse roteiro ensinou:
+O `telas.mjs` também percorre o inverso, que importa tanto quanto: entra como
+operação e cobra que o Financeiro e o Comercial **não estejam** no menu, que
+`/financeiro` digitado na barra encontre uma lâmina que explica em vez de abrir,
+que a coluna "por mês" tenha saído da lista e que a ficha mostre o serviço sem
+nenhum `R$`. Foi ele que pegou o cartão "Recorrente por mês" no topo da lista de
+clientes, que eu tinha esquecido depois de tirar as colunas da tabela.
+
+Três coisas que esse roteiro ensinou:
 
 - **Procurar `nan` em texto minúsculo reprova "Karla Bernardo".** Sujeira de
   render tem caixa própria (`NaN`, `undefined`), então a busca é no texto cru e
   com fronteira de palavra.
+- **Esconder em um lugar não é esconder.** A mesma informação aparece em cinco
+  pontos de uma tela: coluna da tabela, cartão de resumo, cartão de total,
+  resumo do celular e linha da ficha. Tirar da tabela e deixar no total não
+  esconde nada — e é o tipo de sobra que só um roteiro acha.
 - **Entrar com `goto` zera o modo exemplo.** Os dados vivem na memória da
   página; recarregar entre a sessão do cliente e a da equipe apagava justamente
   a continuidade que o teste existia para provar.
 
 ---
+
+## 5b. As três personas do modo exemplo
+
+A prévia tem três entradas, porque o que cada uma vê é diferente — e uma
+demonstração com uma persona só esconde justamente a parte que foi construída:
+
+| Entrada | Quem é | O que muda |
+|---|---|---|
+| `viviane@astartstudio.com.br` | direção (admin) | vê tudo: Financeiro, Comercial, valor do contrato, mudar papel, tirar cliente do ar |
+| `layana@astartstudio.com.br` | operação | sem Financeiro e sem Comercial no menu; contrato sem preço; sem o cartão de vencido |
+| `bruna@mormarcas.com.br` | cliente | só o portal dele, com a própria cobrança e o próprio contrato |
+
+Senha: qualquer coisa.
 
 ## 6. Como a plataforma fala
 

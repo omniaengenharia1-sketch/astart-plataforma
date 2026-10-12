@@ -59,8 +59,14 @@ export interface ServicoContratado {
   formato: FormatoContrato;
   status: StatusServico;
   responsavelNome: string | null;
-  /** Centavos. Nunca float: centavo perdido em cobranca vira ligacao de cliente. */
-  valorCentavos: number;
+  /**
+   * Centavos. Nunca float: centavo perdido em cobranca vira ligacao de cliente.
+   *
+   * Nulo quando quem esta lendo nao cuida do dinheiro (migration 0039). Nulo e
+   * "nao te mostro", nao "e zero" — a tela esconde o campo em vez de dizer que
+   * o cliente nao paga nada.
+   */
+  valorCentavos: number | null;
   diaVencimento: number | null;
   parcelas: number | null;
   inicio: string;
@@ -111,7 +117,8 @@ export interface PainelEquipe {
   saiHoje: SaidaDoDia[];
   semana: CompromissoDaSemana[];
   esperandoCliente: number;
-  vencidoCentavos: number;
+  /** Nulo para quem nao cuida do dinheiro. */
+  vencidoCentavos: number | null;
 }
 
 export interface ResumoRedes {
@@ -175,8 +182,9 @@ export interface ClienteNaLista {
   precisaDeVoce: number;
   /** Itens enviados e sem resposta: a bola está com o cliente. */
   esperandoCliente: number;
-  mensalCentavos: number;
-  unicoCentavos: number;
+  /** Nulos para quem nao cuida do dinheiro: a coluna sai da tabela. */
+  mensalCentavos: number | null;
+  unicoCentavos: number | null;
 }
 
 /** Uma linha da fila de aprovações, de qualquer cliente, dos dois tipos. */
@@ -212,8 +220,8 @@ export interface FichaCliente {
   contatos: ContatoCliente[];
   pendencias: PendenciaCurta[];
   movimentos: Movimento[];
-  mensalCentavos: number;
-  unicoCentavos: number;
+  mensalCentavos: number | null;
+  unicoCentavos: number | null;
 }
 
 /** As três respostas que `responder_item()` aceita. */

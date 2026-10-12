@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSessao } from '../sessao';
+import { veDinheiro } from '../permissao';
 import { Logo } from './Marca';
 import type { ChaveModulo } from '../dados/tipos';
 
@@ -44,6 +45,8 @@ export interface ItemMenu {
   rotulo: string;
   modulo?: ChaveModulo;
   selo?: number;
+  /** Só aparece para quem cuida do dinheiro. O banco recusa de todo jeito. */
+  dinheiro?: boolean;
 }
 
 const MENU_EQUIPE: ItemMenu[] = [
@@ -52,17 +55,22 @@ const MENU_EQUIPE: ItemMenu[] = [
   { para: '/aprovacoes', rotulo: 'Aprovações' },
   { para: '/agenda', rotulo: 'Agenda' },
   { para: '/fila', rotulo: 'Fila' },
-  { para: '/financeiro', rotulo: 'Financeiro' },
-  { para: '/comercial', rotulo: 'Comercial' },
+  { para: '/financeiro', rotulo: 'Financeiro', dinheiro: true },
+  { para: '/comercial', rotulo: 'Comercial', dinheiro: true },
   { para: '/feedbacks', rotulo: 'Feedbacks' },
   { para: '/ajustes', rotulo: 'Ajustes' },
 ];
 
 function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }) {
   const { pathname } = useLocation();
+  const { sessao } = useSessao();
+  const dinheiro = veDinheiro(sessao);
   // Aba de módulo não contratado não existe: não fica cinza, não fica com
-  // cadeado. É a mesma regra que o RLS aplica no banco.
-  const visiveis = itens.filter((i) => !i.modulo || (modulos ?? []).includes(i.modulo));
+  // cadeado. É a mesma regra que o RLS aplica no banco — e vale igual para o
+  // dinheiro: quem não cuida dele não vê a aba, não vê a aba desabilitada.
+  const visiveis = itens.filter(
+    (i) => (!i.modulo || (modulos ?? []).includes(i.modulo)) && (!i.dinheiro || dinheiro),
+  );
 
   return (
     <nav

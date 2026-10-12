@@ -28,7 +28,7 @@ export function Entrar() {
     }
   }
 
-  async function comoExemplo(persona: 'equipe' | 'cliente') {
+  async function comoExemplo(persona: 'dono' | 'equipe' | 'cliente') {
     await entrarComoExemplo(persona);
     await recarregar();
   }
@@ -87,11 +87,19 @@ export function Entrar() {
           {!ligado && (
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="rotulo">modo exemplo</span>
+              {/* Três personas, porque o que cada uma vê é diferente: a direção
+                  vê o dinheiro, a operação não, o cliente vê só o dele. */}
+              <button
+                onClick={() => void comoExemplo('dono')}
+                className="rotulo risca rounded-full hover:text-pink-texto"
+              >
+                entrar como direção
+              </button>
               <button
                 onClick={() => void comoExemplo('equipe')}
                 className="rotulo risca rounded-full hover:text-pink-texto"
               >
-                entrar como equipe
+                entrar como operação
               </button>
               <button
                 onClick={() => void comoExemplo('cliente')}

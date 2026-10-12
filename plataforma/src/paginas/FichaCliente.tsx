@@ -4,7 +4,12 @@ import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
-import { convidar, fichaCliente, tirarAcessoDoCliente } from '../dados/api';
+import {
+  convidar, desativarCliente, fichaCliente, reativarCliente, removerCliente,
+  tirarAcessoDoCliente,
+} from '../dados/api';
+import { souAdmin, veDinheiro } from '../permissao';
+import { useSessao } from '../sessao';
 import { diaMes, haQuanto, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
 import { Ambientes } from './Ambientes';
@@ -26,8 +31,14 @@ const PAPEIS_CLIENTE: { valor: PapelCliente; rotulo: string; explica: string }[]
   { valor: 'leitura', rotulo: 'Só leitura', explica: 'acompanha, não responde' },
 ];
 
-/** Como o contrato é lido numa linha: formato manda no que faz sentido mostrar. */
-function comoCobra(s: ServicoContratado): string {
+/**
+ * Como o contrato é lido numa linha: formato manda no que faz sentido mostrar.
+ *
+ * Nulo quando quem está lendo não cuida do dinheiro — e aí a linha mostra o
+ * serviço, o responsável e o prazo, que é o que ela usa para trabalhar.
+ */
+function comoCobra(s: ServicoContratado): string | null {
+  if (s.valorCentavos === null) return null;
   if (s.formato === 'recorrente') {
     return s.diaVencimento ? `${reais(s.valorCentavos)} · todo dia ${s.diaVencimento}` : reais(s.valorCentavos);
   }
@@ -52,6 +63,10 @@ export function FichaCliente() {
   const [enviando, setEnviando] = useState(false);
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
   const [recado, setRecado] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<'ar' | 'apagar' | null>(null);
+  const { sessao } = useSessao();
+  const admin = souAdmin(sessao);
+  const dinheiro = veDinheiro(sessao);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -101,6 +116,21 @@ export function FichaCliente() {
     }
   }
 
+  /** Tirar do ar, devolver e apagar: as três do admin, com a mesma plumbing. */
+  async function mexerNoCliente(oQue: () => Promise<void>, feito: string) {
+    setErroAcesso(null);
+    setRecado(null);
+    try {
+      await oQue();
+      setRecado(feito);
+      setConfirmando(null);
+      await carregar();
+    } catch (x) {
+      setErroAcesso(x instanceof Error ? x.message : 'Não deu certo.');
+      setConfirmando(null);
+    }
+  }
+
   if (erro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!ficha) return <Carregando oQue="o cliente" />;
 
@@ -119,8 +149,90 @@ export function FichaCliente() {
               {ficha.cliente.slug} · {ficha.cliente.fusoHorario}
             </div>
           </div>
-          {!ficha.cliente.ativo && <Marca forte>cliente inativo</Marca>}
+          <div className="flex flex-wrap items-center gap-2">
+            {!ficha.cliente.ativo && <Marca forte>fora do ar</Marca>}
+            {admin && ficha.cliente.ativo && (
+              <Botao
+                variante="texto"
+                tamanho="pequeno"
+                onClick={() => setConfirmando(confirmando === 'ar' ? null : 'ar')}
+              >
+                Tirar do ar
+              </Botao>
+            )}
+            {admin && !ficha.cliente.ativo && (
+              <>
+                <Botao
+                  tamanho="pequeno"
+                  onClick={() =>
+                    void mexerNoCliente(
+                      () => reativarCliente(clienteId),
+                      `${ficha.cliente.nome} voltou. O contrato continua encerrado.`,
+                    )
+                  }
+                >
+                  Devolver
+                </Botao>
+                <Botao
+                  variante="texto"
+                  tamanho="pequeno"
+                  onClick={() => setConfirmando(confirmando === 'apagar' ? null : 'apagar')}
+                >
+                  Apagar
+                </Botao>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Duas ações que doem: confirmar é no lugar, dizendo o que acontece —
+            não num "tem certeza?" que ninguém lê. */}
+        {confirmando === 'ar' && (
+          <div className="bloco mt-4 max-w-xl p-4">
+            <p className="text-[14.5px] font-medium">
+              O contrato encerra e o portal de {ficha.cliente.nome} fecha. O histórico fica.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Botao
+                variante="primario"
+                tamanho="pequeno"
+                onClick={() =>
+                  void mexerNoCliente(
+                    () => desativarCliente(clienteId),
+                    `${ficha.cliente.nome} saiu do ar.`,
+                  )
+                }
+              >
+                Tirar do ar
+              </Botao>
+              <Botao tamanho="pequeno" onClick={() => setConfirmando(null)}>
+                Deixar como está
+              </Botao>
+            </div>
+          </div>
+        )}
+        {confirmando === 'apagar' && (
+          <div className="bloco brilho-p mt-4 max-w-xl bg-alerta-fundo p-4">
+            <p className="text-[14.5px] font-medium">
+              Apagar some com {ficha.cliente.nome} para sempre. Só funciona se não houver
+              nada registrado nele.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Botao
+                variante="primario"
+                tamanho="pequeno"
+                onClick={() =>
+                  void mexerNoCliente(() => removerCliente(clienteId), 'Cliente apagado.')
+                }
+              >
+                Apagar
+              </Botao>
+              <Botao tamanho="pequeno" onClick={() => setConfirmando(null)}>
+                Cancelar
+              </Botao>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* As abas são os módulos que o contrato dele liga. Módulo não contratado
@@ -139,7 +251,9 @@ export function FichaCliente() {
         >
           Visão geral
         </NavLink>
-        {ficha.modulos.map((m) => (
+        {ficha.modulos
+          .filter((m) => m !== 'financeiro' || dinheiro)
+          .map((m) => (
           <NavLink
             key={m}
             to={`/clientes/${clienteId}/${m}`}
@@ -178,10 +292,20 @@ export function FichaCliente() {
         />
       ) : (
       <>
-      <div className="escada mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div
+        className={
+          'escada mt-7 grid grid-cols-2 gap-4 ' +
+          (ficha.mensalCentavos === null ? 'xl:grid-cols-2' : 'xl:grid-cols-4')
+        }
+      >
         <Bloco rotulo="Serviços ativos" destaque={String(ativos.length)} />
-        <Bloco rotulo="Por mês" destaque={reais(ficha.mensalCentavos)} />
-        <Bloco rotulo="Em projeto" destaque={reais(ficha.unicoCentavos)} />
+        {/* Os dois do dinheiro só existem para quem cuida dele. */}
+        {ficha.mensalCentavos !== null && (
+          <Bloco rotulo="Por mês" destaque={reais(ficha.mensalCentavos)} />
+        )}
+        {ficha.unicoCentavos !== null && (
+          <Bloco rotulo="Em projeto" destaque={reais(ficha.unicoCentavos)} />
+        )}
         <Bloco
           rotulo="Precisa de você"
           destaque={String(ficha.pendencias.length)}
@@ -205,7 +329,7 @@ export function FichaCliente() {
                   <span className="w-44 shrink-0 font-bold uppercase">{s.servicoNome}</span>
                   <Marca>{FORMATO[s.formato]}</Marca>
                   {s.status !== 'ativo' && <Marca forte>{STATUS_SERVICO[s.status]}</Marca>}
-                  <span className="numeros min-w-48 flex-1 text-[13px]">{comoCobra(s)}</span>
+                  <span className="numeros min-w-48 flex-1 text-[13px]">{comoCobra(s) ?? ''}</span>
                   <span className="rotulo w-28 shrink-0">{s.responsavelNome ?? 'sem responsável'}</span>
                   {s.entregaEm && <span className="rotulo w-24 shrink-0">entrega {diaMes(s.entregaEm)}</span>}
                 </li>

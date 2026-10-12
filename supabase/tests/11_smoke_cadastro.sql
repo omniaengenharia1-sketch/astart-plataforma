@@ -93,16 +93,14 @@ begin
   perform public.afirma(
     (select count(*) from public.cliente_servicos cs where cs.cliente_id = v_id) = 2,
     'os dois servicos entraram');
+  -- Desde a 0039 a operacao GRAVA o valor no cadastro e nao le de volta: a
+  -- coluna e fechada e `contrato_valores` confere o papel. Guarda o id para o
+  -- bloco do admin conferir que o 3 chegou mesmo no banco.
+  perform set_config('teste.cliente', v_id::text, false);
   perform public.afirma(
-    (select cs.parcelas from public.cliente_servicos cs
-      join public.servicos s on s.id = cs.servico_id
-     where cs.cliente_id = v_id and s.chave = 'website') = 3,
-    'o site em 3 parcelas');
-  perform public.afirma(
-    (select cs.dia_vencimento from public.cliente_servicos cs
-      join public.servicos s on s.id = cs.servico_id
-     where cs.cliente_id = v_id and s.chave = 'gestao_digital') = 10,
-    'a gestao vence dia 10');
+    not exists (select 1 from public.contrato_valores(v_id)),
+    'quem cadastrou e operacao: grava o valor e nao le de volta');
+
 
   -- A matriz, aplicada.
   perform public.afirma(public.cliente_tem_modulo(v_id, 'grid'),
@@ -123,6 +121,29 @@ begin
       where cs.cliente_id = v_id) = 11,
     'os 11 entregaveis do site nasceram junto com o contrato');
 end $$;
+
+-- O valor foi gravado de verdade — quem confere e quem pode ver.
+set "teste.uid" = '10000000-0000-0000-0000-000000000001';   -- Viviane, admin
+do $$
+declare v_id uuid := current_setting('teste.cliente', true)::uuid;
+begin
+  perform public.afirma(
+    (select v.parcelas from public.contrato_valores(v_id) v
+      join public.cliente_servicos cs on cs.id = v.cliente_servico_id
+      join public.servicos s on s.id = cs.servico_id
+     where s.chave = 'website') = 3,
+    'o site em 3 parcelas, lido por quem cuida do dinheiro');
+  perform public.afirma(
+    (select mensal_centavos from public.contrato_totais(v_id)) = 280000,
+    'e o mensal do contrato novo');
+  perform public.afirma(
+    (select v.dia_vencimento from public.contrato_valores(v_id) v
+      join public.cliente_servicos cs on cs.id = v.cliente_servico_id
+      join public.servicos s on s.id = cs.servico_id
+     where s.chave = 'gestao_digital') = 10,
+    'e a gestao vence dia 10');
+end $$;
+set "teste.uid" = '10000000-0000-0000-0000-000000000002';   -- volta para a operacao
 
 -- ---------------------------------------------------------------------------
 -- 3. o que a funcao recusa

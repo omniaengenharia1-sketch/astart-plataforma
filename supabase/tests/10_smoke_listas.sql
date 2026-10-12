@@ -77,10 +77,12 @@ begin
     'a Aurora aparece com os dois servicos contratados');
   perform public.afirma(a->'responsaveis' = '["Layana"]'::jsonb,
     'com a responsavel pelos contratos');
-  perform public.afirma((a->>'mensalCentavos')::bigint = 280000,
-    'mensal soma so o recorrente');
-  perform public.afirma((a->>'unicoCentavos')::bigint = 1200000,
-    'e o projeto entra no valor unico, nao no mensal');
+  -- Layana e operacao: desde a 0039 ela ve o serviço e a responsavel, nao o
+  -- valor. Nulo, nao zero — zero diria que a Aurora nao paga nada.
+  perform public.afirma(a->'mensalCentavos' = 'null'::jsonb,
+    'operacao nao ve o valor do contrato na lista');
+  perform public.afirma(a->'unicoCentavos' = 'null'::jsonb,
+    'nem o do projeto');
   perform public.afirma((a->>'esperandoCliente')::int = 2,
     'dois itens esperando a Aurora');
   perform public.afirma((a->>'precisaDeVoce')::int = 0,
@@ -122,12 +124,35 @@ begin
   perform public.afirma(f->'contatos'->0->>'userId' = '20000000-0000-0000-0000-00000000000a',
     'com o user_id, que e o que a tela precisa para tirar o acesso dele');
   perform public.afirma(jsonb_array_length(f->'pendencias') = 0, 'sem pendencia ainda');
-  perform public.afirma((f->>'mensalCentavos')::bigint = 280000, 'o mensal bate');
+  -- A ficha aberta pela operacao: o contrato aparece, o preco nao. Ela precisa
+  -- do servico, do responsavel e do prazo para trabalhar; do valor, nao.
+  perform public.afirma(f->'mensalCentavos' = 'null'::jsonb,
+    'a operacao abre a ficha sem o mensal');
+  perform public.afirma(
+    f->'servicos'->0->'valorCentavos' = 'null'::jsonb,
+    'e sem o valor de cada servico');
+  perform public.afirma(f->'servicos'->0->>'servicoNome' is not null
+                    and f->'servicos'->0->>'formato' is not null,
+    'mas com o nome do servico e o formato, que e o que ela usa');
 end $$;
 
 -- ---------------------------------------------------------------------------
 -- 4. o cliente nao recebe tela de equipe, nem ficha de vizinho
 -- ---------------------------------------------------------------------------
+-- A mesma lista, nos olhos de quem cuida do dinheiro.
+set "teste.uid" = '10000000-0000-0000-0000-000000000001';   -- Viviane, admin
+do $$
+declare
+  l jsonb := public.lista_clientes();
+  a jsonb;
+begin
+  select x into a from jsonb_array_elements(l) x where x->>'slug' = 'aurora';
+  perform public.afirma((a->>'mensalCentavos')::bigint = 280000,
+    'admin ve o mensal, e ele soma so o recorrente');
+  perform public.afirma((a->>'unicoCentavos')::bigint = 1200000,
+    'e o projeto entra no valor unico, nao no mensal');
+end $$;
+
 set "teste.uid" = '20000000-0000-0000-0000-00000000000a';   -- Bruna, da Aurora
 
 do $$ begin

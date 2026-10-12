@@ -6,8 +6,12 @@ import { diaMes, porExtenso, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO } from '../rotulos';
 import type { FichaCliente as Ficha, ServicoContratado } from '../dados/tipos';
 
-/** Como aquele serviço é cobrado, numa linha. */
-function comoCobra(s: ServicoContratado): string {
+/**
+ * Como aquele serviço é cobrado, numa linha. Nulo quando quem lê não cuida do
+ * dinheiro: o cliente vê o preço do contrato dele, a equipe de operação não.
+ */
+function comoCobra(s: ServicoContratado): string | null {
+  if (s.valorCentavos === null) return null;
   if (s.formato === 'recorrente') {
     return s.diaVencimento
       ? `${reais(s.valorCentavos)} por mês · vence todo dia ${s.diaVencimento}`
@@ -49,10 +53,19 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
 
   return (
     <div className="mt-7">
-      <div className="escada grid grid-cols-2 gap-4 xl:grid-cols-3">
+      <div
+        className={
+          'escada grid grid-cols-2 gap-4 ' +
+          (ficha.mensalCentavos === null ? '' : 'xl:grid-cols-3')
+        }
+      >
         <Bloco rotulo="Serviços ativos" destaque={String(ativos.length)} />
-        <Bloco rotulo="Por mês" destaque={reais(ficha.mensalCentavos)} />
-        <Bloco rotulo="Em projeto" destaque={reais(ficha.unicoCentavos)} />
+        {ficha.mensalCentavos !== null && (
+          <Bloco rotulo="Por mês" destaque={reais(ficha.mensalCentavos)} />
+        )}
+        {ficha.unicoCentavos !== null && (
+          <Bloco rotulo="Em projeto" destaque={reais(ficha.unicoCentavos)} />
+        )}
       </div>
 
       {ficha.servicos.length === 0 ? (
@@ -75,7 +88,9 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
                         </span>
                         <Marca>{FORMATO[s.formato]}</Marca>
                       </div>
-                      <div className="mt-2 text-[14px] font-medium">{comoCobra(s)}</div>
+                      {comoCobra(s) && (
+                        <div className="mt-2 text-[14px] font-medium">{comoCobra(s)}</div>
+                      )}
                     </div>
                     {s.entregaEm && (
                       <div className="text-right">
@@ -105,7 +120,7 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
                       <span className="w-44 shrink-0 font-bold uppercase">{s.servicoNome}</span>
                       <Marca>{STATUS_SERVICO[s.status]}</Marca>
                       <span className="numeros min-w-48 flex-1 text-[13px]">
-                        {reais(s.valorCentavos)}
+                        {s.valorCentavos === null ? '' : reais(s.valorCentavos)}
                       </span>
                     </li>
                   ))}

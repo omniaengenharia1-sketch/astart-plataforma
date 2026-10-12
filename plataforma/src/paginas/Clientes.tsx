@@ -7,6 +7,8 @@ import { Tabela } from '../componentes/Tabela';
 import type { Coluna } from '../componentes/Tabela';
 import { listaClientes } from '../dados/api';
 import { reais, valor } from '../formato';
+import { veDinheiro } from '../permissao';
+import { useSessao } from '../sessao';
 import type { ClienteNaLista } from '../dados/tipos';
 
 /**
@@ -31,6 +33,8 @@ export function Clientes() {
   const [linhas, setLinhas] = useState<ClienteNaLista[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const navegar = useNavigate();
+  const { sessao } = useSessao();
+  const dinheiro = veDinheiro(sessao);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -88,34 +92,41 @@ export function Clientes() {
         render: (c) => (c.responsaveis.length ? c.responsaveis.join(', ') : '—'),
       },
       { chave: 'bola', titulo: 'De quem é a bola', render: (c) => <Bola c={c} /> },
-      {
-        chave: 'mensal',
-        titulo: 'Por mês',
-        render: (c) =>
-          c.mensalCentavos > 0 ? (
-            <span className="numeros">{valor(c.mensalCentavos)}</span>
-          ) : (
-            <span className="rotulo">—</span>
-          ),
-      },
-      {
-        chave: 'unico',
-        titulo: 'Projeto',
-        render: (c) =>
-          c.unicoCentavos > 0 ? (
-            <span className="numeros">{valor(c.unicoCentavos)}</span>
-          ) : (
-            <span className="rotulo">—</span>
-          ),
-      },
+      // As duas colunas do dinheiro só entram se o banco mandou número. Para
+      // quem não cuida dele, `lista_clientes()` devolve nulo e a coluna
+      // simplesmente não existe — não fica um "—" sugerindo que é zero.
+      ...(dinheiro
+        ? [
+            {
+              chave: 'mensal',
+              titulo: 'Por mês',
+              render: (c: ClienteNaLista) =>
+                c.mensalCentavos ? (
+                  <span className="numeros">{valor(c.mensalCentavos)}</span>
+                ) : (
+                  <span className="rotulo">—</span>
+                ),
+            },
+            {
+              chave: 'unico',
+              titulo: 'Projeto',
+              render: (c: ClienteNaLista) =>
+                c.unicoCentavos ? (
+                  <span className="numeros">{valor(c.unicoCentavos)}</span>
+                ) : (
+                  <span className="rotulo">—</span>
+                ),
+            },
+          ]
+        : []),
     ],
-    [],
+    [dinheiro],
   );
 
   if (erro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!linhas) return <Carregando oQue="os clientes" />;
 
-  const mensal = linhas.reduce((a, c) => a + c.mensalCentavos, 0);
+  const mensal = linhas.reduce((a, c) => a + (c.mensalCentavos ?? 0), 0);
   const ajustes = linhas.reduce((a, c) => a + c.precisaDeVoce, 0);
   const espera = linhas.reduce((a, c) => a + c.esperandoCliente, 0);
 
@@ -143,9 +154,15 @@ export function Clientes() {
         />
       ) : (
         <>
-          <div className="escada mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <div
+            className={
+              'escada mt-7 grid grid-cols-2 gap-4 ' +
+              (dinheiro ? 'xl:grid-cols-4' : 'xl:grid-cols-3')
+            }
+          >
             <Bloco rotulo="Clientes ativos" destaque={String(linhas.length)} />
-            <Bloco rotulo="Recorrente por mês" destaque={reais(mensal)} />
+            {/* O total da carteira é cartão de quem cobra. */}
+            {dinheiro && <Bloco rotulo="Recorrente por mês" destaque={reais(mensal)} />}
             <Bloco
               rotulo="Ajustes na sua mão"
               destaque={String(ajustes)}
@@ -181,12 +198,14 @@ export function Clientes() {
                       c.servicos.map((s) => <Marca key={s}>{s}</Marca>)
                     )}
                   </div>
-                  <div className="numeros mt-2 text-[12.5px] text-tinta-2">
-                    {c.mensalCentavos > 0 && <>{valor(c.mensalCentavos)}/mês</>}
-                    {c.mensalCentavos > 0 && c.unicoCentavos > 0 && ' · '}
-                    {c.unicoCentavos > 0 && <>{valor(c.unicoCentavos)} em projeto</>}
-                    {c.mensalCentavos === 0 && c.unicoCentavos === 0 && '—'}
-                  </div>
+                  {dinheiro && (
+                    <div className="numeros mt-2 text-[12.5px] text-tinta-2">
+                      {!!c.mensalCentavos && <>{valor(c.mensalCentavos)}/mês</>}
+                      {!!c.mensalCentavos && !!c.unicoCentavos && ' · '}
+                      {!!c.unicoCentavos && <>{valor(c.unicoCentavos)} em projeto</>}
+                      {!c.mensalCentavos && !c.unicoCentavos && '—'}
+                    </div>
+                  )}
                   <div className="rotulo mt-1.5">
                     {c.responsaveis.length ? c.responsaveis.join(', ') : 'sem responsável'}
                   </div>

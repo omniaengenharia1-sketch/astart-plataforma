@@ -10,10 +10,12 @@
 // =============================================================================
 import { ligado, sb } from './supabase';
 import {
-  PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  abrirChamadoExemplo, agendaExemplo, ambientesExemplo,
+  SESSAO_CLIENTE, SESSAO_DONO, SESSAO_EQUIPE,
+  abrirChamadoExemplo, agendaExemplo, ambientesExemplo, definirPapelExemplo,
+  painelEquipeExemplo,
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
-  criarGaleriaExemplo, criarLinkExemplo, criarPecaExemplo, financeiroDoClienteExemplo,
+  criarGaleriaExemplo, criarLinkExemplo, criarPecaExemplo, desativarClienteExemplo,
+  financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
   revogarLinkExemplo,
@@ -25,7 +27,7 @@ import type {
   Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao,
   EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente, FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
-  PainelCliente, PainelEquipe, PainelFinanceiro, PecaNaFila, PedidoDeConvite, Perfil,
+  PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
   RelatorioDeCampanha, ResumoNps, ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
 } from './tipos';
 
@@ -43,13 +45,20 @@ export class FalhaDados extends Error {}
  * avaliando lia como "a plataforma me deslogou". Com Supabase ligado quem
  * guarda a sessao e o proprio supabase-js.
  */
-type Persona = 'equipe' | 'cliente';
+type Persona = 'dono' | 'equipe' | 'cliente';
 const CHAVE_PERSONA = 'astart.exemplo.persona';
+
+/** Qual papel cada persona de exemplo tem, para o mock cortar o dinheiro igual. */
+const PAPEL_DA_PERSONA: Record<Persona, 'admin' | 'operacao' | 'cliente'> = {
+  dono: 'admin',
+  equipe: 'operacao',
+  cliente: 'cliente',
+};
 
 function lerPersona(): Persona | null {
   try {
     const v = sessionStorage.getItem(CHAVE_PERSONA);
-    return v === 'equipe' || v === 'cliente' ? v : null;
+    return v === 'dono' || v === 'equipe' || v === 'cliente' ? v : null;
   } catch {
     // Navegador com armazenamento bloqueado: a plataforma continua, so nao
     // lembra a persona entre recargas.
@@ -67,6 +76,13 @@ function gravarPersona(v: Persona | null): void {
 }
 
 let personaExemplo: Persona | null = lerPersona();
+definirPapelExemplo(personaExemplo ? PAPEL_DA_PERSONA[personaExemplo] : null);
+
+function usarPersona(p: Persona | null): void {
+  personaExemplo = p;
+  gravarPersona(p);
+  definirPapelExemplo(p ? PAPEL_DA_PERSONA[p] : null);
+}
 
 function exija<T>(valor: T | null | undefined, oQue: string): T {
   if (valor === null || valor === undefined) {
@@ -122,6 +138,7 @@ function lerSessao(bruta: unknown): Sessao {
 export async function sessaoAtual(): Promise<Sessao> {
   if (!sb) {
     if (personaExemplo === null) return { tipo: 'anonimo' };
+    if (personaExemplo === 'dono') return SESSAO_DONO;
     return personaExemplo === 'equipe' ? SESSAO_EQUIPE : SESSAO_CLIENTE;
   }
 
@@ -135,8 +152,15 @@ export async function sessaoAtual(): Promise<Sessao> {
 
 export async function entrar(email: string, senha: string): Promise<void> {
   if (!sb) {
-    personaExemplo = email.includes('@astartstudio') ? 'equipe' : 'cliente';
-    gravarPersona(personaExemplo);
+    // Em exemplo o e-mail escolhe a persona. A Layana e operacao de proposito:
+    // e o unico jeito de a demonstracao mostrar o que ela NAO ve.
+    usarPersona(
+      !email.includes('@astartstudio')
+        ? 'cliente'
+        : email.toLowerCase().startsWith('layana')
+          ? 'equipe'
+          : 'dono',
+    );
     return;
   }
   const { error } = await sb.auth.signInWithPassword({ email, password: senha });
@@ -150,18 +174,16 @@ export async function entrar(email: string, senha: string): Promise<void> {
 }
 
 export async function entrarComoExemplo(persona: Persona): Promise<void> {
-  personaExemplo = persona;
-  gravarPersona(persona);
+  usarPersona(persona);
 }
 
 export async function sair(): Promise<void> {
-  personaExemplo = null;
-  gravarPersona(null);
+  usarPersona(null);
   if (sb) await sb.auth.signOut();
 }
 
 export async function painelEquipe(): Promise<PainelEquipe> {
-  if (!sb) return PAINEL_EQUIPE;
+  if (!sb) return painelEquipeExemplo();
   const { data, error } = await sb.rpc('painel_equipe');
   if (error) throw new FalhaDados(`Não consegui montar o painel: ${error.message}`);
   return exija(data as PainelEquipe | null, 'O painel da equipe');
@@ -866,5 +888,71 @@ export async function abrirChamado(
     p_descricao: descricao?.trim() || null,
     p_prioridade: prioridade,
   });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// O que só o admin faz
+// ---------------------------------------------------------------------------
+
+/**
+ * Troca o papel de alguém da equipe. A função do banco recusa duas coisas que
+ * a tela não deve nem tentar: quem não é admin mudando papel, e o último admin
+ * se rebaixando — isso trancaria a plataforma para todo mundo.
+ */
+export async function mudarPapel(userId: string, papel: PapelEquipe): Promise<void> {
+  if (!sb) {
+    try {
+      mudarPapelExemplo(userId, papel);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui mudar o papel.');
+    }
+  }
+  const { error } = await sb.rpc('mudar_papel', { p_user_id: userId, p_papel: papel });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/** Tira o cliente do ar: encerra o contrato e fecha o portal dele. Não apaga. */
+export async function desativarCliente(clienteId: string): Promise<void> {
+  if (!sb) {
+    try {
+      desativarClienteExemplo(clienteId);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui tirar do ar.');
+    }
+  }
+  const { error } = await sb.rpc('desativar_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function reativarCliente(clienteId: string): Promise<void> {
+  if (!sb) {
+    try {
+      reativarClienteExemplo(clienteId);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui reativar.');
+    }
+  }
+  const { error } = await sb.rpc('reativar_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * Apaga de verdade. Existe para o cliente cadastrado errado: com qualquer
+ * histórico, a função do banco recusa e manda tirar do ar.
+ */
+export async function removerCliente(clienteId: string): Promise<void> {
+  if (!sb) {
+    try {
+      removerClienteExemplo(clienteId);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui remover.');
+    }
+  }
+  const { error } = await sb.rpc('remover_cliente', { p_cliente: clienteId });
   if (error) throw new FalhaDados(error.message);
 }

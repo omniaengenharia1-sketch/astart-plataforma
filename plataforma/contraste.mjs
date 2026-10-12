@@ -129,7 +129,7 @@ const MEDIDA = `(() => {
 })()`;
 
 const TELAS = [
-  ['equipe', 'layana@astartstudio.com.br',
+  ['equipe', 'viviane@astartstudio.com.br',
     ['Clientes', 'Aprovações', 'Agenda', 'Fila', 'Financeiro', 'Comercial', 'Feedbacks', 'Ajustes']],
   ['cliente', 'bruna@mormarcas.com.br',
     ['Para aprovar', 'Meu projeto', 'Grid', 'Financeiro', 'Contrato', 'Meu site', 'Feedback']],

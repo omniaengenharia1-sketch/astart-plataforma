@@ -45,7 +45,18 @@ export function InicioEquipe() {
         <Bloco rotulo="Precisa de você" destaque={String(n)} alerta={n > 0} sombra={n > 0} />
         <Bloco rotulo="Sai hoje" destaque={String(painel.saiHoje.length)} />
         <Bloco rotulo="Esperando o cliente" destaque={String(painel.esperandoCliente)} />
-        <Bloco rotulo="Vencido" destaque={reais(painel.vencidoCentavos)} />
+        {/* Vencido é cartão de quem cobra. Para quem não cuida do dinheiro, o
+            lugar mostra o que ela de fato precisa olhar: a semana. */}
+        {painel.vencidoCentavos !== null ? (
+          <Bloco
+            rotulo="Vencido"
+            destaque={reais(painel.vencidoCentavos)}
+            alerta={painel.vencidoCentavos > 0}
+            sombra={painel.vencidoCentavos > 0}
+          />
+        ) : (
+          <Bloco rotulo="Nesta semana" destaque={String(painel.semana.length)} />
+        )}
       </div>
 
       <div className="mt-9 grid items-start gap-9 lg:grid-cols-[1fr_360px]">

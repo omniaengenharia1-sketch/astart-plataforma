@@ -50,6 +50,27 @@ export function Falhou({
   );
 }
 
+/**
+ * Quem digitou o endereço de uma área que não é dele. Diz o que é, e para quem
+ * falar — não "acesso negado", que não ajuda ninguém a resolver.
+ */
+export function NaoEAqui({ oQue }: { oQue: string }) {
+  return (
+    <div className="px-5 pb-16 sm:px-8 lg:px-12">
+      <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">{oQue}</h1>
+      <div className="bloco mt-7 max-w-xl p-5 sm:p-6">
+        <div className="rotulo">área restrita</div>
+        <p className="mt-2 text-[15px] font-medium">
+          Esta parte é de quem cuida do dinheiro da agência.
+        </p>
+        <p className="mt-2 text-tinta-2">
+          Se você precisa entrar aqui, fale com quem administra a plataforma.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /** O primeiro dia de cada tela: o que falta, e o botão que resolve. */
 export function Vazio({ titulo, explica, acao }: { titulo: string; explica?: string; acao?: ReactNode }) {
   return (

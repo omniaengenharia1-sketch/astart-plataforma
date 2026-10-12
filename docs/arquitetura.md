@@ -241,6 +241,34 @@ ajuste de uma peça.
 9. Migrations versionadas. Nada de mexer no schema pelo painel.
 10. Interface em português do Brasil.
 
+## 10b. Quem vê o quê
+
+Papel decide, e decide no banco. O portão do dinheiro é `usuario_financeiro()`
+— papel `admin` **ou** `financeiro`.
+
+| | direção | operação | financeiro | só leitura | cliente |
+|---|---|---|---|---|---|
+| Financeiro (agência) | ✓ | — | ✓ | — | — |
+| Comercial / funil | ✓ | — | ✓ | — | — |
+| Valor do contrato | ✓ | — | ✓ | — | o próprio |
+| Cobrança do cliente | ✓ | — | ✓ | — | a própria |
+| Clientes, aprovações, agenda, fila, feedbacks | ✓ | ✓ | ✓ | lê | — |
+| Convidar, mudar papel, tirar cliente do ar | ✓ | — | — | — | — |
+
+Três coisas que isso quer dizer na prática:
+
+1. **A operação vê o contrato sem o preço.** Serviço, formato, responsável e
+   prazo de entrega ficam; valor, dia de vencimento e parcelas saem. Ela precisa
+   dos primeiros para trabalhar e não precisa dos últimos para nada.
+2. **O NPS continua sendo da equipe inteira.** Quem atende precisa saber que o
+   cliente reclamou. O funil, não — ele carrega o valor de cada proposta.
+3. **O último admin não se rebaixa.** `mudar_papel()` recusa, porque isso
+   trancaria a plataforma para todo mundo e ninguém de dentro conseguiria abrir.
+
+No front isso vive em `src/permissao.ts`, em duas funções, e serve apenas para a
+tela não OFERECER o que o banco vai recusar — menu que abre numa recusa é pior
+que menu que não tem o item. Quando as duas discordarem, o banco está certo.
+
 ## 11. Stack
 
 | Camada | O quê |
@@ -302,6 +330,7 @@ E os módulos:
 | `0036` | as nove leituras que faltavam: financeiro, fila, agenda, grid, NPS, funil, campanhas, ambientes |
 | `0037` | as quatro escritas que faltavam: responder NPS, mover lead, abrir chamado |
 | `0038` | o cliente lê a mídia do próprio post — sem isso o Grid do portal era um grid vazio |
+| `0039` | o dinheiro é só de quem cuida dele, o comercial fecha junto, e o admin ganha mudar papel e tirar cliente do ar |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -345,7 +374,34 @@ abaixo passou batido por toda a auditoria).
    direito do admin também. O teste `15_escalada_de_privilegio.sql` tenta a
    promoção e mais cinco caminhos, e falha se a `0032` sair.
 
-A quinta: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
+A quinta: **zero que mente é pior que porta fechada.** O RLS de `lancamentos` já
+era de admin e financeiro, mas `painel_financeiro()` abria para qualquer pessoa
+ativa: o RLS filtrava as linhas em silêncio e a tela mostrava R$ 0,00 em tudo.
+Operação abria o Financeiro e lia "a agência não faturou nada". A `0039` troca
+o portão da função, e agora ela devolve `null` — a aba deixa de existir em vez
+de abrir num painel de zeros. Vale para o cartão "vencido" do Início e para a
+coluna "por mês" da lista de clientes: nulo é *não te mostro*, zero é *é zero*,
+e a tela esconde o campo em vez de afirmar o segundo.
+
+A sexta: **RLS é por linha, e às vezes o segredo é uma coluna.** A operação
+PRECISA da linha de `cliente_servicos` — nome do serviço, responsável, prazo de
+entrega — e não pode ver três colunas dela. Nenhuma política resolve isso, e
+esconder só na função de leitura seria teatro: `GET /rest/v1/cliente_servicos
+?select=valor_centavos` continuaria aberto para qualquer login. A `0039` corta
+no privilégio de coluna (`revoke select` + `grant select (as outras)`) e o
+dinheiro passa a sair de `contrato_valores()` / `contrato_totais()`, SECURITY
+DEFINER, que conferem o papel. Isso tira o acesso direto do admin também, de
+propósito — e é justamente o motivo de a `0032` **não** ter usado privilégio de
+coluna para `perfis.papel`: lá não havia função no caminho, aqui há.
+
+A sétima: **`for all` inclui `delete`.** A política de `clientes` da `0006` era
+`for all using (usuario_edita())`, então qualquer pessoa de operação podia
+apagar um cliente — e o cascade levaria posts, cobranças, galerias e aprovações
+com ele. A `0039` separa em três políticas e deixa delete só para admin. Mesmo
+ele passa por `remover_cliente()`, que recusa quem tem histórico e manda usar
+`desativar_cliente()`.
+
+A oitava: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
 antes do cast.** A `0035` e a `0038` leem o dono do arquivo a partir do caminho,
 e as duas funções rodam dentro do `using` da política do bucket. Um nome de
 arquivo fora da convenção fazendo `::uuid` estourar não derrubaria só aquele
