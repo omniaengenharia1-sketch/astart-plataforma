@@ -9,13 +9,15 @@
 // =============================================================================
 import type {
   Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
-  ConviteAberto, EntregavelNoProjeto, EquipeEConvites, FichaCliente, FormatoContrato,
+  Album, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, FichaCliente, FormatoContrato,
+  GaleriaNaLista, ItemGaleria,
   ItemNaFila, MesDeConteudo, PainelCliente, PainelEquipe, PecaNoMes, Perfil,
   PedidoDeConvite, PessoaDaEquipe, ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, StatusPublicacao, TipoPeca,
 } from './tipos';
 
 import { sluguificar } from '../formato';
+import { publico } from '../publico';
 
 const hoje = new Date().toISOString().slice(0, 10);
 const emDias = (n: number) => {
@@ -881,4 +883,193 @@ export function tirarAcessoDoClienteExemplo(email: string, clienteId: string): v
   const c = CLIENTES.find((x) => x.cliente.id === clienteId);
   const contato = c?.contatos.find((x) => x.email === email);
   if (contato) contato.ativo = false;
+}
+
+// ---------------------------------------------------------------------------
+// Galerias de exemplo
+//
+// As fotos são campos de cor gerados para este repositório — nossas, leves, e
+// combinam com o vidro. Em modo exemplo o "upload" não sai do navegador: o
+// arquivo vira um object URL e entra na grade, para o fluxo inteiro poder ser
+// percorrido antes de existir Supabase.
+// ---------------------------------------------------------------------------
+interface GaleriaExemplo extends GaleriaNaLista {
+  clienteId: string;
+  itens: ItemGaleria[];
+}
+
+const foto = (n: number, nome: string, bytes: number): ItemGaleria => ({
+  id: `g-foto-${n}`,
+  tipo: 'foto',
+  nome,
+  miniatura: publico(`exemplo/mini-${String(n).padStart(2, '0')}.jpg`),
+  poster: null,
+  largura: 6000,
+  altura: 4000,
+  duracao: null,
+  bytes,
+});
+
+const ITENS_PADARIA: ItemGaleria[] = [
+  foto(1, 'ASTART_padaria_0001.jpg', 8_412_000),
+  foto(2, 'ASTART_padaria_0002.jpg', 7_980_000),
+  foto(3, 'ASTART_padaria_0003.jpg', 9_104_000),
+  foto(4, 'ASTART_padaria_0004.jpg', 8_221_000),
+  foto(5, 'ASTART_padaria_0005.jpg', 7_640_000),
+  foto(6, 'ASTART_padaria_0006.jpg', 8_903_000),
+  {
+    id: 'g-video-1',
+    tipo: 'video',
+    nome: 'ASTART_padaria_makingof.mp4',
+    miniatura: publico('exemplo/mini-07.jpg'),
+    poster: publico('exemplo/foto-07.jpg'),
+    largura: 3840,
+    altura: 2160,
+    duracao: 94.5,
+    bytes: 1_240_000_000,
+  },
+  foto(8, 'ASTART_padaria_0008.jpg', 8_060_000),
+];
+
+const GALERIAS: GaleriaExemplo[] = [
+  {
+    id: 'gal-1',
+    clienteId: 'exemplo-chopp',
+    titulo: 'Captação na fábrica — outubro',
+    sessaoId: 'ses-1',
+    quando: emDias(-6),
+    local: 'Fábrica, Bairro Industrial',
+    provedor: 'storage',
+    url: null,
+    permiteDownload: true,
+    publicadaEm: emDias(-5),
+    capa: publico('exemplo/mini-01.jpg'),
+    fotos: 7,
+    videos: 1,
+    bytes: ITENS_PADARIA.reduce((a, i) => a + (i.bytes ?? 0), 0),
+    favoritos: 2,
+    baixou: true,
+    links: [{ id: 'lk-1', criadoEm: emDias(-5), acessos: 6, ultimoAcessoEm: emDias(-1) }],
+    itens: ITENS_PADARIA,
+  },
+  {
+    id: 'gal-2',
+    clienteId: 'exemplo-mor',
+    titulo: 'Ensaio de produto — setembro',
+    sessaoId: 'ses-2',
+    quando: emDias(-38),
+    local: 'Estúdio Astart',
+    provedor: 'storage',
+    url: null,
+    permiteDownload: true,
+    publicadaEm: emDias(-36),
+    capa: publico('exemplo/mini-04.jpg'),
+    fotos: 4,
+    videos: 0,
+    bytes: 32_000_000,
+    favoritos: 0,
+    baixou: false,
+    links: [],
+    itens: [
+      foto(4, 'ASTART_mor_0001.jpg', 8_000_000),
+      foto(5, 'ASTART_mor_0002.jpg', 8_000_000),
+      foto(6, 'ASTART_mor_0003.jpg', 8_000_000),
+      foto(8, 'ASTART_mor_0004.jpg', 8_000_000),
+    ],
+  },
+];
+
+const FAVORITOS = new Set<string>(['g-foto-2', 'g-foto-5']);
+
+export function galeriasExemplo(clienteId: string): GaleriaNaLista[] {
+  return GALERIAS.filter((g) => g.clienteId === clienteId).map((g) => ({
+    ...g,
+    fotos: g.itens.filter((i) => i.tipo === 'foto').length,
+    videos: g.itens.filter((i) => i.tipo === 'video').length,
+    bytes: g.itens.reduce((a, i) => a + (i.bytes ?? 0), 0),
+    favoritos: g.itens.filter((i) => FAVORITOS.has(i.id)).length,
+  }));
+}
+
+export function albumExemplo(chave: string): Album {
+  const g = GALERIAS.find((x) => x.id === chave || x.links.some((l) => l.id === chave))
+    ?? GALERIAS[0]!;
+  return {
+    titulo: g.titulo,
+    recado: 'Separe as suas preferidas marcando o coração. O download sai em alta.',
+    cliente: CLIENTES.find((c) => c.cliente.id === g.clienteId)?.cliente.nome ?? null,
+    quando: g.quando,
+    permiteDownload: g.permiteDownload,
+    favoritos: g.itens.filter((i) => FAVORITOS.has(i.id)).map((i) => i.id),
+    itens: g.itens,
+  };
+}
+
+export function favoritarExemplo(item: string, ligadoAgora: boolean): void {
+  if (ligadoAgora) FAVORITOS.add(item);
+  else FAVORITOS.delete(item);
+}
+
+export function urlsExemplo(item?: string): { id: string; nome: string; bytes: number | null; url: string }[] {
+  const itens = GALERIAS.flatMap((g) => g.itens);
+  const alvo = item ? itens.filter((i) => i.id === item) : (GALERIAS[0]?.itens ?? []);
+  return alvo.map((i) => ({
+    id: i.id,
+    nome: i.nome,
+    bytes: i.bytes,
+    // Em exemplo o "alta resolução" é a própria foto de exemplo.
+    url: i.poster ?? (i.miniatura ?? '').replace('mini-', 'foto-'),
+  }));
+}
+
+export function criarGaleriaExemplo(clienteId: string, titulo: string): string {
+  const id = `gal-${GALERIAS.length + 1}`;
+  GALERIAS.unshift({
+    id, clienteId, titulo, sessaoId: `ses-${id}`, quando: hoje, local: null,
+    provedor: 'storage', url: null, permiteDownload: true, publicadaEm: null,
+    capa: null, fotos: 0, videos: 0, bytes: 0, favoritos: 0, baixou: false,
+    links: [], itens: [],
+  });
+  return id;
+}
+
+export function criarLinkExemplo(galeriaId: string): { linkId: string; token: string } {
+  const g = GALERIAS.find((x) => x.id === galeriaId);
+  const linkId = `lk-${Math.random().toString(36).slice(2, 8)}`;
+  const token = `exemplo-${galeriaId}`;
+  g?.links.push({ id: linkId, criadoEm: new Date().toISOString(), acessos: 0, ultimoAcessoEm: null });
+  if (g && !g.publicadaEm) g.publicadaEm = new Date().toISOString();
+  return { linkId, token };
+}
+
+export function revogarLinkExemplo(linkId: string): void {
+  for (const g of GALERIAS) g.links = g.links.filter((l) => l.id !== linkId);
+}
+
+/** O "upload" do modo exemplo: object URL, com um progresso de mentirinha. */
+export async function registrarItemExemplo(
+  galeriaId: string,
+  arquivo: File,
+  aoProgredir: (f: number) => void,
+): Promise<void> {
+  const g = GALERIAS.find((x) => x.id === galeriaId);
+  if (!g) throw new Error('Galeria não encontrada.');
+  for (const passo of [0.15, 0.4, 0.7, 0.95]) {
+    await new Promise((r) => setTimeout(r, 120));
+    aoProgredir(passo);
+  }
+  const url = URL.createObjectURL(arquivo);
+  g.itens.push({
+    id: `g-novo-${g.itens.length + 1}`,
+    tipo: arquivo.type.startsWith('video/') ? 'video' : 'foto',
+    nome: arquivo.name,
+    miniatura: url,
+    poster: arquivo.type.startsWith('video/') ? url : null,
+    largura: null,
+    altura: null,
+    duracao: null,
+    bytes: arquivo.size,
+  });
+  if (!g.capa) g.capa = url;
+  aoProgredir(1);
 }

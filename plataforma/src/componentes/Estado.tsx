@@ -1,18 +1,44 @@
 import type { ReactNode } from 'react';
 import { Botao } from './Botao';
 
-export function Carregando({ oQue }: { oQue: string }) {
-  return (
+/**
+ * `principal` para quando este é o conteúdo da página inteira — tela de
+ * carregamento do app, por exemplo. Sem isso a página fica sem `<main>` e sem
+ * h1 enquanto carrega, e quem navega por marcos cai no vazio.
+ */
+export function Carregando({ oQue, principal }: { oQue: string; principal?: boolean }) {
+  const corpo = (
     <p role="status" className="rotulo piscando px-5 py-20 text-center sm:px-8 lg:px-12">
       carregando {oQue}
     </p>
   );
+  if (!principal) return corpo;
+  return (
+    <main id="conteudo">
+      <h1 className="sr-only">Carregando {oQue}</h1>
+      {corpo}
+    </main>
+  );
 }
 
 /** Falha nunca é silenciosa: o que quebrou, em português, e a ação. */
-export function Falhou({ mensagem, tentar }: { mensagem: string; tentar?: () => void }) {
+export function Falhou({
+  mensagem,
+  tentar,
+  principal,
+}: {
+  mensagem: string;
+  tentar?: () => void;
+  principal?: boolean;
+}) {
+  const Caixa = principal ? 'main' : 'div';
   return (
-    <div role="alert" className="bloco brilho-p mx-5 my-10 bg-alerta-fundo p-5 sm:mx-8 lg:mx-12">
+    <Caixa
+      {...(principal ? { id: 'conteudo' } : {})}
+      role="alert"
+      className="bloco brilho-p mx-5 my-10 bg-alerta-fundo p-5 sm:mx-8 lg:mx-12"
+    >
+      {principal && <h1 className="sr-only">Não deu certo</h1>}
       <div className="rotulo-forte text-pink-texto">não deu certo</div>
       <p className="mt-2 text-[15px] font-medium">{mensagem}</p>
       {tentar && (
@@ -20,7 +46,7 @@ export function Falhou({ mensagem, tentar }: { mensagem: string; tentar?: () => 
           Tentar de novo
         </Botao>
       )}
-    </div>
+    </Caixa>
   );
 }
 

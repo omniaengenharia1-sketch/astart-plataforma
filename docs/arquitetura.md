@@ -410,6 +410,59 @@ sistema ou do atributo `data-tema`.
 A auditoria de contraste, acessibilidade, heurísticas e jornada está em
 [`ux.md`](ux.md), com os roteiros que medem tudo isso no navegador.
 
+## 15. Galeria própria — saindo do Pixieset
+
+A 0022 deixou a galeria provedor-agnóstica. A `0034`/`0035` fazem `storage`
+virar provedor de primeira classe: o arquivo mora no nosso bucket, o cliente
+abre por um link sem conta, escolhe as favoritas e baixa em alta.
+
+### As decisões que moldam o resto
+
+1. **A miniatura é feita no navegador, antes de subir.** Quem envia já tem o
+   arquivo na mão; mandar 8 MB para o servidor devolver um quadrado de 40 KB
+   gasta banda duas vezes e obriga a manter processamento de mídia no servidor.
+   Para vídeo seria pior: 1,2 GB subindo só para alguém pegar o primeiro
+   quadro. O poster do vídeo sai de um `<canvas>`, com o `<video>` posicionado
+   um segundo adentro — o primeiro quadro costuma ser preto.
+2. **O original nunca passa por função.** O download é uma URL assinada que
+   aponta direto para o storage. Streaming de GB por Edge Function é o caminho
+   certo para estourar memória e tempo.
+3. **O zip é montado no navegador de quem baixa.** Com `showSaveFilePicker`
+   (Chrome e Edge no computador) o arquivo é escrito direto no disco, item a
+   item, sem nunca existir inteiro na memória — é assim que 40 GB de captação
+   cabem num download. Sem a API, cai para um arquivo de cada vez. O zip é
+   `store`, sem compressão: foto e vídeo já estão comprimidos.
+4. **Duas portas para a mesma sala.** Quem tem o link não tem conta e passa
+   pela Edge Function `galeria`, que valida o token contra o hash no banco.
+   Quem está logado lê direto, porque o RLS já sabe quem é. A mesma tela de
+   álbum serve as duas.
+5. **O caminho é o dono.** `<galeria_id>/orig|mini|poster/<item_id>.<ext>`, e a
+   política do bucket traduz o caminho em cliente. A função que faz isso
+   confere o formato antes de converter: ela roda dentro da política, e um
+   nome de arquivo torto estourando o cast derrubaria toda leitura do storage,
+   para todo mundo.
+
+### O que o Pixieset faz e aqui também
+
+Link sem conta · senha opcional no contrato (`permite_download`) · grade com
+lupa, teclado e vídeo · o cliente marca as preferidas (é metade do valor do
+produto) · download individual e em lote, em alta · registro de quem abriu,
+quantas vezes e se já baixou · link revogável, que é a única porta de saída
+porque **nada vence** nesta plataforma.
+
+### Onde fica a conta
+
+O que muda de verdade não é o código, é onde o arquivo mora. O Supabase
+Storage cobra armazenamento barato e **egresso caro** — por volta de
+US$ 0,09/GB acima da franquia, e download de captação é egresso puro. O
+Cloudflare R2 cobra armazenamento parecido e **egresso zero**.
+
+Para 300 GB de entregas sendo baixadas duas vezes cada, a diferença é a
+mensalidade inteira do Pixieset. O código já está preparado: a única parte
+que conhece o provedor é quem assina a URL. Confirmar os preços antes de
+decidir — eles mudam.
+
+
 ### O que já está construído em `plataforma/`
 
 O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do banco

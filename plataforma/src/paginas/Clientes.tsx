@@ -143,7 +143,7 @@ export function Clientes() {
         />
       ) : (
         <>
-          <div className="mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <div className="escada mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
             <Bloco rotulo="Clientes ativos" destaque={String(linhas.length)} />
             <Bloco rotulo="Recorrente por mês" destaque={reais(mensal)} />
             <Bloco

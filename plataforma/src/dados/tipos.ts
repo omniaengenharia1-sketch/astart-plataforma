@@ -386,3 +386,68 @@ export type PedidoDeConvite =
       clienteId: string;
       papelCliente: PapelCliente;
     };
+
+// --- galeria própria (migrations 0034/0035) ---------------------------------
+
+export type TipoMidia = 'foto' | 'video';
+
+export interface ItemGaleria {
+  id: string;
+  tipo: TipoMidia;
+  nome: string;
+  /** URL assinada da miniatura. Curta: a página pede de novo quando recarrega. */
+  miniatura: string | null;
+  poster: string | null;
+  largura: number | null;
+  altura: number | null;
+  duracao: number | null;
+  bytes: number | null;
+}
+
+/** O que a página do link sem conta recebe. */
+export interface Album {
+  titulo: string;
+  recado: string | null;
+  cliente: string | null;
+  quando: string | null;
+  permiteDownload: boolean;
+  favoritos: string[];
+  itens: ItemGaleria[];
+}
+
+export interface LinkGaleria {
+  id: string;
+  criadoEm: string;
+  acessos: number;
+  ultimoAcessoEm: string | null;
+}
+
+export interface GaleriaNaLista {
+  id: string;
+  titulo: string;
+  sessaoId: string;
+  quando: string;
+  local: string | null;
+  provedor: 'drive' | 'pixieset' | 'storage' | 'outro';
+  url: string | null;
+  permiteDownload: boolean;
+  publicadaEm: string | null;
+  capa: string | null;
+  fotos: number;
+  videos: number;
+  bytes: number;
+  favoritos: number;
+  baixou: boolean;
+  links: LinkGaleria[];
+}
+
+/** Um arquivo subindo, do jeito que a tela mostra. */
+export interface EnvioEmCurso {
+  id: string;
+  nome: string;
+  bytes: number;
+  tipo: TipoMidia;
+  progresso: number;
+  erro: string | null;
+  pronto: boolean;
+}

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { CascaEquipe } from './componentes/Casca';
 import { Carregando, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
+import { AlbumPublico } from './paginas/AlbumPublico';
 import { Entrar } from './paginas/Entrar';
 import { Ajustes } from './paginas/Ajustes';
 import { Aprovacoes } from './paginas/Aprovacoes';
@@ -20,7 +21,18 @@ function EmBreve({ titulo }: { titulo: string }) {
 export default function App() {
   const { sessao, carregando } = useSessao();
 
-  if (carregando) return <Carregando oQue="a plataforma" />;
+  if (carregando) return <Carregando oQue="a plataforma" principal />;
+
+  // A galeria por link vem ANTES de qualquer checagem de sessao: quem recebeu
+  // o endereco nao tem conta, e nao vai criar uma para ver as proprias fotos.
+  if (window.location.pathname.startsWith('/g/') || window.location.hash.startsWith('#/g/')) {
+    return (
+      <Routes>
+        <Route path="/g/:token" element={<AlbumPublico />} />
+      </Routes>
+    );
+  }
+
   if (sessao.tipo === 'anonimo') return <Entrar />;
 
   // Depois da senha o sistema sabe quem e: equipe cai no painel, cliente no

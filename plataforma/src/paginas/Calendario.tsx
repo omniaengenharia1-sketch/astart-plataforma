@@ -192,7 +192,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
         )}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="escada mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco
           rotulo={cota ? 'No mês · cota' : 'No mês'}
           destaque={cota ? `${dados.noMes}/${cota}` : String(dados.noMes)}

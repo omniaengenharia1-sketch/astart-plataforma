@@ -41,7 +41,7 @@ export function InicioEquipe() {
         </h1>
       </div>
 
-      <div className="mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="escada mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco rotulo="Precisa de você" destaque={String(n)} alerta={n > 0} sombra={n > 0} />
         <Bloco rotulo="Sai hoje" destaque={String(painel.saiHoje.length)} />
         <Bloco rotulo="Esperando o cliente" destaque={String(painel.esperandoCliente)} />

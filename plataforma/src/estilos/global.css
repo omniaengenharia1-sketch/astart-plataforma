@@ -473,3 +473,159 @@ input::placeholder, textarea::placeholder {
 
 :root[data-tema="claro"] .marca-papel { display: none; }
 :root[data-tema="claro"] .marca-tinta { display: block; }
+
+/* ---------------------------------------------------------------------------
+   Vidro, a camada de sensação.
+
+   O que vem acima é estrutura. O que vem aqui é o que faz o vidro parecer
+   molhado: luz que anda devagar, reflexo que segue a mão, borda que respira.
+
+   A regra de tudo aqui é a mesma: NADA é rápido. Movimento curto chama
+   atenção; movimento longo e de baixo contraste acalma. Nenhuma animação
+   desta seção dura menos de 12 segundos, exceto a que responde ao toque.
+   --------------------------------------------------------------------------- */
+
+/* O ângulo do fio iridescente é animável porque está registrado como ângulo.
+   Sem @property o navegador interpola o degradê como texto — ou seja, não
+   interpola. Quem não suportar fica com a borda parada, que é o estado bonito. */
+@property --giro {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 100deg;
+}
+
+/* As auroras que andam. Ficam numa camada própria, presa à janela, com
+   transform animado — é a única propriedade que a GPU move de graça. Animar o
+   background-position do body faria a página inteira repintar a 60fps. */
+.auroras {
+  position: fixed;
+  inset: -20vmax;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.auroras > i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.auroras > i:nth-child(1) {
+  width: 58vmax; height: 58vmax; top: -14vmax; left: -10vmax;
+  background: radial-gradient(circle, rgb(255 61 154 / 0.55), transparent 65%);
+  animation: deriva-a 46s ease-in-out infinite alternate;
+}
+.auroras > i:nth-child(2) {
+  width: 46vmax; height: 46vmax; top: -8vmax; right: -8vmax;
+  background: radial-gradient(circle, rgb(160 107 255 / 0.45), transparent 65%);
+  animation: deriva-b 61s ease-in-out infinite alternate;
+}
+.auroras > i:nth-child(3) {
+  width: 44vmax; height: 44vmax; bottom: -16vmax; left: 38%;
+  background: radial-gradient(circle, rgb(94 231 255 / 0.3), transparent 65%);
+  animation: deriva-c 53s ease-in-out infinite alternate;
+}
+
+@keyframes deriva-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(8vmax, 6vmax, 0) scale(1.18); }
+}
+@keyframes deriva-b {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to   { transform: translate3d(-7vmax, 9vmax, 0) scale(0.92); }
+}
+@keyframes deriva-c {
+  from { transform: translate3d(0, 0, 0) scale(0.95); }
+  to   { transform: translate3d(6vmax, -7vmax, 0) scale(1.2); }
+}
+
+/* Com as auroras em camada própria, o campo do body volta a ser só o campo. */
+body { background-image: none; }
+
+/* A borda da lâmina respira: o fio iridescente gira uma volta a cada 24s.
+   Lento o bastante para ninguém ver acontecer, e para a tela nunca parecer
+   parada. */
+.bloco::before {
+  background: linear-gradient(var(--giro), var(--pink), var(--violeta) 48%, var(--ciano));
+  animation: girar-fio 24s linear infinite;
+}
+
+@keyframes girar-fio {
+  to { --giro: 460deg; }
+}
+
+/**
+ * O reflexo que segue a mão. `--mx`/`--my` são escritos em JS no painel sob o
+ * ponteiro (um listener só, no documento inteiro, limitado a um quadro).
+ * Sem ponteiro — telefone, teclado — simplesmente não aparece, e nada quebra.
+ */
+.bloco::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms ease-out;
+  background: radial-gradient(
+    22rem 22rem at var(--mx, 50%) var(--my, 0%),
+    rgb(255 255 255 / 0.14),
+    transparent 60%
+  );
+}
+
+.bloco:hover::after { opacity: 1; }
+
+/* No tema claro o reflexo é sombra, não luz: branco sobre branco some. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema="escuro"]) .bloco::after {
+    background: radial-gradient(
+      22rem 22rem at var(--mx, 50%) var(--my, 0%),
+      rgb(255 255 255 / 0.85),
+      transparent 55%
+    );
+  }
+}
+
+/* A lâmina fica mais "molhada" com a mão em cima: mais desfoque e mais cor
+   atrás, nunca mais contraste na frente. */
+.bloco {
+  transition:
+    backdrop-filter 420ms ease-out,
+    border-color 420ms ease-out;
+}
+.bloco:hover {
+  backdrop-filter: blur(26px) saturate(175%);
+  -webkit-backdrop-filter: blur(26px) saturate(175%);
+}
+
+/* Entrada das lâminas de uma grade: uma depois da outra, de baixo para cima.
+   Seis delas levam meio segundo no total — o suficiente para parecer que a
+   tela assentou, e pouco para não virar espera. */
+.escada > * { animation: subir-lamina 520ms cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+.escada > *:nth-child(2) { animation-delay: 60ms; }
+.escada > *:nth-child(3) { animation-delay: 120ms; }
+.escada > *:nth-child(4) { animation-delay: 180ms; }
+.escada > *:nth-child(5) { animation-delay: 240ms; }
+.escada > *:nth-child(6) { animation-delay: 300ms; }
+
+@keyframes subir-lamina {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auroras > i { animation: none; }
+  .bloco::before { animation: none; }
+  .escada > * { animation: none; }
+}
+
+/* Sem transparência pedida, nada disso faz sentido: some a luz toda. */
+@media (prefers-reduced-transparency: reduce) {
+  .auroras { display: none; }
+  .bloco::after { display: none; }
+}

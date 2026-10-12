@@ -50,7 +50,7 @@ export function InicioCliente({ painel, nome }: { painel: PainelCliente; nome: s
         </h1>
       </div>
 
-      <div className="mt-7 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
+      <div className="escada mt-7 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
         {aprovar > 0 ? (
           <Cartao rotulo="Para aprovar" destaque={`${aprovar} ${aprovar === 1 ? 'item' : 'itens'}`} forte>
             {/* Dentro do cartao pink TODO texto e do pink: tinta-2 aqui dava

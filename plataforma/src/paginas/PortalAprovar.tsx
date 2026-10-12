@@ -188,7 +188,7 @@ export function PortalAprovar({
         />
       ) : (
         <>
-          <div className="mt-7 grid grid-cols-3 gap-4">
+          <div className="escada mt-7 grid grid-cols-3 gap-4">
             <Bloco rotulo="Esperando você" destaque={String(n)} alerta sombra />
             <Bloco
               rotulo="Peças"
@@ -223,7 +223,7 @@ export function PortalAprovar({
           <div className="mt-8">
             <Fita>Um por um</Fita>
           </div>
-          <ul className="mt-4 grid gap-5 xl:grid-cols-2">
+          <ul className="escada mt-4 grid gap-5 xl:grid-cols-2">
             {itens.map((i) => (
               <Item key={i.id} item={i} nome={nome} aoResponder={recarregar} />
             ))}

@@ -15,3 +15,8 @@ verify_jwt = false
 # Ao contrario das duas acima, esta PRECISA do JWT: e por ele que a funcao
 # descobre quem esta convidando e confere se e admin.
 verify_jwt = true
+
+[functions.galeria]
+# A porta do link sem conta: quem abre nao tem login nenhum. Quem autoriza e o
+# token, conferido dentro do banco contra o hash guardado.
+verify_jwt = false

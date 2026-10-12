@@ -154,7 +154,7 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
     // A barra de envio cola no rodape; sem esta folga a ultima etapa fica
     // escondida atras dela quando a pagina chega no fim.
     <div className={'pt-7 ' + (equipe && marcados.length > 0 ? 'pb-24' : '')}>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="escada grid gap-4 sm:grid-cols-3">
         <Bloco rotulo="Etapas" destaque={String(todos.length)} />
         <Bloco rotulo="Aprovadas" destaque={String(aprovados)} />
         <Bloco

@@ -11,15 +11,16 @@
 import { ligado, sb } from './supabase';
 import {
   PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  calendarioExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo, criarPecaExemplo,
+  calendarioExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo, criarGaleriaExemplo,
+  criarLinkExemplo, criarPecaExemplo, galeriasExemplo, revogarLinkExemplo,
   enviarExemplo, equipeEConvitesExemplo, fichaExemplo, filaExemplo, itemDoEntregavelExemplo,
   listaClientesExemplo, moverPecaExemplo, mudarAcessoExemplo, painelClienteExemplo,
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
-  Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, EquipeEConvites, FichaCliente,
-  ItemNaFila, MesDeConteudo, PainelCliente, PainelEquipe, PedidoDeConvite, Perfil,
-  ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
+  Album, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, EquipeEConvites,
+  FichaCliente, GaleriaNaLista, ItemGaleria, ItemNaFila, MesDeConteudo, PainelCliente,
+  PainelEquipe, PedidoDeConvite, Perfil, ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
 } from './tipos';
 
 export { ligado };
@@ -462,4 +463,210 @@ export async function tirarAcessoDoCliente(
     p_cliente: clienteId,
   });
   if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Galeria
+// ---------------------------------------------------------------------------
+
+export async function galeriasDoCliente(clienteId: string): Promise<GaleriaNaLista[]> {
+  if (!sb) return galeriasExemplo(clienteId);
+  const { data, error } = await sb.rpc('galerias_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui carregar as galerias: ${error.message}`);
+  return exija(data as GaleriaNaLista[] | null, 'As galerias deste cliente');
+}
+
+/**
+ * A galeria nasce de uma captação, não do nada: é o trabalho que justifica o
+ * álbum. Sem captação registrada, esta função cria uma na data de hoje.
+ */
+export async function criarGaleria(
+  clienteId: string,
+  titulo: string,
+  sessaoId?: string,
+): Promise<string> {
+  if (!sb) return criarGaleriaExemplo(clienteId, titulo);
+
+  let sessao = sessaoId;
+  if (!sessao) {
+    const { data, error } = await sb
+      .from('sessoes_captacao')
+      .insert({
+        cliente_id: clienteId,
+        titulo,
+        data: new Date().toISOString().slice(0, 10),
+        status: 'realizada',
+      })
+      .select('id')
+      .single();
+    if (error) {
+      throw new FalhaDados(
+        /row-level security|permission denied/i.test(error.message)
+          ? 'Seu acesso não cria galeria.'
+          : error.message,
+      );
+    }
+    sessao = (data as { id: string }).id;
+  }
+
+  const { data, error } = await sb.rpc('criar_galeria', {
+    p_sessao: sessao,
+    p_titulo: titulo,
+    p_recado: null,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as string | null, 'A galeria');
+}
+
+export async function criarLinkGaleria(galeriaId: string): Promise<{ linkId: string; token: string }> {
+  if (!sb) return criarLinkExemplo(galeriaId);
+  const { data, error } = await sb.rpc('criar_link_galeria', { p_galeria: galeriaId });
+  if (error) throw new FalhaDados(error.message);
+  const linha = (data as { link_id: string; token: string }[] | null)?.[0];
+  if (!linha) throw new FalhaDados('O link não voltou do servidor.');
+  // O token aparece UMA vez, agora. Depois disto só existe o hash no banco.
+  return { linkId: linha.link_id, token: linha.token };
+}
+
+export async function revogarLinkGaleria(linkId: string): Promise<void> {
+  if (!sb) {
+    revogarLinkExemplo(linkId);
+    return;
+  }
+  const { error } = await sb.rpc('revogar_link_galeria', { p_link: linkId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * Os itens de uma galeria para a equipe, com miniatura assinada. A equipe lê o
+ * bucket direto (política do 0035), então não precisa passar pela Edge
+ * Function do link — ela existe para quem NÃO tem conta.
+ */
+export async function itensDaGaleria(galeriaId: string): Promise<ItemGaleria[]> {
+  if (!sb) {
+    const { albumExemplo } = await import('./mock');
+    return albumExemplo(galeriaId).itens;
+  }
+
+  const { data, error } = await sb
+    .from('galeria_itens')
+    .select('id, tipo, nome, miniatura_caminho, poster_caminho, largura, altura, duracao_s, tamanho_bytes')
+    .eq('galeria_id', galeriaId)
+    .eq('pronto', true)
+    .order('ordem');
+  if (error) throw new FalhaDados(`Não consegui abrir a galeria: ${error.message}`);
+
+  const linhas = (data ?? []) as {
+    id: string; tipo: 'foto' | 'video'; nome: string;
+    miniatura_caminho: string | null; poster_caminho: string | null;
+    largura: number | null; altura: number | null;
+    duracao_s: number | null; tamanho_bytes: number | null;
+  }[];
+
+  const caminhos = linhas.map((l) => l.miniatura_caminho).filter((c): c is string => !!c);
+  const assinadas = new Map<string, string>();
+  if (caminhos.length) {
+    const { data: urls } = await sb.storage.from('galerias').createSignedUrls(caminhos, 3600);
+    for (const u of urls ?? []) if (u.path && u.signedUrl) assinadas.set(u.path, u.signedUrl);
+  }
+
+  return linhas.map((l) => ({
+    id: l.id,
+    tipo: l.tipo,
+    nome: l.nome,
+    miniatura: l.miniatura_caminho ? (assinadas.get(l.miniatura_caminho) ?? null) : null,
+    poster: l.poster_caminho ? (assinadas.get(l.poster_caminho) ?? null) : null,
+    largura: l.largura,
+    altura: l.altura,
+    duracao: l.duracao_s,
+    bytes: l.tamanho_bytes,
+  }));
+}
+
+/** O álbum que o cliente LOGADO abre, sem token nenhum. */
+export async function albumDoCliente(galeriaId: string): Promise<Album> {
+  if (!sb) {
+    const { albumExemplo } = await import('./mock');
+    return albumExemplo(galeriaId);
+  }
+
+  const [{ data: cabeca, error: e1 }, itens] = await Promise.all([
+    sb.from('galerias')
+      .select('titulo, recado, permite_download, sessoes_captacao(data, clientes(nome))')
+      .eq('id', galeriaId)
+      .single(),
+    itensDaGaleria(galeriaId),
+  ]);
+  if (e1) throw new FalhaDados(`Não consegui abrir a galeria: ${e1.message}`);
+
+  const { data: favs } = await sb
+    .from('galeria_favoritos')
+    .select('item_id')
+    .eq('galeria_id', galeriaId);
+
+  const c = cabeca as unknown as {
+    titulo: string | null;
+    recado: string | null;
+    permite_download: boolean;
+    sessoes_captacao: { data: string; clientes: { nome: string } | null } | null;
+  };
+
+  return {
+    titulo: c.titulo ?? 'Galeria',
+    recado: c.recado,
+    cliente: c.sessoes_captacao?.clientes?.nome ?? null,
+    quando: c.sessoes_captacao?.data ?? null,
+    permiteDownload: c.permite_download,
+    favoritos: ((favs ?? []) as { item_id: string }[]).map((f) => f.item_id),
+    itens,
+  };
+}
+
+export async function favoritarItem(itemId: string, ligadoAgora: boolean): Promise<void> {
+  if (!sb) {
+    const { favoritarExemplo } = await import('./mock');
+    favoritarExemplo(itemId, ligadoAgora);
+    return;
+  }
+  const { error } = await sb.rpc('favoritar_item', { p_item: itemId, p_ligado: ligadoAgora });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * URLs dos originais para o cliente logado. Ele lê o bucket por política
+ * (0035), então assina direto — sem passar pela função do link.
+ */
+export async function urlsDosOriginais(
+  galeriaId: string,
+  itemId?: string,
+): Promise<{ id: string; nome: string; bytes: number | null; url: string | null }[]> {
+  if (!sb) {
+    const { urlsExemplo } = await import('./mock');
+    return urlsExemplo(itemId);
+  }
+
+  let consulta = sb
+    .from('galeria_itens')
+    .select('id, nome, caminho, tamanho_bytes')
+    .eq('galeria_id', galeriaId)
+    .eq('pronto', true)
+    .order('ordem');
+  if (itemId) consulta = consulta.eq('id', itemId);
+
+  const { data, error } = await consulta;
+  if (error) throw new FalhaDados(error.message);
+  const linhas = (data ?? []) as { id: string; nome: string; caminho: string; tamanho_bytes: number | null }[];
+  if (linhas.length === 0) return [];
+
+  const { data: urls } = await sb.storage
+    .from('galerias')
+    .createSignedUrls(linhas.map((l) => l.caminho), 60 * 60 * 6);
+  const mapa = new Map((urls ?? []).map((u) => [u.path, u.signedUrl]));
+
+  return linhas.map((l) => ({
+    id: l.id,
+    nome: l.nome,
+    bytes: l.tamanho_bytes,
+    url: mapa.get(l.caminho) ?? null,
+  }));
 }

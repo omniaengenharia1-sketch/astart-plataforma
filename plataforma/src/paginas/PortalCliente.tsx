@@ -7,6 +7,7 @@ import { useSessao } from '../sessao';
 import { InicioCliente } from './InicioCliente';
 import { PortalAprovar } from './PortalAprovar';
 import { Calendario } from './Calendario';
+import { Galeria } from './Galeria';
 import { Projeto } from './Projeto';
 import type { PainelCliente } from '../dados/tipos';
 
@@ -39,8 +40,8 @@ export function PortalCliente() {
   }, [carregar]);
 
   if (sessao.tipo !== 'cliente') return null;
-  if (erro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
-  if (!painel) return <Carregando oQue="o seu portal" />;
+  if (erro) return <Falhou mensagem={erro} tentar={() => void carregar()} principal />;
+  if (!painel) return <Carregando oQue="o seu portal" principal />;
 
   return (
     <CascaCliente modulos={painel.modulos} aprovacoesAbertas={painel.paraAprovar.length}>
@@ -76,7 +77,15 @@ export function PortalCliente() {
         />
         <Route path="grid" element={<EmBreve titulo="Grid" />} />
         <Route path="campanhas" element={<EmBreve titulo="Campanhas" />} />
-        <Route path="galeria" element={<EmBreve titulo="Galeria" />} />
+        <Route
+          path="galeria"
+          element={
+            <div className="px-5 pb-16 sm:px-8 lg:px-12">
+              <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">Galeria</h1>
+              <Galeria clienteId={painel.cliente.id} equipe={false} quem={sessao.nome} />
+            </div>
+          }
+        />
         <Route path="site" element={<EmBreve titulo="Meu site" />} />
         <Route path="acervo" element={<EmBreve titulo="Acervo" />} />
         <Route path="financeiro" element={<EmBreve titulo="Financeiro" />} />

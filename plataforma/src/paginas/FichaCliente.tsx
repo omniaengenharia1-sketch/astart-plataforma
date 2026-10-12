@@ -8,6 +8,7 @@ import { convidar, fichaCliente, tirarAcessoDoCliente } from '../dados/api';
 import { diaMes, haQuanto, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
 import { Calendario } from './Calendario';
+import { Galeria } from './Galeria';
 import { Projeto } from './Projeto';
 import type {
   ChaveModulo, FichaCliente as Ficha, PapelCliente, ServicoContratado,
@@ -150,6 +151,8 @@ export function FichaCliente() {
         <Projeto clienteId={clienteId} equipe />
       ) : aba === 'calendario' || aba === 'publicacao' ? (
         <Calendario clienteId={clienteId} equipe />
+      ) : aba === 'galeria' || aba === 'acervo' ? (
+        <Galeria clienteId={clienteId} equipe />
       ) : aba !== '' ? (
         <Vazio
           titulo={MODULO[aba as ChaveModulo] ?? 'Seção'}
@@ -157,7 +160,7 @@ export function FichaCliente() {
         />
       ) : (
       <>
-      <div className="mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="escada mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco rotulo="Serviços ativos" destaque={String(ativos.length)} />
         <Bloco rotulo="Por mês" destaque={reais(ficha.mensalCentavos)} />
         <Bloco rotulo="Em projeto" destaque={reais(ficha.unicoCentavos)} />
