@@ -2,12 +2,12 @@
 // O contraste fica de fora aqui: o axe não sabe compor vidro translúcido sobre
 // campo com aurora, e dá falso positivo em tudo. Quem mede contraste é o
 // contraste.mjs, que compõe as camadas de verdade.
-import { chromium } from 'playwright-core';
+import { abrirNavegador } from './navegador.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = readFileSync(new URL('./node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 const BASE = 'http://localhost:4178';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const b = await abrirNavegador();
 
 const CONFIG = {
   runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
@@ -35,8 +35,10 @@ async function varre(p, onde) {
 for (const [larg, alt, nome] of [[1440, 980, 'desktop'], [390, 844, 'celular']]) {
   for (const claro of [false, true]) {
     for (const [papel, email, abas] of [
-      ['equipe', 'layana@astartstudio.com.br', ['Clientes', 'Aprovações', 'Ajustes']],
-      ['cliente', 'bruna@mormarcas.com.br', ['Para aprovar', 'Meu projeto', 'Calendário']],
+      ['equipe', 'layana@astartstudio.com.br',
+        ['Clientes', 'Aprovações', 'Agenda', 'Fila', 'Financeiro', 'Comercial', 'Feedbacks', 'Ajustes']],
+      ['cliente', 'bruna@mormarcas.com.br',
+        ['Para aprovar', 'Meu projeto', 'Calendário', 'Grid', 'Financeiro', 'Contrato', 'Meu site', 'Feedback']],
     ]) {
       const ctx = await b.newContext({ viewport: { width: larg, height: alt }, colorScheme: claro ? 'light' : 'dark' });
       const p = await ctx.newPage();

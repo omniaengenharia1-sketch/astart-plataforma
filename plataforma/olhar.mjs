@@ -1,14 +1,12 @@
 // Abre a plataforma em modo exemplo e exercita o ciclo de aprovacao inteiro.
 // Navega clicando, nao por goto: em modo exemplo os itens moram na memoria da
 // pagina, e recarregar comeca de novo — como recomecaria no banco de verdade.
-import { chromium } from 'playwright-core';
+import { abrirNavegador } from './navegador.mjs';
 
 const BASE = process.env.BASE ?? 'http://localhost:4178';
 const SAIDA = './tiros';
 
-const navegador = await chromium.launch({
-  args: ['--no-sandbox'],
-});
+const navegador = await abrirNavegador();
 
 const problemas = [];
 async function pagina(ctx, nome) {

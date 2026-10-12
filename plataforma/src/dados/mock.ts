@@ -9,11 +9,14 @@
 // =============================================================================
 import type {
   Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
-  Album, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, FichaCliente, FormatoContrato,
-  GaleriaNaLista, ItemGaleria,
-  ItemNaFila, MesDeConteudo, PainelCliente, PainelEquipe, PecaNoMes, Perfil,
-  PedidoDeConvite, PessoaDaEquipe, ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
-  Sessao, StatusPublicacao, TipoPeca,
+  Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
+  EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
+  GaleriaNaLista, ItemDoGrid, ItemGaleria,
+  ItemNaFila, LancamentoNaLista, LeadNoFunil, MesDeConteudo, NpsDoCliente, PainelCliente,
+  PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
+  PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, ServicoContratado,
+  ServicoEscolhido, ServicoNoProjeto,
+  Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
 } from './tipos';
 
 import { sluguificar } from '../formato';
@@ -247,6 +250,23 @@ const ITENS: ItemNaFila[] = [
   }),
   // Rascunho: no banco todo post nasce com item, pelo gatilho da 0019.
   item('i12', 'exemplo-mor', 'Depoimento da cliente', { estado: 'produzindo', enviadoEm: null }),
+  // Aprovados que ainda vao sair: e deles que a fila de publicacao e feita.
+  item('i13', 'exemplo-mor', 'Antes e depois do projeto', {
+    estado: 'aprovado', enviadoEm: haHoras(40), respondidoEm: haHoras(31),
+    respondidoPor: 'Bruna Melo',
+  }),
+  item('i14', 'exemplo-pub', 'Bastidores da reunião', {
+    estado: 'aprovado', enviadoEm: haHoras(33), respondidoEm: haHoras(25),
+    respondidoPor: 'Thiago Prado',
+  }),
+  item('i15', 'exemplo-chopp', 'Chopp do fim de semana', {
+    estado: 'aprovado', enviadoEm: haHoras(29), respondidoEm: haHoras(20),
+    respondidoPor: 'Ana Paula',
+  }),
+  item('i16', 'exemplo-pub', 'Dica rápida de copy', {
+    estado: 'aprovado', enviadoEm: haHoras(70), respondidoEm: haHoras(60),
+    respondidoPor: 'Thiago Prado',
+  }),
 ];
 
 const PESO: Record<string, number> = { com_ajustes: 0, em_aprovacao: 1 };
@@ -400,7 +420,9 @@ export function painelClienteExemplo(clienteId: string): PainelCliente {
       id: 'c1', descricao: 'Gestão Digital — outubro',
       valorCentavos: 280000, vencimento: emDias(3), situacao: 'previsto',
     },
-    npsPendente: true,
+    // Derivado do mesmo lugar que a aba Feedback le: se a tela do NPS diz que
+    // nao ha nada pendente, o cartao do Inicio nao pode insistir que ha.
+    npsPendente: npsDoClienteExemplo(alvo).pendente !== null,
     redes: { publicados: 5, agendados: 1, esperandoVoce: itensDoCliente(alvo).length, emProducao: 3 },
     projeto: {
       servicoNome: 'Website', total: 11, entregues: 2,
@@ -715,6 +737,18 @@ const PECAS: PecaExemplo[] = [
   { id: 'pc8', clienteId: 'exemplo-chopp', itemId: 'i8', titulo: 'Reels da fábrica',
     tipo: 'reel', legenda: '', dia: noMes(5), hora: '18:00',
     statusPublicacao: 'falhou', contas: ['@choppdobarbudo'] },
+  { id: 'pc9', clienteId: 'exemplo-mor', itemId: 'i13', titulo: 'Antes e depois do projeto',
+    tipo: 'carrossel', legenda: 'Dois meses entre a primeira e a última foto.',
+    dia: hoje, hora: '19:00', statusPublicacao: 'agendado', contas: ['@mormarcas'] },
+  { id: 'pc10', clienteId: 'exemplo-pub', itemId: 'i14', titulo: 'Bastidores da reunião',
+    tipo: 'story', legenda: '', dia: hoje, hora: '09:00',
+    statusPublicacao: 'publicando', contas: ['@publika.ai'] },
+  { id: 'pc11', clienteId: 'exemplo-chopp', itemId: 'i15', titulo: 'Chopp do fim de semana',
+    tipo: 'imagem', legenda: 'Sexta começa quinta.', dia: emDias(1), hora: '18:00',
+    statusPublicacao: 'agendado', contas: ['@choppdobarbudo'] },
+  { id: 'pc12', clienteId: 'exemplo-pub', itemId: 'i16', titulo: 'Dica rápida de copy',
+    tipo: 'reel', legenda: '', dia: emDias(-1), hora: '12:00',
+    statusPublicacao: 'publicado', contas: ['@publika.ai'] },
 ];
 
 let seqPeca = 0;
@@ -1072,4 +1106,610 @@ export async function registrarItemExemplo(
   });
   if (!g.capa) g.capa = url;
   aoProgredir(1);
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro
+//
+// Os lançamentos saem do contrato, não de uma lista paralela: a mensalidade de
+// exemplo é a mesma que a ficha do cliente mostra. Fora isso, o que existe aqui
+// é o que a Astart tem de verdade na planilha — entrada de projeto, equipe,
+// ferramentas, imposto.
+// ---------------------------------------------------------------------------
+interface LancamentoExemplo extends LancamentoNaLista {
+  competencia: string;
+}
+
+const primeiroDoMes = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+
+const mesAtual = primeiroDoMes(agora);
+const mesPassado = primeiroDoMes(new Date(agora.getFullYear(), agora.getMonth() - 1, 1));
+
+/** Dia do mês de uma competência, sem escorregar em fevereiro. */
+function diaDe(competencia: string, dia: number): string {
+  const [ano, mes] = competencia.split('-').map(Number) as [number, number];
+  const ultimo = new Date(ano, mes, 0).getDate();
+  return `${ano}-${String(mes).padStart(2, '0')}-${String(Math.min(dia, ultimo)).padStart(2, '0')}`;
+}
+
+let seqLanc = 0;
+function lanc(
+  competencia: string,
+  descricao: string,
+  valorCentavos: number,
+  resto: Partial<LancamentoExemplo> = {},
+): LancamentoExemplo {
+  seqLanc += 1;
+  return {
+    id: `l-${seqLanc}`,
+    descricao,
+    clienteNome: null,
+    clienteId: null,
+    natureza: 'receita',
+    grupo: 'Receita de serviços',
+    categoria: 'Serviços',
+    subcategoria: 'Mensalidade',
+    valorCentavos,
+    vencimento: diaDe(competencia, 10),
+    situacao: 'previsto',
+    forma: 'pix',
+    sugestao: null,
+    competencia,
+    ...resto,
+  };
+}
+
+/** A mensalidade de cada contrato recorrente ativo, no mês pedido. */
+function mensalidadesDo(competencia: string, situacao: SituacaoLancamento): LancamentoExemplo[] {
+  return CLIENTES.flatMap((c) =>
+    ativos(c)
+      .filter((s) => s.formato === 'recorrente')
+      .map((s) =>
+        lanc(competencia, `${s.servicoNome} — ${c.cliente.nome}`, s.valorCentavos, {
+          clienteId: c.cliente.id,
+          clienteNome: c.cliente.nome,
+          categoria: s.servicoNome,
+          vencimento: diaDe(competencia, s.diaVencimento ?? 10),
+          situacao,
+        }),
+      ),
+  );
+}
+
+const LANCAMENTOS: LancamentoExemplo[] = [
+  // Mês passado, fechado.
+  ...mensalidadesDo(mesPassado, 'recebido'),
+  lanc(mesPassado, 'Equipe — salários', 1_420_000, {
+    natureza: 'custo', grupo: 'Pessoas', categoria: 'Equipe fixa', subcategoria: 'Salários',
+    vencimento: diaDe(mesPassado, 5), situacao: 'pago', forma: 'transferência',
+  }),
+  lanc(mesPassado, 'Ferramentas e hospedagem', 185_000, {
+    natureza: 'custo', grupo: 'Operação', categoria: 'Ferramentas', subcategoria: 'Assinaturas',
+    vencimento: diaDe(mesPassado, 8), situacao: 'pago', forma: 'cartão',
+  }),
+
+  // Mês corrente.
+  ...mensalidadesDo(mesAtual, 'previsto').map((l) =>
+    // As duas primeiras já entraram; o resto vence ao longo do mês.
+    l.clienteId === 'exemplo-mor' || l.clienteId === 'exemplo-pub'
+      ? { ...l, situacao: 'recebido' as SituacaoLancamento }
+      : l,
+  ),
+  lanc(mesAtual, 'Branding — entrada', 320_000, {
+    clienteId: 'exemplo-kb', clienteNome: 'Karla Bernardo',
+    categoria: 'Branding', subcategoria: 'Entrada de projeto',
+    vencimento: emDias(-3), situacao: 'atrasado', forma: 'boleto',
+  }),
+  lanc(mesAtual, 'Website — parcela 2 de 3', 400_000, {
+    clienteId: 'exemplo-mor', clienteNome: 'Mor Marcas',
+    categoria: 'Website', subcategoria: 'Parcela de projeto',
+    vencimento: diaDe(mesAtual, 20),
+  }),
+  lanc(mesAtual, 'Website — parcela 1 de 3', 600_000, {
+    clienteId: 'exemplo-omnia', clienteNome: 'Omnia Engenharia',
+    categoria: 'Website', subcategoria: 'Parcela de projeto',
+    vencimento: diaDe(mesAtual, 25),
+  }),
+  lanc(mesAtual, 'Sistemas — parcela 1 de 6', 400_000, {
+    clienteId: 'exemplo-omnia', clienteNome: 'Omnia Engenharia',
+    categoria: 'Sistemas', subcategoria: 'Parcela de projeto',
+    vencimento: diaDe(mesAtual, 25),
+  }),
+  lanc(mesAtual, 'Audiovisual — parcela 1 de 2', 120_000, {
+    clienteId: 'exemplo-chopp', clienteNome: 'Chopp do Barbudo',
+    categoria: 'Audiovisual', subcategoria: 'Parcela de projeto',
+    vencimento: diaDe(mesAtual, 12), situacao: 'recebido',
+  }),
+  lanc(mesAtual, 'Equipe — salários', 1_420_000, {
+    natureza: 'custo', grupo: 'Pessoas', categoria: 'Equipe fixa', subcategoria: 'Salários',
+    vencimento: diaDe(mesAtual, 5), situacao: 'pago', forma: 'transferência',
+  }),
+  lanc(mesAtual, 'Ferramentas e hospedagem', 185_000, {
+    natureza: 'custo', grupo: 'Operação', categoria: 'Ferramentas', subcategoria: 'Assinaturas',
+    vencimento: diaDe(mesAtual, 8), situacao: 'pago', forma: 'cartão',
+  }),
+  lanc(mesAtual, 'Edição do making of', 95_000, {
+    natureza: 'custo', grupo: 'Produção', categoria: 'Freelancer', subcategoria: 'A confirmar',
+    vencimento: diaDe(mesAtual, 18), forma: 'pix',
+    // Enquanto ninguém confirma, a classificação é palpite — e aparece como palpite.
+    sugestao: 'Produção · Edição de vídeo',
+  }),
+  lanc(mesAtual, 'Simples Nacional', 236_700, {
+    natureza: 'imposto', grupo: 'Impostos', categoria: 'Simples Nacional', subcategoria: 'DAS',
+    vencimento: diaDe(mesAtual, 20), forma: 'boleto',
+  }),
+];
+
+export function painelFinanceiroExemplo(mes?: string): PainelFinanceiro {
+  const competencia = mes ? `${mes.slice(0, 7)}-01` : mesAtual;
+  const doMes = LANCAMENTOS.filter((l) => l.competencia === competencia);
+  const soma2 = (f: (l: LancamentoExemplo) => boolean) =>
+    soma(doMes.filter(f).map((l) => l.valorCentavos));
+
+  const porCliente = new Map<string, { clienteId: string; clienteNome: string; receitaCentavos: number; atrasadoCentavos: number }>();
+  for (const l of doMes) {
+    if (l.natureza !== 'receita' || !l.clienteId || l.situacao === 'cancelado') continue;
+    const atual = porCliente.get(l.clienteId) ?? {
+      clienteId: l.clienteId, clienteNome: l.clienteNome ?? '', receitaCentavos: 0, atrasadoCentavos: 0,
+    };
+    atual.receitaCentavos += l.valorCentavos;
+    if (l.situacao === 'atrasado') atual.atrasadoCentavos += l.valorCentavos;
+    porCliente.set(l.clienteId, atual);
+  }
+
+  return {
+    mes: competencia,
+    receitaCentavos: soma2((l) => l.natureza === 'receita' && l.situacao !== 'cancelado'),
+    custoCentavos: soma2((l) => l.natureza === 'custo' && l.situacao !== 'cancelado'),
+    recebidoCentavos: soma2((l) => l.natureza === 'receita' && l.situacao === 'recebido'),
+    atrasadoCentavos: soma2((l) => l.natureza === 'receita' && l.situacao === 'atrasado'),
+    lancamentos: doMes
+      .slice()
+      .sort((a, b) => (a.vencimento ?? '').localeCompare(b.vencimento ?? '')),
+    porCliente: [...porCliente.values()].sort((a, b) => b.receitaCentavos - a.receitaCentavos),
+  };
+}
+
+export function financeiroDoClienteExemplo(clienteId: string): FinanceiroDoCliente {
+  const dele = LANCAMENTOS.filter((l) => l.clienteId === clienteId && l.natureza === 'receita');
+  const somaSe = (f: (l: LancamentoExemplo) => boolean) =>
+    soma(dele.filter(f).map((l) => l.valorCentavos));
+  return {
+    aVencerCentavos: somaSe((l) => l.situacao === 'previsto'),
+    atrasadoCentavos: somaSe((l) => l.situacao === 'atrasado'),
+    pagoNoAnoCentavos: somaSe((l) => l.situacao === 'recebido'),
+    lancamentos: dele
+      .slice()
+      .sort((a, b) => (b.vencimento ?? '').localeCompare(a.vencimento ?? ''))
+      .map((l) => ({
+        id: l.id,
+        descricao: l.descricao,
+        valorCentavos: l.valorCentavos,
+        vencimento: l.vencimento,
+        competencia: l.competencia,
+        situacao: l.situacao,
+        // Boleto e pix só existem para o que ainda tem de ser pago.
+        boletoUrl: l.situacao === 'previsto' || l.situacao === 'atrasado' ? '#boleto-de-exemplo' : null,
+        pix:
+          l.situacao === 'previsto' || l.situacao === 'atrasado'
+            ? '00020126580014BR.GOV.BCB.PIX0136exemplo-astart-studio-chave-pix5204000053039865802BR6009SAO PAULO62070503***6304ABCD'
+            : null,
+      })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Fila de publicação
+//
+// Mesma origem do calendário: as peças. Dois eixos, como no banco — o status do
+// post e o estado de cada conta. Peça publicada em duas contas e falhada numa
+// terceira é exatamente o caso que a tela precisa mostrar.
+// ---------------------------------------------------------------------------
+const NA_FILA: StatusPublicacao[] = ['aprovado', 'agendado', 'publicando', 'falhou', 'publicado'];
+
+export function filaPublicacaoExemplo(): PecaNaFila[] {
+  const limite = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+  return PECAS.filter(
+    (p) =>
+      NA_FILA.includes(p.statusPublicacao) &&
+      (p.statusPublicacao !== 'publicado' || p.dia >= limite),
+  )
+    .map((p) => ({
+      id: p.id,
+      clienteId: p.clienteId,
+      clienteNome: CLIENTES.find((c) => c.cliente.id === p.clienteId)?.cliente.nome ?? '',
+      titulo: p.titulo,
+      tipo: p.tipo,
+      status: p.statusPublicacao,
+      quando: `${p.dia}T${p.hora}:00-03:00`,
+      erro: p.statusPublicacao === 'falhou' ? 'O token do Instagram venceu.' : null,
+      alvos: p.contas.map((conta) => ({
+        conta,
+        plataforma: 'instagram',
+        estado:
+          p.statusPublicacao === 'falhou'
+            ? 'falhou'
+            : p.statusPublicacao === 'publicado'
+              ? 'publicado'
+              : p.statusPublicacao === 'publicando'
+                ? 'enviando'
+                : 'na fila',
+        erro: p.statusPublicacao === 'falhou' ? 'Token expirado (190).' : null,
+        tentativas: p.statusPublicacao === 'falhou' ? 3 : p.statusPublicacao === 'publicando' ? 1 : 0,
+      })),
+    }))
+    .sort((a, b) => {
+      const falha = Number(b.status === 'falhou') - Number(a.status === 'falhou');
+      return falha !== 0 ? falha : (a.quando ?? '').localeCompare(b.quando ?? '');
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Agenda — tudo que tem data, no mesmo lugar
+// ---------------------------------------------------------------------------
+interface CaptacaoExemplo {
+  clienteId: string;
+  titulo: string;
+  data: string;
+  local: string;
+}
+
+const CAPTACOES: CaptacaoExemplo[] = [
+  { clienteId: 'exemplo-chopp', titulo: 'Captação na fábrica', data: emDias(1), local: 'Fábrica, Bairro Industrial' },
+  { clienteId: 'exemplo-mor', titulo: 'Ensaio de produto', data: emDias(9), local: 'Estúdio Astart' },
+  { clienteId: 'exemplo-chopp', titulo: 'Captação de bastidores', data: emDias(22), local: 'Bar da Praça' },
+];
+
+const nomeDe = (clienteId: string) =>
+  CLIENTES.find((c) => c.cliente.id === clienteId)?.cliente.nome ?? '';
+
+export function agendaExemplo(de: string, ate: string): EventoNaAgenda[] {
+  const dentro = (dia: string) => dia >= de && dia <= ate;
+  const eventos: EventoNaAgenda[] = [];
+
+  for (const p of PECAS) {
+    if (!dentro(p.dia)) continue;
+    eventos.push({
+      tipo: 'publicacao', quando: p.dia, clienteId: p.clienteId,
+      clienteNome: nomeDe(p.clienteId), oQue: p.titulo, detalhe: p.tipo,
+    });
+  }
+  for (const c of CAPTACOES) {
+    if (!dentro(c.data)) continue;
+    eventos.push({
+      tipo: 'captacao', quando: c.data, clienteId: c.clienteId,
+      clienteNome: nomeDe(c.clienteId), oQue: c.titulo, detalhe: c.local,
+    });
+  }
+  for (const cliente of CLIENTES) {
+    for (const s of projetoExemplo(cliente.cliente.id)) {
+      for (const m of s.marcos) {
+        if (m.concluidoEm || !dentro(m.prazo)) continue;
+        eventos.push({
+          tipo: 'marco', quando: m.prazo, clienteId: cliente.cliente.id,
+          clienteNome: cliente.cliente.nome, oQue: m.titulo, detalhe: s.servicoNome,
+        });
+      }
+    }
+  }
+  for (const l of LANCAMENTOS) {
+    if (l.natureza !== 'receita' || !l.vencimento || !l.clienteId) continue;
+    if (l.situacao !== 'previsto' && l.situacao !== 'atrasado') continue;
+    if (!dentro(l.vencimento)) continue;
+    eventos.push({
+      tipo: 'cobranca', quando: l.vencimento, clienteId: l.clienteId,
+      clienteNome: l.clienteNome ?? '', oQue: l.descricao, detalhe: l.situacao,
+    });
+  }
+
+  return eventos.sort((a, b) => a.quando.localeCompare(b.quando) || a.oQue.localeCompare(b.oQue, 'pt-BR'));
+}
+
+// ---------------------------------------------------------------------------
+// Grid — o feed como ele vai ficar
+// ---------------------------------------------------------------------------
+const NO_GRID: StatusPublicacao[] = ['aprovado', 'agendado', 'publicando', 'publicado'];
+
+export function gridExemplo(clienteId: string): ItemDoGrid[] {
+  return PECAS.filter((p) => p.clienteId === clienteId && NO_GRID.includes(p.statusPublicacao))
+    .slice()
+    .sort((a, b) => (b.dia + b.hora).localeCompare(a.dia + a.hora))
+    .map((p, i) => {
+      const item = p.itemId ? ITENS.find((x) => x.id === p.itemId) : null;
+      return {
+        id: p.id,
+        titulo: p.titulo,
+        tipo: p.tipo,
+        status: p.statusPublicacao,
+        estado: item?.estado ?? 'produzindo',
+        quando: `${p.dia}T${p.hora}:00-03:00`,
+        capa: publico(`exemplo/mini-0${(i % 8) + 1}.jpg`),
+      };
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Feedbacks (NPS)
+//
+// Uma tabela mutável, como as outras: quando o cliente dá a nota no portal, o
+// resumo da equipe muda na mesma hora.
+// ---------------------------------------------------------------------------
+interface PesquisaExemplo {
+  id: string;
+  clienteId: string;
+  competencia: string;
+  nota: number | null;
+  comentario: string | null;
+  quem: string | null;
+  quando: string | null;
+}
+
+const PESQUISAS: PesquisaExemplo[] = [
+  { id: 'nps-1', clienteId: 'exemplo-mor', competencia: mesAtual, nota: null, comentario: null, quem: null, quando: null },
+  { id: 'nps-2', clienteId: 'exemplo-omnia', competencia: mesAtual, nota: null, comentario: null, quem: null, quando: null },
+  { id: 'nps-3', clienteId: 'exemplo-pub', competencia: mesAtual, nota: 10,
+    comentario: 'Resposta rápida e material no ponto.', quem: 'Thiago Prado', quando: haHoras(60) },
+  { id: 'nps-4', clienteId: 'exemplo-chopp', competencia: mesAtual, nota: 9,
+    comentario: null, quem: 'Ana Paula', quando: haHoras(100) },
+  { id: 'nps-5', clienteId: 'exemplo-pam', competencia: mesAtual, nota: 4,
+    comentario: 'Demora pra responder no WhatsApp.', quem: 'Pamela Dantas', quando: haHoras(120) },
+  { id: 'nps-6', clienteId: 'exemplo-mor', competencia: mesPassado, nota: 9,
+    comentario: 'A entrega do mês ficou ótima.', quem: 'Bruna Melo', quando: emDias(-34) },
+  { id: 'nps-7', clienteId: 'exemplo-pub', competencia: mesPassado, nota: 10, comentario: null, quem: 'Thiago Prado', quando: emDias(-33) },
+  { id: 'nps-8', clienteId: 'exemplo-chopp', competencia: mesPassado, nota: 8,
+    comentario: 'Só senti falta de mais stories.', quem: 'Ana Paula', quando: emDias(-31) },
+  { id: 'nps-9', clienteId: 'exemplo-kb', competencia: mesPassado, nota: 6,
+    comentario: 'Travou no meio do projeto, voltou depois.', quem: 'Karla Bernardo', quando: emDias(-30) },
+];
+
+export function npsResumoExemplo(): ResumoNps {
+  const respondidas = PESQUISAS.filter((p): p is PesquisaExemplo & { nota: number } => p.nota !== null);
+  const conta2 = (f: (n: number) => boolean) => respondidas.filter((p) => f(p.nota)).length;
+  const total = respondidas.length;
+  const promotores = conta2((n) => n >= 9);
+  const detratores = conta2((n) => n <= 6);
+
+  return {
+    respostas: total,
+    promotores,
+    neutros: conta2((n) => n >= 7 && n <= 8),
+    detratores,
+    nps: total === 0 ? null : Math.round(((promotores - detratores) / total) * 100),
+    ultimas: respondidas
+      .filter((p) => p.comentario !== null || p.nota <= 6)
+      .slice()
+      .sort((a, b) => (b.quando ?? '').localeCompare(a.quando ?? ''))
+      .map((p) => ({
+        nota: p.nota,
+        comentario: p.comentario,
+        quem: p.quem,
+        quando: p.quando ?? '',
+        clienteNome: nomeDe(p.clienteId),
+        clienteId: p.clienteId,
+      })),
+    semResposta: PESQUISAS.filter((p) => p.nota === null)
+      .map((p) => ({ clienteNome: nomeDe(p.clienteId), competencia: p.competencia }))
+      .sort((a, b) => b.competencia.localeCompare(a.competencia)),
+  };
+}
+
+export function npsDoClienteExemplo(clienteId: string): NpsDoCliente {
+  const dele = PESQUISAS.filter((p) => p.clienteId === clienteId);
+  const pendente = dele
+    .filter((p) => p.nota === null)
+    .sort((a, b) => b.competencia.localeCompare(a.competencia))[0];
+  return {
+    pendente: pendente ? { id: pendente.id, competencia: pendente.competencia } : null,
+    respondidas: dele
+      .filter((p): p is PesquisaExemplo & { nota: number } => p.nota !== null)
+      .sort((a, b) => b.competencia.localeCompare(a.competencia))
+      .map((p) => ({
+        competencia: p.competencia,
+        nota: p.nota,
+        comentario: p.comentario,
+        quando: p.quando ?? '',
+      })),
+  };
+}
+
+/** Mesma trava da função do banco: a mesma pesquisa não se responde duas vezes. */
+export function responderNpsExemplo(pesquisaId: string, nota: number, comentario?: string): void {
+  const p = PESQUISAS.find((x) => x.id === pesquisaId);
+  if (!p) throw new Error('Pesquisa não encontrada.');
+  if (p.nota !== null) throw new Error('Esta pesquisa já foi respondida.');
+  p.nota = nota;
+  p.comentario = comentario?.trim() || null;
+  p.quem = SESSAO_CLIENTE.tipo === 'cliente' ? SESSAO_CLIENTE.nome : null;
+  p.quando = new Date().toISOString();
+}
+
+// ---------------------------------------------------------------------------
+// Comercial — o funil
+// ---------------------------------------------------------------------------
+const FECHADAS: EtapaLead[] = ['fechado', 'perdido', 'descartado'];
+
+const LEADS: (LeadNoFunil & { convertidoEm: string | null })[] = [
+  {
+    id: 'ld-1', nome: 'Renata Alves', empresa: 'Clínica Viva', etapa: 'proposta_enviada',
+    valorCentavos: 450_000, origem: 'indicação', proximoPasso: 'Ligar para fechar',
+    proximoEm: emDias(1), responsavelNome: 'Layana', ultimaEm: emDias(-2), convertidoEm: null,
+  },
+  {
+    id: 'ld-2', nome: 'Diego Matos', empresa: 'Matos Advocacia', etapa: 'reuniao_agendada',
+    valorCentavos: 320_000, origem: 'Instagram', proximoPasso: 'Reunião às 15h',
+    proximoEm: emDias(2), responsavelNome: 'Viviane', ultimaEm: emDias(-1), convertidoEm: null,
+  },
+  {
+    id: 'ld-3', nome: 'Juliana Prado', empresa: 'Doce Ponto', etapa: 'em_conversa',
+    valorCentavos: 190_000, origem: 'Google', proximoPasso: 'Mandar portfólio de food',
+    proximoEm: hoje, responsavelNome: 'Layana', ultimaEm: emDias(-4), convertidoEm: null,
+  },
+  {
+    id: 'ld-4', nome: 'Sérgio Lima', empresa: 'Lima Construções', etapa: 'qualificado',
+    valorCentavos: 1_200_000, origem: 'indicação', proximoPasso: 'Levantar escopo do site',
+    proximoEm: emDias(3), responsavelNome: 'Viviane', ultimaEm: emDias(-6), convertidoEm: null,
+  },
+  {
+    id: 'ld-5', nome: 'Camila Rocha', empresa: null, etapa: 'novo_lead',
+    valorCentavos: null, origem: 'WhatsApp', proximoPasso: 'Primeiro contato',
+    proximoEm: hoje, responsavelNome: null, ultimaEm: null, convertidoEm: null,
+  },
+  {
+    id: 'ld-6', nome: 'Fábio Nunes', empresa: 'Nunes Pneus', etapa: 'negociacao',
+    valorCentavos: 280_000, origem: 'Instagram', proximoPasso: 'Responder contraproposta',
+    proximoEm: emDias(-1), responsavelNome: 'Layana', ultimaEm: emDias(-3), convertidoEm: null,
+  },
+  {
+    id: 'ld-7', nome: 'Marcos Lopes', empresa: 'Omnia Engenharia', etapa: 'fechado',
+    valorCentavos: 4_200_000, origem: 'indicação', proximoPasso: null,
+    proximoEm: null, responsavelNome: 'Viviane', ultimaEm: emDias(-20), convertidoEm: emDias(-18),
+  },
+  {
+    id: 'ld-8', nome: 'Paula Freitas', empresa: 'Freitas Odonto', etapa: 'perdido',
+    valorCentavos: 240_000, origem: 'Google', proximoPasso: null,
+    proximoEm: null, responsavelNome: 'Layana', ultimaEm: emDias(-25), convertidoEm: null,
+  },
+];
+
+export function funilExemplo(): Funil {
+  const abertos = LEADS.filter((l) => !FECHADAS.includes(l.etapa));
+  const inicioDoMes = mesAtual;
+  return {
+    abertos: abertos.length,
+    valorAbertoCentavos: soma(abertos.map((l) => l.valorCentavos ?? 0)),
+    fechadosNoMes: LEADS.filter((l) => l.convertidoEm && l.convertidoEm >= inicioDoMes).length,
+    leads: abertos
+      .slice()
+      .sort((a, b) => (a.proximoEm ?? '9999').localeCompare(b.proximoEm ?? '9999')),
+  };
+}
+
+/** Mesma trava do banco: perdido exige motivo. */
+export function moverLeadExemplo(leadId: string, etapa: EtapaLead, motivo?: string): void {
+  const l = LEADS.find((x) => x.id === leadId);
+  if (!l) throw new Error('Lead não encontrado.');
+  if (etapa === 'perdido' && !motivo?.trim()) throw new Error('Lead perdido precisa de motivo.');
+  l.etapa = etapa;
+  l.ultimaEm = new Date().toISOString();
+  if (etapa === 'fechado') l.convertidoEm = hoje;
+  if (FECHADAS.includes(etapa)) {
+    l.proximoPasso = null;
+    l.proximoEm = null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Campanhas — o relatório do tráfego
+// ---------------------------------------------------------------------------
+const RELATORIOS: (RelatorioDeCampanha & { clienteId: string })[] = [
+  {
+    id: 'rel-1', clienteId: 'exemplo-pub', de: mesPassado, ate: diaDe(mesPassado, 31),
+    arquivo: 'publika-relatorio-outubro.pdf',
+    metricas: [
+      { rotulo: 'Alcance', valor: 184_320 },
+      { rotulo: 'Cliques no link', valor: 3_914 },
+      { rotulo: 'Conversas iniciadas', valor: 212 },
+      { rotulo: 'Custo por conversa', valor: 7.08 },
+    ],
+    campanhas: [
+      { nome: 'Lançamento — tráfego frio', plataforma: 'Meta Ads', objetivo: 'Mensagens',
+        verbaCentavos: 90_000, resultadoRotulo: 'Conversas', resultadoValor: 128 },
+      { nome: 'Remarketing — quem viu o vídeo', plataforma: 'Meta Ads', objetivo: 'Mensagens',
+        verbaCentavos: 60_000, resultadoRotulo: 'Conversas', resultadoValor: 84 },
+    ],
+  },
+  {
+    id: 'rel-2', clienteId: 'exemplo-pub',
+    de: primeiroDoMes(new Date(agora.getFullYear(), agora.getMonth() - 2, 1)),
+    ate: diaDe(primeiroDoMes(new Date(agora.getFullYear(), agora.getMonth() - 2, 1)), 31),
+    arquivo: 'publika-relatorio-setembro.pdf',
+    metricas: [
+      { rotulo: 'Alcance', valor: 151_880 },
+      { rotulo: 'Cliques no link', valor: 3_102 },
+      { rotulo: 'Conversas iniciadas', valor: 166 },
+      { rotulo: 'Custo por conversa', valor: 9.03 },
+    ],
+    campanhas: [
+      { nome: 'Sempre no ar', plataforma: 'Meta Ads', objetivo: 'Alcance',
+        verbaCentavos: 150_000, resultadoRotulo: 'Conversas', resultadoValor: 166 },
+    ],
+  },
+];
+
+export function campanhasExemplo(clienteId: string): RelatorioDeCampanha[] {
+  return RELATORIOS.filter((r) => r.clienteId === clienteId);
+}
+
+// ---------------------------------------------------------------------------
+// Ambientes, domínios e chamados
+// ---------------------------------------------------------------------------
+const AMBIENTES: Record<string, AmbientesDoCliente> = {
+  'exemplo-omnia': {
+    ambientes: [
+      { id: 'am-1', nome: 'Produção', url: 'https://omniaengenharia.com.br',
+        hospedagem: 'Vercel', sslRenovaEm: emDias(54), noAr: true },
+      { id: 'am-2', nome: 'Homologação', url: 'https://staging.omniaengenharia.com.br',
+        hospedagem: 'Vercel', sslRenovaEm: emDias(54), noAr: true },
+    ],
+    dominios: [
+      { dominio: 'omniaengenharia.com.br', registrador: 'Registro.br',
+        titular: 'Omnia Engenharia LTDA', venceEm: emDias(210) },
+    ],
+    chamados: [
+      { id: 'ch-1', titulo: 'Formulário de contato não envia no celular',
+        prioridade: 'alta', status: 'em_andamento', abertoEm: emDias(-2) },
+      { id: 'ch-2', titulo: 'Trocar o telefone do rodapé',
+        prioridade: 'baixa', status: 'resolvido', abertoEm: emDias(-14) },
+    ],
+  },
+  'exemplo-mor': {
+    ambientes: [
+      { id: 'am-3', nome: 'Produção', url: 'https://mormarcas.com.br',
+        hospedagem: 'Vercel', sslRenovaEm: emDias(31), noAr: false },
+    ],
+    dominios: [
+      { dominio: 'mormarcas.com.br', registrador: 'Registro.br',
+        titular: 'Mor Marcas ME', venceEm: emDias(96) },
+    ],
+    chamados: [],
+  },
+};
+
+const VAZIO_AMBIENTES: AmbientesDoCliente = { ambientes: [], dominios: [], chamados: [] };
+
+export function ambientesExemplo(clienteId: string): AmbientesDoCliente {
+  return AMBIENTES[clienteId] ?? VAZIO_AMBIENTES;
+}
+
+let seqChamado = 0;
+
+/**
+ * Mesma ordem de conferência da função do banco, inclusive o módulo: sem
+ * manutenção no contrato, a função recusa — não é a tela que esconde o botão.
+ */
+export function abrirChamadoExemplo(
+  clienteId: string,
+  titulo: string,
+  descricao?: string,
+  prioridade = 'media',
+): void {
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  if (!c) throw new Error('Cliente não encontrado.');
+  if (!titulo.trim()) throw new Error('Diga em uma linha o que está acontecendo.');
+  if (!modulosDe(c.servicos, c.extras).includes('manutencao')) {
+    throw new Error('Este cliente não tem manutenção no contrato.');
+  }
+  seqChamado += 1;
+  const alvo = AMBIENTES[clienteId] ?? (AMBIENTES[clienteId] = { ambientes: [], dominios: [], chamados: [] });
+  alvo.chamados.unshift({
+    id: `ch-novo-${seqChamado}`,
+    titulo: titulo.trim(),
+    prioridade,
+    status: 'aberto',
+    abertoEm: new Date().toISOString(),
+  });
+  // `descricao` existe no banco e aparece quando a equipe abre o chamado; a
+  // lista do cliente mostra só o título.
+  void descricao;
 }

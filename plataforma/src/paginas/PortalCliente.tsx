@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { CascaCliente } from '../componentes/Casca';
@@ -6,8 +7,14 @@ import { painelCliente } from '../dados/api';
 import { useSessao } from '../sessao';
 import { InicioCliente } from './InicioCliente';
 import { PortalAprovar } from './PortalAprovar';
+import { Ambientes } from './Ambientes';
 import { Calendario } from './Calendario';
+import { Campanhas } from './Campanhas';
+import { ContaDoCliente } from './ContaDoCliente';
+import { Contrato } from './Contrato';
+import { FeedbackCliente } from './FeedbackCliente';
 import { Galeria } from './Galeria';
+import { Grid } from './Grid';
 import { Projeto } from './Projeto';
 import type { PainelCliente } from '../dados/tipos';
 
@@ -15,6 +22,19 @@ import type { PainelCliente } from '../dados/tipos';
 function EmBreve({ titulo }: { titulo: string }) {
   return (
     <Vazio titulo={titulo} explica="Em breve." />
+  );
+}
+
+/**
+ * O miolo de cada aba do portal. O h1 fica aqui, uma vez: tela sem h1 deixa
+ * quem navega por marcos sem ponto de entrada, e dois h1 é a mesma doença.
+ */
+function Aba({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <div className="px-5 pb-16 sm:px-8 lg:px-12">
+      <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">{titulo}</h1>
+      {children}
+    </div>
   );
 }
 
@@ -60,37 +80,85 @@ export function PortalCliente() {
         <Route
           path="projeto"
           element={
-            <div className="px-5 pb-16 sm:px-8 lg:px-12">
-              <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">Meu projeto</h1>
+            <Aba titulo="Meu projeto">
               <Projeto clienteId={painel.cliente.id} equipe={false} />
-            </div>
+            </Aba>
           }
         />
         <Route
           path="calendario"
           element={
-            <div className="px-5 pb-16 sm:px-8 lg:px-12">
-              <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">Calendário</h1>
+            <Aba titulo="Calendário">
               <Calendario clienteId={painel.cliente.id} equipe={false} />
-            </div>
+            </Aba>
           }
         />
-        <Route path="grid" element={<EmBreve titulo="Grid" />} />
-        <Route path="campanhas" element={<EmBreve titulo="Campanhas" />} />
+        <Route
+          path="grid"
+          element={
+            <Aba titulo="Grid">
+              <Grid clienteId={painel.cliente.id} equipe={false} />
+            </Aba>
+          }
+        />
+        <Route
+          path="campanhas"
+          element={
+            <Aba titulo="Campanhas">
+              <Campanhas clienteId={painel.cliente.id} equipe={false} />
+            </Aba>
+          }
+        />
         <Route
           path="galeria"
           element={
-            <div className="px-5 pb-16 sm:px-8 lg:px-12">
-              <h1 className="titulao pt-9 text-[clamp(1.8rem,5vw,2.8rem)]">Galeria</h1>
+            <Aba titulo="Galeria">
               <Galeria clienteId={painel.cliente.id} equipe={false} quem={sessao.nome} />
-            </div>
+            </Aba>
           }
         />
-        <Route path="site" element={<EmBreve titulo="Meu site" />} />
-        <Route path="acervo" element={<EmBreve titulo="Acervo" />} />
-        <Route path="financeiro" element={<EmBreve titulo="Financeiro" />} />
-        <Route path="contrato" element={<EmBreve titulo="Contrato" />} />
-        <Route path="feedback" element={<EmBreve titulo="Feedback" />} />
+        <Route
+          path="site"
+          element={
+            <Aba titulo="Meu site">
+              <Ambientes clienteId={painel.cliente.id} equipe={false} />
+            </Aba>
+          }
+        />
+        {/* Acervo e Galeria leem a mesma coisa: os arquivos entregues. O que
+            muda e o nome que o contrato da a aba. */}
+        <Route
+          path="acervo"
+          element={
+            <Aba titulo="Acervo">
+              <Galeria clienteId={painel.cliente.id} equipe={false} quem={sessao.nome} />
+            </Aba>
+          }
+        />
+        <Route
+          path="financeiro"
+          element={
+            <Aba titulo="Financeiro">
+              <ContaDoCliente clienteId={painel.cliente.id} equipe={false} />
+            </Aba>
+          }
+        />
+        <Route
+          path="contrato"
+          element={
+            <Aba titulo="Contrato">
+              <Contrato clienteId={painel.cliente.id} equipe={false} />
+            </Aba>
+          }
+        />
+        <Route
+          path="feedback"
+          element={
+            <Aba titulo="Feedback">
+              <FeedbackCliente clienteId={painel.cliente.id} equipe={false} />
+            </Aba>
+          }
+        />
         <Route path="*" element={<EmBreve titulo="Página não encontrada" />} />
       </Routes>
     </CascaCliente>

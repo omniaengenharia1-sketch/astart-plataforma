@@ -149,11 +149,31 @@ confere que o comentário aparece na fila da equipe, do outro lado.
 
 ```bash
 cd plataforma && npm run build && npx vite preview --port 4178
-# noutro terminal, com playwright-core instalado:
-node contraste.mjs        # contraste composto, dois temas
-node acessibilidade.mjs   # axe-core, 2 larguras × 2 temas × 2 papéis
-node olhar.mjs            # jornada da equipe + ciclo de aprovação
+# noutro terminal:
+npm run contraste       # contraste composto, dois temas, 15 telas
+npm run acessibilidade  # axe-core, 2 larguras × 2 temas × 2 papéis
+npm run olhar           # jornada da equipe + ciclo de aprovação
+npm run telas           # cada tela abre, com dado dentro, nas duas larguras
 ```
+
+Os quatro acham o Chromium do ambiente por conta (`navegador.mjs`): o
+`playwright-core` procura um número de build exato e morre pedindo
+`npx playwright install` quando a imagem traz outro.
+
+O `telas.mjs` é o que cobra o básico de toda tela nova, dos dois lados: um `h1`
+por página, nenhum erro no console, nada rolando na horizontal, nenhum "Em
+breve" sobrando, e nenhum `NaN`, `undefined` ou `Invalid Date` escapando para a
+tela. Ele também fecha um ciclo: o cliente dá a nota do NPS, sai, a equipe entra
+e o comentário dele tem de estar lá.
+
+Duas coisas que esse roteiro ensinou:
+
+- **Procurar `nan` em texto minúsculo reprova "Karla Bernardo".** Sujeira de
+  render tem caixa própria (`NaN`, `undefined`), então a busca é no texto cru e
+  com fronteira de palavra.
+- **Entrar com `goto` zera o modo exemplo.** Os dados vivem na memória da
+  página; recarregar entre a sessão do cliente e a da equipe apagava justamente
+  a continuidade que o teste existia para provar.
 
 ---
 

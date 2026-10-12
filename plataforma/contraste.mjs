@@ -11,10 +11,10 @@
 //   2. O fundo de um texto é a primeira camada opaca ABAIXO dele. Somar todas
 //      as camadas do caminho como candidatas mede o texto do botão contra o
 //      painel atrás do botão — que ninguém vê.
-import { chromium } from 'playwright-core';
+import { abrirNavegador } from './navegador.mjs';
 
 const BASE = 'http://localhost:4178';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const b = await abrirNavegador();
 
 const MEDIDA = `(() => {
   const lum = ([r, g, b]) => {
@@ -129,8 +129,10 @@ const MEDIDA = `(() => {
 })()`;
 
 const TELAS = [
-  ['equipe', 'layana@astartstudio.com.br', ['Clientes', 'Aprovações', 'Ajustes']],
-  ['cliente', 'bruna@mormarcas.com.br', ['Para aprovar', 'Meu projeto']],
+  ['equipe', 'layana@astartstudio.com.br',
+    ['Clientes', 'Aprovações', 'Agenda', 'Fila', 'Financeiro', 'Comercial', 'Feedbacks', 'Ajustes']],
+  ['cliente', 'bruna@mormarcas.com.br',
+    ['Para aprovar', 'Meu projeto', 'Grid', 'Financeiro', 'Contrato', 'Meu site', 'Feedback']],
 ];
 
 const vistos = new Map();

@@ -54,6 +54,7 @@ const MENU_EQUIPE: ItemMenu[] = [
   { para: '/fila', rotulo: 'Fila' },
   { para: '/financeiro', rotulo: 'Financeiro' },
   { para: '/comercial', rotulo: 'Comercial' },
+  { para: '/feedbacks', rotulo: 'Feedbacks' },
   { para: '/ajustes', rotulo: 'Ajustes' },
 ];
 

@@ -451,3 +451,155 @@ export interface EnvioEmCurso {
   erro: string | null;
   pronto: boolean;
 }
+
+// --- as telas que faltavam (migrations 0036/0037) ---------------------------
+
+export type SituacaoLancamento = 'previsto' | 'atrasado' | 'recebido' | 'pago' | 'cancelado';
+
+export interface LancamentoNaLista {
+  id: string;
+  descricao: string;
+  clienteNome: string | null;
+  clienteId: string | null;
+  natureza: 'receita' | 'custo' | 'investimento' | 'imposto';
+  grupo: string;
+  categoria: string;
+  subcategoria: string;
+  valorCentavos: number;
+  vencimento: string | null;
+  situacao: SituacaoLancamento;
+  forma: string | null;
+  /** Só aparece enquanto ninguém confirmou a sugestão da IA. */
+  sugestao: string | null;
+}
+
+export interface PainelFinanceiro {
+  mes: string;
+  receitaCentavos: number;
+  custoCentavos: number;
+  recebidoCentavos: number;
+  atrasadoCentavos: number;
+  lancamentos: LancamentoNaLista[];
+  porCliente: { clienteId: string; clienteNome: string; receitaCentavos: number; atrasadoCentavos: number }[];
+}
+
+export interface ContaDoCliente {
+  id: string;
+  descricao: string;
+  valorCentavos: number;
+  vencimento: string | null;
+  competencia: string;
+  situacao: SituacaoLancamento;
+  boletoUrl: string | null;
+  pix: string | null;
+}
+
+export interface FinanceiroDoCliente {
+  aVencerCentavos: number;
+  atrasadoCentavos: number;
+  pagoNoAnoCentavos: number;
+  lancamentos: ContaDoCliente[];
+}
+
+export interface AlvoDaPeca {
+  conta: string;
+  plataforma: string;
+  estado: string;
+  erro: string | null;
+  tentativas: number;
+}
+
+export interface PecaNaFila {
+  id: string;
+  clienteId: string;
+  clienteNome: string;
+  titulo: string;
+  tipo: TipoPeca;
+  status: StatusPublicacao;
+  quando: string | null;
+  erro: string | null;
+  alvos: AlvoDaPeca[];
+}
+
+export interface EventoNaAgenda {
+  tipo: 'publicacao' | 'captacao' | 'marco' | 'cobranca';
+  quando: string;
+  clienteId: string;
+  clienteNome: string;
+  oQue: string;
+  detalhe: string;
+}
+
+export interface ItemDoGrid {
+  id: string;
+  titulo: string;
+  tipo: TipoPeca;
+  status: StatusPublicacao;
+  estado: EstadoAprovacao;
+  quando: string | null;
+  capa: string | null;
+}
+
+export interface ResumoNps {
+  respostas: number;
+  promotores: number;
+  neutros: number;
+  detratores: number;
+  nps: number | null;
+  ultimas: {
+    nota: number; comentario: string | null; quem: string | null;
+    quando: string; clienteNome: string | null; clienteId: string | null;
+  }[];
+  semResposta: { clienteNome: string; competencia: string }[];
+}
+
+export interface NpsDoCliente {
+  pendente: { id: string; competencia: string } | null;
+  respondidas: { competencia: string; nota: number; comentario: string | null; quando: string }[];
+}
+
+export type EtapaLead =
+  | 'novo_lead' | 'pronto_abordar' | 'aguardando_aprovacao' | 'aguardando_edicao'
+  | 'contato_feito' | 'em_conversa' | 'qualificado' | 'reuniao_agendada'
+  | 'proposta_enviada' | 'negociacao' | 'fechado' | 'perdido' | 'descartado';
+
+export interface LeadNoFunil {
+  id: string;
+  nome: string;
+  empresa: string | null;
+  etapa: EtapaLead;
+  valorCentavos: number | null;
+  origem: string | null;
+  proximoPasso: string | null;
+  proximoEm: string | null;
+  responsavelNome: string | null;
+  ultimaEm: string | null;
+}
+
+export interface Funil {
+  abertos: number;
+  valorAbertoCentavos: number;
+  fechadosNoMes: number;
+  leads: LeadNoFunil[];
+}
+
+export interface RelatorioDeCampanha {
+  id: string;
+  de: string;
+  ate: string;
+  arquivo: string | null;
+  metricas: { rotulo: string; valor: number }[];
+  campanhas: {
+    nome: string; plataforma: string; objetivo: string | null;
+    verbaCentavos: number | null; resultadoRotulo: string | null; resultadoValor: number | null;
+  }[];
+}
+
+export interface AmbientesDoCliente {
+  ambientes: {
+    id: string; nome: string; url: string | null; hospedagem: string | null;
+    sslRenovaEm: string | null; noAr: boolean;
+  }[];
+  dominios: { dominio: string; registrador: string | null; titular: string | null; venceEm: string | null }[];
+  chamados: { id: string; titulo: string; prioridade: string; status: string; abertoEm: string }[];
+}

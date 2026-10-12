@@ -10,7 +10,8 @@
     "typecheck": "tsc -b --noEmit",
     "olhar": "node olhar.mjs",
     "contraste": "node contraste.mjs",
-    "acessibilidade": "node acessibilidade.mjs"
+    "acessibilidade": "node acessibilidade.mjs",
+    "telas": "node telas.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

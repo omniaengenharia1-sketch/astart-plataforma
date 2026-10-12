@@ -4,10 +4,15 @@ import { Carregando, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
 import { AlbumPublico } from './paginas/AlbumPublico';
 import { Entrar } from './paginas/Entrar';
+import { Agenda } from './paginas/Agenda';
 import { Ajustes } from './paginas/Ajustes';
 import { Aprovacoes } from './paginas/Aprovacoes';
 import { Clientes } from './paginas/Clientes';
+import { Comercial } from './paginas/Comercial';
+import { Feedbacks } from './paginas/Feedbacks';
 import { FichaCliente } from './paginas/FichaCliente';
+import { Fila } from './paginas/Fila';
+import { Financeiro } from './paginas/Financeiro';
 import { InicioEquipe } from './paginas/InicioEquipe';
 import { NovoCliente } from './paginas/NovoCliente';
 import { PortalCliente } from './paginas/PortalCliente';
@@ -59,14 +64,14 @@ export default function App() {
               <Route path="/clientes/novo" element={<NovoCliente />} />
               <Route path="/clientes/:clienteId/*" element={<FichaCliente />} />
               <Route path="/aprovacoes" element={<Aprovacoes />} />
-              <Route path="/agenda" element={<EmBreve titulo="Agenda" />} />
-              <Route path="/fila" element={<EmBreve titulo="Fila de publicação" />} />
-              <Route path="/financeiro" element={<EmBreve titulo="Financeiro" />} />
-              <Route path="/comercial" element={<EmBreve titulo="Comercial" />} />
+              <Route path="/agenda" element={<Agenda />} />
+              <Route path="/fila" element={<Fila />} />
+              <Route path="/financeiro" element={<Financeiro />} />
+              <Route path="/comercial" element={<Comercial />} />
+              <Route path="/feedbacks" element={<Feedbacks />} />
               <Route path="/ajustes/*" element={<Ajustes />} />
-              <Route path="/feedbacks" element={<EmBreve titulo="Feedbacks" />} />
-              <Route path="/grid" element={<EmBreve titulo="Grid" />} />
-              <Route path="/entregaveis" element={<EmBreve titulo="Entregáveis" />} />
+              {/* Grid, calendário e entregáveis são de um cliente: moram na
+                  ficha dele, não numa tela solta que não saberia de quem é. */}
               <Route path="*" element={<EmBreve titulo="Página não encontrada" />} />
             </Routes>
           </CascaEquipe>

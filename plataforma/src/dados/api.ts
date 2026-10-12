@@ -11,16 +11,22 @@
 import { ligado, sb } from './supabase';
 import {
   PAINEL_EQUIPE, SESSAO_CLIENTE, SESSAO_EQUIPE,
-  calendarioExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo, criarGaleriaExemplo,
-  criarLinkExemplo, criarPecaExemplo, galeriasExemplo, revogarLinkExemplo,
+  abrirChamadoExemplo, agendaExemplo, ambientesExemplo,
+  calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
+  criarGaleriaExemplo, criarLinkExemplo, criarPecaExemplo, financeiroDoClienteExemplo,
+  filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
+  npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
+  revogarLinkExemplo,
   enviarExemplo, equipeEConvitesExemplo, fichaExemplo, filaExemplo, itemDoEntregavelExemplo,
   listaClientesExemplo, moverPecaExemplo, mudarAcessoExemplo, painelClienteExemplo,
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
-  Album, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao, EquipeEConvites,
-  FichaCliente, GaleriaNaLista, ItemGaleria, ItemNaFila, MesDeConteudo, PainelCliente,
-  PainelEquipe, PedidoDeConvite, Perfil, ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
+  Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao,
+  EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente, FinanceiroDoCliente, Funil,
+  GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
+  PainelCliente, PainelEquipe, PainelFinanceiro, PecaNaFila, PedidoDeConvite, Perfil,
+  RelatorioDeCampanha, ResumoNps, ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
 } from './tipos';
 
 export { ligado };
@@ -669,4 +675,196 @@ export async function urlsDosOriginais(
     bytes: l.tamanho_bytes,
     url: mapa.get(l.caminho) ?? null,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro
+// ---------------------------------------------------------------------------
+
+/** `mes` é qualquer dia do mês, AAAA-MM-DD. Omitido, é o mês corrente. */
+export async function painelFinanceiro(mes?: string): Promise<PainelFinanceiro> {
+  if (!sb) return painelFinanceiroExemplo(mes);
+  const { data, error } = await sb.rpc('painel_financeiro', { p_mes: mes ?? null });
+  if (error) {
+    throw new FalhaDados(
+      /permission denied|row-level security/i.test(error.message)
+        ? 'Seu acesso não abre o financeiro.'
+        : `Não consegui abrir o financeiro: ${error.message}`,
+    );
+  }
+  return exija(data as PainelFinanceiro | null, 'O financeiro do mês');
+}
+
+/**
+ * A conta de UM cliente. A mesma função serve a equipe e o próprio cliente: o
+ * RLS é que decide quais lançamentos cada um alcança, então a tela não precisa
+ * de dois caminhos.
+ */
+export async function financeiroDoCliente(clienteId: string): Promise<FinanceiroDoCliente> {
+  if (!sb) return financeiroDoClienteExemplo(clienteId);
+  const { data, error } = await sb.rpc('financeiro_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir as cobranças: ${error.message}`);
+  return exija(data as FinanceiroDoCliente | null, 'As cobranças deste cliente');
+}
+
+// ---------------------------------------------------------------------------
+// Fila de publicação e agenda
+// ---------------------------------------------------------------------------
+
+export async function filaPublicacao(): Promise<PecaNaFila[]> {
+  if (!sb) return filaPublicacaoExemplo();
+  const { data, error } = await sb.rpc('fila_publicacao');
+  if (error) throw new FalhaDados(`Não consegui carregar a fila: ${error.message}`);
+  return exija(data as PecaNaFila[] | null, 'A fila de publicação');
+}
+
+export async function agenda(de: string, ate: string): Promise<EventoNaAgenda[]> {
+  if (!sb) return agendaExemplo(de, ate);
+  const { data, error } = await sb.rpc('agenda', { p_de: de, p_ate: ate });
+  if (error) throw new FalhaDados(`Não consegui abrir a agenda: ${error.message}`);
+  return exija(data as EventoNaAgenda[] | null, 'A agenda');
+}
+
+// ---------------------------------------------------------------------------
+// Grid
+// ---------------------------------------------------------------------------
+
+/**
+ * O feed como ele vai ficar. A capa vem como CAMINHO no bucket privado, não
+ * como endereço: quem assina é esta função, com validade curta. O cliente lê o
+ * bucket pela política da 0038 — a mesma chamada serve aos dois lados.
+ */
+export async function gridDoCliente(clienteId: string): Promise<ItemDoGrid[]> {
+  if (!sb) return gridExemplo(clienteId);
+  const { data, error } = await sb.rpc('grid_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir o grid: ${error.message}`);
+  const itens = exija(data as ItemDoGrid[] | null, 'O grid deste cliente');
+
+  const caminhos = itens.map((i) => i.capa).filter((c): c is string => !!c);
+  if (caminhos.length === 0) return itens;
+
+  const { data: urls } = await sb.storage.from('midias-posts').createSignedUrls(caminhos, 3600);
+  const mapa = new Map((urls ?? []).map((u) => [u.path, u.signedUrl]));
+  // Capa que não assinou vira null, não vira endereço quebrado: a tela mostra o
+  // bloco vazio com o título, que é melhor que um ícone de imagem partida.
+  return itens.map((i) => ({ ...i, capa: i.capa ? (mapa.get(i.capa) ?? null) : null }));
+}
+
+// ---------------------------------------------------------------------------
+// Feedbacks (NPS)
+// ---------------------------------------------------------------------------
+
+export async function npsResumo(): Promise<ResumoNps> {
+  if (!sb) return npsResumoExemplo();
+  const { data, error } = await sb.rpc('nps_resumo');
+  if (error) throw new FalhaDados(`Não consegui carregar os feedbacks: ${error.message}`);
+  return exija(data as ResumoNps | null, 'Os feedbacks');
+}
+
+export async function npsDoCliente(clienteId: string): Promise<NpsDoCliente> {
+  if (!sb) return npsDoClienteExemplo(clienteId);
+  const { data, error } = await sb.rpc('nps_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir o feedback: ${error.message}`);
+  return exija(data as NpsDoCliente | null, 'O feedback deste cliente');
+}
+
+/**
+ * A nota do cliente. A função do banco recusa a segunda resposta da mesma
+ * pesquisa: responder duas vezes mudaria o NPS do mês com uma opinião só.
+ */
+export async function responderNps(
+  pesquisaId: string,
+  nota: number,
+  comentario?: string,
+): Promise<void> {
+  if (nota < 0 || nota > 10 || !Number.isInteger(nota)) {
+    throw new FalhaDados('A nota vai de 0 a 10.');
+  }
+  if (!sb) {
+    try {
+      responderNpsExemplo(pesquisaId, nota, comentario);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui registrar a nota.');
+    }
+  }
+  const { error } = await sb.rpc('responder_nps', {
+    p_pesquisa: pesquisaId,
+    p_nota: nota,
+    p_comentario: comentario?.trim() || null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Comercial
+// ---------------------------------------------------------------------------
+
+export async function funil(): Promise<Funil> {
+  if (!sb) return funilExemplo();
+  const { data, error } = await sb.rpc('funil');
+  if (error) throw new FalhaDados(`Não consegui abrir o funil: ${error.message}`);
+  return exija(data as Funil | null, 'O funil');
+}
+
+export async function moverLead(leadId: string, etapa: EtapaLead, motivo?: string): Promise<void> {
+  if (etapa === 'perdido' && !motivo?.trim()) {
+    throw new FalhaDados('Escreva o motivo para marcar como perdido.');
+  }
+  if (!sb) {
+    try {
+      moverLeadExemplo(leadId, etapa, motivo);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui mover o lead.');
+    }
+  }
+  const { error } = await sb.rpc('mover_lead', {
+    p_lead: leadId,
+    p_etapa: etapa,
+    p_motivo: motivo?.trim() || null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Campanhas, ambientes e chamados
+// ---------------------------------------------------------------------------
+
+export async function campanhasDoCliente(clienteId: string): Promise<RelatorioDeCampanha[]> {
+  if (!sb) return campanhasExemplo(clienteId);
+  const { data, error } = await sb.rpc('campanhas_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir as campanhas: ${error.message}`);
+  return exija(data as RelatorioDeCampanha[] | null, 'As campanhas deste cliente');
+}
+
+export async function ambientesDoCliente(clienteId: string): Promise<AmbientesDoCliente> {
+  if (!sb) return ambientesExemplo(clienteId);
+  const { data, error } = await sb.rpc('ambientes_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Não consegui abrir o site: ${error.message}`);
+  return exija(data as AmbientesDoCliente | null, 'O site deste cliente');
+}
+
+export async function abrirChamado(
+  clienteId: string,
+  titulo: string,
+  descricao?: string,
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente' = 'media',
+): Promise<void> {
+  if (!titulo.trim()) throw new FalhaDados('Diga em uma linha o que está acontecendo.');
+  if (!sb) {
+    try {
+      abrirChamadoExemplo(clienteId, titulo, descricao, prioridade);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui abrir o chamado.');
+    }
+  }
+  const { error } = await sb.rpc('abrir_chamado', {
+    p_cliente: clienteId,
+    p_titulo: titulo.trim(),
+    p_descricao: descricao?.trim() || null,
+    p_prioridade: prioridade,
+  });
+  if (error) throw new FalhaDados(error.message);
 }

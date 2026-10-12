@@ -7,8 +7,14 @@ import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { convidar, fichaCliente, tirarAcessoDoCliente } from '../dados/api';
 import { diaMes, haQuanto, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
+import { Ambientes } from './Ambientes';
 import { Calendario } from './Calendario';
+import { Campanhas } from './Campanhas';
+import { ContaDoCliente } from './ContaDoCliente';
+import { Contrato } from './Contrato';
+import { FeedbackCliente } from './FeedbackCliente';
 import { Galeria } from './Galeria';
+import { Grid } from './Grid';
 import { Projeto } from './Projeto';
 import type {
   ChaveModulo, FichaCliente as Ficha, PapelCliente, ServicoContratado,
@@ -153,6 +159,18 @@ export function FichaCliente() {
         <Calendario clienteId={clienteId} equipe />
       ) : aba === 'galeria' || aba === 'acervo' ? (
         <Galeria clienteId={clienteId} equipe />
+      ) : aba === 'grid' ? (
+        <Grid clienteId={clienteId} equipe />
+      ) : aba === 'campanhas' ? (
+        <Campanhas clienteId={clienteId} equipe />
+      ) : aba === 'ambientes' || aba === 'manutencao' ? (
+        <Ambientes clienteId={clienteId} equipe />
+      ) : aba === 'financeiro' ? (
+        <ContaDoCliente clienteId={clienteId} equipe />
+      ) : aba === 'contrato' ? (
+        <Contrato clienteId={clienteId} equipe />
+      ) : aba === 'nps' ? (
+        <FeedbackCliente clienteId={clienteId} equipe />
       ) : aba !== '' ? (
         <Vazio
           titulo={MODULO[aba as ChaveModulo] ?? 'Seção'}
