@@ -214,12 +214,12 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
         <div className="bloco mt-5 p-4 sm:p-5">
           <div className="rotulo-forte">nova peça</div>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Campo id="peca-titulo" rotulo="Nome interno" dica="é por ele que a equipe acha a peça">
+            <Campo id="peca-titulo" rotulo="Nome interno" dica="só a equipe vê">
               <Entrada
                 id="peca-titulo"
                 value={titulo}
                 autoFocus
-                placeholder="Ex.: Carrossel do pão de fermentação natural"
+                placeholder="Ex.: Carrossel do pão"
                 onChange={(e) => setTitulo(e.target.value)}
               />
             </Campo>
@@ -240,7 +240,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
                 onChange={(e) => setNovoDia(e.target.value)}
               />
             </Campo>
-            <Campo id="peca-hora" rotulo="Hora" dica={`no fuso de ${dados.fusoHorario}`}>
+            <Campo id="peca-hora" rotulo="Hora" dica="fuso do cliente">
               <Entrada
                 id="peca-hora"
                 type="time"
@@ -329,7 +329,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
         {dados.pecas.length === 0 ? (
           <Vazio
             titulo="Mês vazio."
-            explica={equipe ? 'Nenhuma peça marcada para este mês ainda.' : 'Nada publicado nem marcado por aqui.'}
+            explica={equipe ? 'Nenhuma peça marcada.' : 'Nada marcado neste mês.'}
           />
         ) : (
           [...porDia.entries()].map(([dia, lista]) => (
@@ -351,9 +351,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
         <section className="mt-9">
           <Fita>Pronto para mandar</Fita>
           {prontas.length === 0 ? (
-            <p className="py-4 text-tinta-3">
-              Nada em rascunho neste mês. O que foi enviado está com o cliente.
-            </p>
+            <p className="py-4 text-tinta-3">Nada em rascunho.</p>
           ) : (
             <ul className="border-t border-linha-fraca">
               {prontas.map((p) => (
@@ -406,12 +404,12 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
             <Entrada
               value={mensagem}
               onChange={(e) => setMensagem(e.target.value)}
-              placeholder="Recado para o cliente (opcional)"
+              placeholder="Recado (opcional)"
               aria-label="Recado para o cliente"
               className="max-w-80 flex-1"
             />
             <Botao variante="primario" disabled={enviando} onClick={() => void enviar()}>
-              {enviando ? 'Enviando…' : 'Enviar para aprovação'}
+              {enviando ? 'Enviando…' : 'Enviar ao cliente'}
             </Botao>
             <Botao variante="texto" disabled={enviando} onClick={() => setMarcados([])}>
               Limpar

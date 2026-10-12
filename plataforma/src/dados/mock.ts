@@ -996,7 +996,7 @@ export function albumExemplo(chave: string): Album {
     ?? GALERIAS[0]!;
   return {
     titulo: g.titulo,
-    recado: 'Separe as suas preferidas marcando o coração. O download sai em alta.',
+    recado: 'Marque as suas preferidas. O download sai em alta.',
     cliente: CLIENTES.find((c) => c.cliente.id === g.clienteId)?.cliente.nome ?? null,
     quando: g.quando,
     permiteDownload: g.permiteDownload,

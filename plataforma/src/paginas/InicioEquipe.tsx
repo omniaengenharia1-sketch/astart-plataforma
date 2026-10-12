@@ -54,7 +54,7 @@ export function InicioEquipe() {
           {n === 0 ? (
             <Vazio
               titulo="Tudo em dia."
-              explica="Nenhuma peça parada, nenhuma publicação falha, nenhuma cobrança vencida."
+              explica="Nada parado, nada vencido."
             />
           ) : (
             <ul className="border-t border-linha-fraca">
@@ -98,7 +98,7 @@ export function InicioEquipe() {
           <div className="mt-8" />
           <Fita>Esta semana</Fita>
           {painel.semana.length === 0 ? (
-            <p className="py-4 text-tinta-3">Semana sem marco nem captação.</p>
+            <p className="py-4 text-tinta-3">Nada marcado.</p>
           ) : (
             <ul>
               {painel.semana.map((c) => (

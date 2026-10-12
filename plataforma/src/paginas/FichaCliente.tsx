@@ -156,7 +156,7 @@ export function FichaCliente() {
       ) : aba !== '' ? (
         <Vazio
           titulo={MODULO[aba as ChaveModulo] ?? 'Seção'}
-          explica="Esta aba ainda não foi construída. O contrato deste cliente já a liga, e ela aparece aqui porque o serviço contratado pede."
+          explica="Em breve."
         />
       ) : (
       <>
@@ -176,7 +176,7 @@ export function FichaCliente() {
         <div>
           <Fita>Contrato</Fita>
           {ficha.servicos.length === 0 ? (
-            <Vazio titulo="Sem serviço contratado." explica="É o contrato que liga as telas deste cliente." />
+            <Vazio titulo="Sem contrato." explica="Adicione um serviço para liberar as abas." />
           ) : (
             <ul className="border-t border-linha-fraca">
               {ficha.servicos.map((s) => (
@@ -217,7 +217,7 @@ export function FichaCliente() {
           <div className="mt-9" />
           <Fita>O que já andou</Fita>
           {ficha.movimentos.length === 0 ? (
-            <p className="py-4 text-tinta-3">Nenhuma resposta do cliente ainda.</p>
+            <p className="py-4 text-tinta-3">Nada ainda.</p>
           ) : (
             <ul>
               {ficha.movimentos.map((m, i) => (
@@ -246,9 +246,7 @@ export function FichaCliente() {
 
           {abrindoAcesso && (
             <div className="bloco mt-3 p-3">
-              <p className="rotulo normal-case">
-                ele recebe um e-mail para criar a senha. o convite não vence.
-              </p>
+              <p className="rotulo normal-case">ele recebe um e-mail para criar a senha.</p>
               <div className="mt-3 grid gap-3">
                 <Campo id="ac-nome" rotulo="Nome">
                   <Entrada id="ac-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -330,17 +328,13 @@ export function FichaCliente() {
           )}
 
           <div className="mt-8" />
-          <Fita>Ligado para ele</Fita>
+          <Fita>Abas liberadas</Fita>
           <div className="flex flex-wrap gap-1.5 pt-3">
             {ficha.modulos.map((m) => (
               <Marca key={m}>{MODULO[m]}</Marca>
             ))}
           </div>
-          <p className="rotulo mt-3">
-            {ativos.length === 0
-              ? 'só o que todo cliente tem'
-              : `ligado pelos ${ativos.length === 1 ? 'serviço' : 'serviços'} do contrato`}
-          </p>
+
         </aside>
       </div>
       </>

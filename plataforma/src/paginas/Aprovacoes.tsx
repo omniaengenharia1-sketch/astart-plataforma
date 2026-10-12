@@ -79,7 +79,7 @@ export function Aprovacoes() {
   return (
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
-        <div className="rotulo">peça e entregável na mesma fila</div>
+        <div className="rotulo">fila única</div>
         <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">
           {ajustes.length === 0
             ? 'Nada na sua mão.'
@@ -125,7 +125,7 @@ export function Aprovacoes() {
       {filtrada.length === 0 ? (
         <Vazio
           titulo="Fila vazia."
-          explica="Nenhuma peça e nenhum entregável esperando resposta ou voltando com ajuste."
+          explica="Nada esperando resposta."
         />
       ) : (
         <div className="mt-8 grid items-start gap-9 xl:grid-cols-2">

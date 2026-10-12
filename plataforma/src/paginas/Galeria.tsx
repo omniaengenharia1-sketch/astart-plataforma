@@ -77,7 +77,7 @@ function Cartao({
           {itens === null ? (
             <Carregando oQue="os arquivos" />
           ) : itens.length === 0 ? (
-            <p className="text-tinta-3">Nada subiu para esta galeria ainda.</p>
+            <p className="text-tinta-3">Nada subiu ainda.</p>
           ) : (
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
               {itens.map((i) => (
@@ -254,14 +254,14 @@ export function Galeria({
         <div className="bloco mb-7 p-4 sm:p-5">
           <div className="rotulo-forte">nova galeria</div>
           <p className="rotulo mt-1.5 normal-case">
-            o cliente abre por link, sem conta, e baixa em alta — é o que o Pixieset fazia
+            o cliente abre por link, sem conta, e baixa em alta
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <Campo id="gal-titulo" rotulo="Nome da entrega" className="min-w-64 flex-1">
               <Entrada
                 id="gal-titulo"
                 value={novoTitulo}
-                placeholder="Ex.: Captação na fábrica — outubro"
+                placeholder="Ex.: Captação na fábrica"
                 onChange={(e) => setNovoTitulo(e.target.value)}
               />
             </Campo>
@@ -276,11 +276,11 @@ export function Galeria({
 
       {galerias.length === 0 ? (
         <Vazio
-          titulo="Nenhuma entrega ainda."
+          titulo="Nenhuma entrega."
           explica={
             equipe
-              ? 'Crie a galeria, suba as fotos e os vídeos, e mande o link para o cliente.'
-              : 'Quando a Astart entregar um material, ele aparece aqui.'
+              ? 'Crie a galeria, suba os arquivos e mande o link.'
+              : 'As entregas aparecem aqui.'
           }
         />
       ) : (
@@ -318,7 +318,7 @@ export function Galeria({
                     }}
                     className="mt-3 rounded-[var(--raio)] border border-dashed border-linha p-5 text-center"
                   >
-                    <p className="text-tinta-2">Arraste as fotos e os vídeos aqui</p>
+                    <p className="text-tinta-2">Arraste fotos e vídeos aqui</p>
                     <Botao
                       className="mt-3"
                       disabled={subindo}
@@ -327,8 +327,7 @@ export function Galeria({
                       {subindo ? 'Subindo…' : 'Escolher arquivos'}
                     </Botao>
                     <p className="rotulo mt-3 normal-case">
-                      a miniatura é feita aqui no navegador, antes de subir — o original vai
-                      inteiro, sem recompressão
+                      o original sobe inteiro, sem recompressão
                     </p>
                   </div>
 
@@ -360,9 +359,7 @@ export function Galeria({
                   <Fita>Link do cliente</Fita>
                   {tokens[g.id] ? (
                     <div className="mt-3">
-                      <p className="rotulo normal-case">
-                        copie agora: por segurança, o endereço completo só aparece uma vez
-                      </p>
+                      <p className="rotulo normal-case">copie agora — aparece uma vez só</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <code className="min-w-0 flex-1 truncate rounded-[var(--raio-p)] border border-linha bg-superficie px-3 py-2 font-mono text-[12px]">
                           {enderecoDe(tokens[g.id] as string)}
@@ -378,7 +375,7 @@ export function Galeria({
                           variante="texto"
                           onClick={() => window.open(`/g/${tokens[g.id]}`, '_blank', 'noopener')}
                         >
-                          Ver como o cliente vê
+                          Abrir como cliente
                         </Botao>
                       </div>
                     </div>

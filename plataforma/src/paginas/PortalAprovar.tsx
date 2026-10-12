@@ -57,7 +57,7 @@ function Item({
       {/* O preview do conteúdo entra aqui quando a mídia estiver no Storage.
           Até lá, a tela não finge ter imagem: diz o que ainda não tem. */}
       <div className="aurora mt-4 border border-dashed border-linha px-4 py-8 text-center">
-        <span className="rotulo-forte rounded-full bg-superficie-2 px-3 py-1.5 text-tinta">a prévia do material aparece aqui</span>
+        <span className="rotulo-forte rounded-full bg-superficie-2 px-3 py-1.5 text-tinta">prévia do material</span>
       </div>
 
       {aberto === null && (
@@ -77,7 +77,7 @@ function Item({
       {aberto !== null && (
         <div className="mt-4 border-t border-linha-fraca pt-4">
           <label htmlFor={`texto-${item.id}`} className="rotulo-forte">
-            {aberto === 'ajuste' ? 'o que precisa mudar' : 'por que não vai usar (opcional)'}
+            {aberto === 'ajuste' ? 'o que mudar' : 'motivo (opcional)'}
           </label>
           <textarea
             id={`texto-${item.id}`}
@@ -87,16 +87,12 @@ function Item({
             autoFocus
             placeholder={
               aberto === 'ajuste'
-                ? 'Ex.: trocar a foto do primeiro quadro, o produto saiu escuro.'
+                ? 'Ex.: trocar a foto do primeiro quadro.'
                 : 'Ex.: a promoção foi cancelada.'
             }
             className="mt-2 w-full resize-y border border-linha bg-superficie px-3 py-2 text-[14px] placeholder:text-tinta-3 focus:outline-none"
           />
-          {aberto === 'ajuste' && (
-            <p className="rotulo mt-1.5">
-              sem isso a equipe não sabe o que refazer — por isso o campo é obrigatório
-            </p>
-          )}
+          {aberto === 'ajuste' && <p className="rotulo mt-1.5">obrigatório</p>}
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <Botao
               variante="primario"
@@ -169,14 +165,13 @@ export function PortalAprovar({
   return (
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
-        <div className="rotulo">o que a Astart mandou para você olhar</div>
+        
         <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">
           {n === 0 ? 'Nada esperando você.' : `${n} ${n === 1 ? 'item espera' : 'itens esperam'} você.`}
         </h1>
         {n > 0 && (
           <p className="mt-3 max-w-xl text-tinta-2">
-            Aprove o que estiver bom. Se algo precisar mudar, escreva o que mudar — é isso que a
-            equipe vai ler.
+            Aprove o que estiver bom. Se precisar mudar, escreva o que mudar.
           </p>
         )}
       </div>
@@ -184,7 +179,7 @@ export function PortalAprovar({
       {n === 0 ? (
         <Vazio
           titulo="Tudo respondido."
-          explica="Quando a equipe mandar material novo, ele aparece aqui e você recebe aviso."
+          explica="A gente avisa quando chegar material novo."
         />
       ) : (
         <>
@@ -204,16 +199,16 @@ export function PortalAprovar({
             <div className="mt-7 flex flex-wrap items-center gap-3">
               {confirmando ? (
                 <>
-                  <span className="rotulo-forte">aprovar {n} itens de uma vez?</span>
+                  <span className="rotulo-forte">aprovar os {n}?</span>
                   <Botao variante="primario" disabled={lote} onClick={() => void aprovarTudo()}>
-                    {lote ? 'Aprovando…' : `Sim, aprovar ${n}`}
+                    {lote ? 'Aprovando…' : 'Sim, aprovar'}
                   </Botao>
                   <Botao variante="texto" disabled={lote} onClick={() => setConfirmando(false)}>
-                    Deixa, vou ver um por um
+                    Ver um por um
                   </Botao>
                 </>
               ) : (
-                <Botao onClick={() => setConfirmando(true)}>Aprovar todos de uma vez</Botao>
+                <Botao onClick={() => setConfirmando(true)}>Aprovar tudo</Botao>
               )}
             </div>
           )}

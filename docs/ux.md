@@ -154,3 +154,28 @@ node contraste.mjs        # contraste composto, dois temas
 node acessibilidade.mjs   # axe-core, 2 larguras × 2 temas × 2 papéis
 node olhar.mjs            # jornada da equipe + ciclo de aprovação
 ```
+
+---
+
+## 6. Como a plataforma fala
+
+Seis regras, aplicadas tela a tela. Elas existem porque a diferença entre
+"linguagem de app" e "texto de sistema" é quase toda subtração.
+
+1. **Botão é verbo curto.** "Enviar ao cliente", não "Enviar para aprovação".
+   "Aprovar tudo", não "Aprovar todos de uma vez".
+2. **Rótulo é substantivo de uma a três palavras.** "Como cobra", "Pode o quê",
+   "De quem é a bola". Pergunta curta vale; frase não.
+3. **Não explicar a regra — dizer o que fazer.** Era: "sem isso a equipe não
+   sabe o que refazer, por isso o campo é obrigatório". Virou: "obrigatório".
+4. **Dica tem no máximo cinco palavras, e só quando evita erro.** "do 1 ao 28",
+   "só a equipe vê", "opcional". Quando não evita erro, sai.
+5. **Vazio diz o que vai aparecer ali, e a ação.** "Nenhuma entrega. Crie a
+   galeria, suba os arquivos e mande o link." Sem "assim que a Astart…".
+6. **A plataforma não fala de si mesma.** Nada de "o sistema", "a plataforma",
+   "nossa infraestrutura", "esta tela ainda não foi construída". O que não
+   existe ainda diz "Em breve." e pronto.
+
+Duas consequências práticas: o motivo de uma regra mora no **código**, em
+comentário, não na tela — e nome de fornecedor (Pixieset, Anthropic) não
+aparece para o usuário, só na documentação.

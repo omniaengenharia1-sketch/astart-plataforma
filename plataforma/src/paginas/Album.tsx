@@ -201,7 +201,7 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
         else n.add(item.id);
         return n;
       });
-      setErroBaixa('Não consegui salvar a sua escolha. Tente de novo.');
+      setErroBaixa('Não salvou a escolha. Tente de novo.');
     }
   }
 
@@ -242,7 +242,7 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
       );
       if (modo === 'um-a-um') {
         setErroBaixa(
-          'Seu navegador não monta o zip: os arquivos vieram um a um. No Chrome ou no Edge do computador, sai tudo num arquivo só.',
+          'Vieram um a um — seu navegador não monta zip. No Chrome ou no Edge do computador sai tudo junto.',
         );
       }
     } catch (x) {
@@ -312,11 +312,11 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
 
       {mostrados.length === 0 ? (
         <Vazio
-          titulo={soFavoritas ? 'Nenhuma escolhida ainda.' : 'Galeria vazia.'}
+          titulo={soFavoritas ? 'Nenhuma escolhida.' : 'Galeria vazia.'}
           explica={
             soFavoritas
-              ? 'Marque o coração nas que você quiser separar.'
-              : 'Assim que a Astart subir o material, ele aparece aqui.'
+              ? 'Marque o coração nas que quiser separar.'
+              : 'A gente avisa quando o material subir.'
           }
         />
       ) : (

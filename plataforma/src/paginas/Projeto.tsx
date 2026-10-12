@@ -138,11 +138,11 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
   if (servicos.length === 0) {
     return (
       <Vazio
-        titulo="Sem projeto aqui."
+        titulo="Nenhum projeto."
         explica={
           equipe
-            ? 'Este cliente não contratou serviço com entregáveis. É o contrato que liga esta aba.'
-            : 'Quando um projeto começar, as etapas aparecem aqui.'
+            ? 'O contrato não tem serviço com entregáveis.'
+            : 'As etapas aparecem aqui quando o projeto começar.'
         }
       />
     );
@@ -231,12 +231,12 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
             <Entrada
               value={mensagem}
               onChange={(ev) => setMensagem(ev.target.value)}
-              placeholder="Recado para o cliente (opcional)"
+              placeholder="Recado (opcional)"
               aria-label="Recado para o cliente"
               className="max-w-80 flex-1"
             />
             <Botao variante="primario" disabled={enviando} onClick={() => void enviar()}>
-              {enviando ? 'Enviando…' : 'Enviar para aprovação'}
+              {enviando ? 'Enviando…' : 'Enviar ao cliente'}
             </Botao>
             <Botao variante="texto" disabled={enviando} onClick={() => setMarcados([])}>
               Limpar

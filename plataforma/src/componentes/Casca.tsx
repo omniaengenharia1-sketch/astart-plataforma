@@ -141,7 +141,7 @@ function AvisoExemplo() {
       className="border-b border-linha-fraca bg-pink-fundo px-5 py-2 sm:px-8 lg:px-12"
     >
       <span className="rotulo-forte text-pink-texto">
-        modo exemplo — sem Supabase configurado, os dados desta tela são fictícios
+        modo exemplo · dados fictícios
       </span>
     </aside>
   );

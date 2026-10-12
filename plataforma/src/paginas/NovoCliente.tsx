@@ -75,7 +75,7 @@ function LinhaServico({
           rotulo="Como cobra"
           dica={
             s.formatoPadrao === null && escolha.formato === null
-              ? 'o audiovisual pode ser mensal ou de uma vez — diga qual'
+              ? 'mensal ou de uma vez?'
               : undefined
           }
         >
@@ -103,7 +103,7 @@ function LinhaServico({
         </Campo>
 
         {recorrente ? (
-          <Campo id={`${id}-dia`} rotulo="Vence todo dia" dica="até o 28, que existe em todo mês">
+          <Campo id={`${id}-dia`} rotulo="Vence todo dia" dica="do 1 ao 28">
             <Escolha
               id={`${id}-dia`}
               value={escolha.diaVencimento ?? 10}
@@ -141,7 +141,7 @@ function LinhaServico({
         </Campo>
 
         {!recorrente && (
-          <Campo id={`${id}-entrega`} rotulo="Entrega prevista" dica="pode ficar em branco">
+          <Campo id={`${id}-entrega`} rotulo="Entrega prevista" dica="opcional">
             <Entrada
               id={`${id}-entrega`}
               type="date"
@@ -299,15 +299,14 @@ export function NovoCliente() {
         </Link>
         <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">Novo cliente</h1>
         <p className="mt-3 max-w-xl text-tinta-2">
-          O contrato é o que liga as telas dele. Serviço contratado abre aba; serviço
-          que não entrou não aparece em lugar nenhum.
+          Os serviços contratados definem as abas que ele vê.
         </p>
       </div>
 
       <div className="mt-6 flex gap-2 border-y border-linha-fraca py-2">
         {([
-          ['mao', 'Preencher à mão'],
-          ['proposta', 'Jogar a proposta'],
+          ['mao', 'À mão'],
+          ['proposta', 'Pela proposta'],
         ] as const).map(([chave, texto]) => (
           <button
             key={chave}
@@ -325,27 +324,22 @@ export function NovoCliente() {
 
       {aba === 'proposta' ? (
         <div className="bloco brilho-p mt-7 max-w-2xl p-5 sm:p-7">
-          <div className="rotulo">ainda não ligado</div>
+          <div className="rotulo">em breve</div>
           <h2 className="titulao mt-2 text-[clamp(1.2rem,4vw,1.7rem)]">
-            Ler a proposta e montar o cliente sozinho
+            Jogue o PDF, a IA preenche
           </h2>
           <p className="mt-3 text-tinta-2">
-            O desenho está pronto: você joga o PDF da proposta ou cola o link, e a plataforma
-            preenche nome, serviços e valores para você só conferir.
+            Nome, serviços e valores vêm da proposta. Você só confere.
           </p>
-          <p className="mt-3 text-tinta-2">Faltam duas coisas, e as duas são suas:</p>
+          <p className="mt-4 text-tinta-2">Falta decidir duas coisas:</p>
           <ul className="mt-3 space-y-2">
+            <li className="border-l-2 border-pink pl-3">A chave da IA que lê o PDF.</li>
             <li className="border-l-2 border-pink pl-3">
-              A chave da API da Anthropic, que é quem lê o PDF.
-            </li>
-            <li className="border-l-2 border-pink pl-3">
-              A sua decisão de que a proposta de um cliente pode sair da nossa infraestrutura
-              para ser lida. Enquanto isso não estiver decidido, não vou mandar documento de
-              cliente para lugar nenhum.
+              Se a proposta de um cliente pode sair daqui para ser lida.
             </li>
           </ul>
           <Botao className="mt-6" onClick={() => setAba('mao')}>
-            Preencher à mão por enquanto
+            Preencher à mão
           </Botao>
         </div>
       ) : (
@@ -354,7 +348,7 @@ export function NovoCliente() {
             <div>
               <Fita>Quem é</Fita>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Campo id="nome" rotulo="Nome do cliente" dica="o nome que aparece na plataforma">
+                <Campo id="nome" rotulo="Nome do cliente" dica="aparece para ele">
                   <Entrada
                     id="nome"
                     value={nome}
@@ -369,10 +363,10 @@ export function NovoCliente() {
                   rotulo="Endereço"
                   dica={
                     editandoSlug ? (
-                      'só letras, números e hífen'
+                      'letras, números e hífen'
                     ) : (
                       <>
-                        sai do nome —{' '}
+                        gerado do nome ·{' '}
                         <button
                           type="button"
                           className="underline hover:text-pink-texto"
@@ -381,7 +375,7 @@ export function NovoCliente() {
                             setEditandoSlug(true);
                           }}
                         >
-                          escrever outro
+                          editar
                         </button>
                       </>
                     )
@@ -396,7 +390,7 @@ export function NovoCliente() {
                   )}
                 </Campo>
 
-                <Campo id="fuso" rotulo="Fuso do cliente" dica="só para mostrar hora certa a ele">
+                <Campo id="fuso" rotulo="Fuso do cliente" dica="para as datas dele">
                   <Escolha id="fuso" value={fuso} onChange={(e) => setFuso(e.target.value)}>
                     {FUSOS.map((f) => (
                       <option key={f} value={f}>
@@ -472,19 +466,19 @@ export function NovoCliente() {
               )}
 
               {escolhidos.length === 0 && !abrindo && (
-                <p className="rotulo mt-3">sem serviço o cliente não tem tela nenhuma</p>
+                <p className="rotulo mt-3">escolha pelo menos um serviço</p>
               )}
             </div>
 
             <aside aria-label="Resumo do contrato" className="lg:sticky lg:top-5">
-              <Fita>Vai ficar assim</Fita>
+              <Fita>Resumo</Fita>
               <div className="mt-4 grid gap-4">
                 <Bloco rotulo="Por mês" destaque={reais(mensal)} />
                 <Bloco rotulo="Projeto e pontual" destaque={reais(unico)} />
               </div>
 
               <div className="mt-6">
-                <span className="rotulo-forte">abas que o contrato liga</span>
+                <span className="rotulo-forte">abas liberadas</span>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {modulos.map((m) => (
                     <Marca key={m}>{MODULO[m]}</Marca>
@@ -494,7 +488,7 @@ export function NovoCliente() {
 
               {semFormato.length > 0 && (
                 <p className="rotulo mt-4 normal-case text-tinta">
-                  falta dizer como cobra{' '}
+                  falta o formato de{' '}
                   {semFormato
                     .map((e) => cat.servicos.find((s) => s.chave === e.servico)?.nome)
                     .filter(Boolean)

@@ -68,7 +68,7 @@ export function InicioCliente({ painel, nome }: { painel: PainelCliente; nome: s
           </Cartao>
         ) : (
           <Cartao rotulo="Para aprovar" destaque="Nada pendente">
-            <p className="mt-1 text-[13px] text-tinta-2">A Astart avisa quando tiver algo.</p>
+            <p className="mt-1 text-[13px] text-tinta-2">A gente avisa quando chegar.</p>
           </Cartao>
         )}
 

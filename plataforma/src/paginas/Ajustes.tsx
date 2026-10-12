@@ -86,7 +86,7 @@ export function Ajustes() {
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="flex flex-wrap items-end justify-between gap-4 pt-9">
         <div>
-          <div className="rotulo">quem entra na plataforma</div>
+          <div className="rotulo">acessos</div>
           <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">Equipe</h1>
         </div>
         {dados.souAdmin && (
@@ -107,7 +107,7 @@ export function Ajustes() {
         <div className="bloco mt-7 p-4 sm:p-5">
           <div className="rotulo-forte">convidar para a equipe</div>
           <p className="rotulo mt-1.5 normal-case">
-            a pessoa recebe um e-mail para criar a senha dela. o convite não vence.
+            ela recebe um e-mail para criar a senha.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Campo id="conv-nome" rotulo="Nome">
@@ -122,7 +122,7 @@ export function Ajustes() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Campo>
-            <Campo id="conv-cargo" rotulo="Cargo" dica="como ela se apresenta">
+            <Campo id="conv-cargo" rotulo="Cargo">
               <Entrada id="conv-cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} />
             </Campo>
             <Campo
@@ -199,9 +199,7 @@ export function Ajustes() {
               </li>
             ))}
           </ul>
-          <p className="rotulo mt-2 normal-case">
-            convite não vence: fica aberto até ser aceito ou cancelado aqui.
-          </p>
+          <p className="rotulo mt-2 normal-case">o convite não vence.</p>
         </section>
       )}
 
@@ -247,9 +245,7 @@ export function Ajustes() {
             </li>
           ))}
         </ul>
-        <p className="rotulo mt-2 normal-case">
-          tirar o acesso não apaga ninguém: o histórico de quem aprovou o quê continua de pé.
-        </p>
+        <p className="rotulo mt-2 normal-case">tirar o acesso não apaga o histórico.</p>
       </section>
     </div>
   );

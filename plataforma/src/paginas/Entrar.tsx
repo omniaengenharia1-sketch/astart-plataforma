@@ -38,9 +38,7 @@ export function Entrar() {
       <main className="bloco entra w-full max-w-[26rem] p-7 sm:p-9">
         <Logo altura={38} />
         <h1 className="titulao mt-7 text-[clamp(1.8rem,6vw,2.4rem)]">Entrar</h1>
-        <p className="mt-2 text-tinta-2">
-          Equipe e clientes, mesmo acesso. A plataforma sabe quem é você.
-        </p>
+        <p className="mt-2 text-tinta-2">Use o e-mail do seu convite.</p>
 
         <form onSubmit={(e) => void enviar(e)} className="mt-7 flex flex-col gap-4" noValidate>
           <label className="flex flex-col gap-2">
@@ -83,8 +81,7 @@ export function Entrar() {
 
         <div className="mt-8 border-t border-linha-fraca pt-5">
           <p className="text-[12.5px] text-tinta-3">
-            Primeiro acesso? Use o link do convite e crie sua senha aqui mesmo. O convite não
-            vence.
+            Primeiro acesso? Abra o link do convite para criar sua senha.
           </p>
 
           {!ligado && (

@@ -14,7 +14,7 @@ import { PortalCliente } from './paginas/PortalCliente';
 
 function EmBreve({ titulo }: { titulo: string }) {
   return (
-    <Vazio titulo={titulo} explica="Esta tela ainda não foi construída. A rota já existe." />
+    <Vazio titulo={titulo} explica="Em breve." />
   );
 }
 

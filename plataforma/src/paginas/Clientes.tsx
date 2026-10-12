@@ -123,7 +123,7 @@ export function Clientes() {
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="flex flex-wrap items-end justify-between gap-4 pt-9">
         <div>
-          <div className="rotulo">quem a Astart atende hoje</div>
+          <div className="rotulo">carteira</div>
           <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">Clientes</h1>
         </div>
         <Botao variante="primario" onClick={() => navegar('/clientes/novo')}>
@@ -134,7 +134,7 @@ export function Clientes() {
       {linhas.length === 0 ? (
         <Vazio
           titulo="Nenhum cliente ainda."
-          explica="Cadastre o primeiro pelo formulário ou jogando a proposta no sistema."
+          explica="Cadastre o primeiro para começar."
           acao={
             <Botao variante="primario" onClick={() => navegar('/clientes/novo')}>
               Cadastrar cliente
@@ -161,7 +161,7 @@ export function Clientes() {
               colunas={colunas}
               chaveDe={(c) => c.id}
               aoClicar={(c) => navegar(`/clientes/${c.id}`)}
-              placeholderBusca="buscar cliente ou serviço"
+              placeholderBusca="buscar"
               resumo={(c) => (
                 <>
                   <div className="flex items-start justify-between gap-3">

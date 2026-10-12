@@ -14,7 +14,7 @@ import type { PainelCliente } from '../dados/tipos';
 /** Tela ainda não construída. Diz isso, em vez de mostrar uma página em branco. */
 function EmBreve({ titulo }: { titulo: string }) {
   return (
-    <Vazio titulo={titulo} explica="Esta tela ainda não foi construída. O portal já reconhece a rota." />
+    <Vazio titulo={titulo} explica="Em breve." />
   );
 }
 
