@@ -54,7 +54,10 @@ function selo(p: PecaNoMes, equipe: boolean): { texto: string; forte: boolean } 
 function Chip({ p, equipe }: { p: PecaNoMes; equipe: boolean }) {
   const s = selo(p, equipe);
   return (
-    <div className="border-2 border-linha bg-superficie px-1.5 py-1">
+    <div
+      title={`${p.titulo} · ${p.hora}`}
+      className="rounded-[10px] border border-linha bg-superficie px-2 py-1.5"
+    >
       <div className="flex items-center justify-between gap-1">
         <span className="numeros text-[10.5px]">{p.hora}</span>
         <Marca forte={s.forte}>{s.texto}</Marca>
@@ -208,7 +211,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
       </div>
 
       {equipe && novoDia && (
-        <div className="bloco sombra-dura-p mt-5 bg-superficie p-4 sm:p-5">
+        <div className="bloco mt-5 p-4 sm:p-5">
           <div className="rotulo-forte">nova peça</div>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Campo id="peca-titulo" rotulo="Nome interno" dica="é por ele que a equipe acha a peça">
@@ -255,8 +258,8 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
             </Botao>
           </div>
           {erroForm && (
-            <div role="alert" className="bloco mt-4 border-4 bg-alerta-fundo p-3">
-              <span className="rotulo-forte">não deu certo</span>
+            <div role="alert" className="bloco mt-4 bg-alerta-fundo p-3.5">
+              <span className="rotulo-forte text-pink-texto">não deu certo</span>
               <p className="mt-1 text-[13.5px] font-medium">{erroForm}</p>
             </div>
           )}
@@ -270,36 +273,54 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
             <div
               key={d}
               className={
-                'rotulo-forte border-b-4 border-linha px-2 py-2 ' +
+                'rotulo-forte border-b border-linha px-2 py-2 ' +
                 (diasDoPlano.includes(i) ? 'bg-superficie-2' : '')
               }
             >
               {d}
             </div>
           ))}
-          {celulas.map((dia, i) => (
-            <div
-              key={dia ?? `vazio-${i}`}
-              className={
-                'min-h-28 border-r-2 border-b-2 border-linha-fraca p-1.5 ' +
-                (dia === hojeISO() ? 'bg-pink-fundo ' : '') +
-                // Hachura no dia vazio ao passar o mouse: "cabe coisa aqui".
-                (dia && equipe ? 'cursor-pointer hover:hachura' : '')
-              }
-              onClick={dia && equipe ? () => { setNovoDia(dia); setErroForm(null); } : undefined}
-            >
-              {dia && (
-                <>
-                  <div className="numeros mb-1 text-[11px] text-tinta-3">{Number(dia.slice(8))}</div>
-                  <div className="flex flex-col gap-1">
-                    {(porDia.get(dia) ?? []).map((p) => (
-                      <Chip key={p.id} p={p} equipe={equipe} />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
+          {celulas.map((dia, i) => {
+            const pecasDoDia = dia ? (porDia.get(dia) ?? []) : [];
+            const conteudo = dia && (
+              <>
+                <div className="numeros mb-1 text-left text-[11px] text-tinta-3">
+                  {Number(dia.slice(8))}
+                </div>
+                <div className="flex flex-col gap-1">
+                  {pecasDoDia.map((p) => (
+                    <Chip key={p.id} p={p} equipe={equipe} />
+                  ))}
+                </div>
+              </>
+            );
+            const classe =
+              'min-h-28 w-full border-r border-b border-linha-fraca p-1.5 text-left ' +
+              (dia === hojeISO() ? 'bg-pink-fundo ' : '');
+
+            // Dia clicavel e <button>, nao <div onClick>: com div, criar peca
+            // existia so para quem tem mouse.
+            return dia && equipe ? (
+              <button
+                key={dia}
+                type="button"
+                aria-label={`Criar peça no dia ${Number(dia.slice(8))}${
+                  pecasDoDia.length ? ` · ${pecasDoDia.length} já marcada(s)` : ''
+                }`}
+                onClick={() => {
+                  setNovoDia(dia);
+                  setErroForm(null);
+                }}
+                className={classe + 'cursor-pointer transition-colors hover:aurora'}
+              >
+                {conteudo}
+              </button>
+            ) : (
+              <div key={dia ?? `vazio-${i}`} className={classe}>
+                {conteudo}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -334,13 +355,13 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
               Nada em rascunho neste mês. O que foi enviado está com o cliente.
             </p>
           ) : (
-            <ul className="border-t-2 border-linha">
+            <ul className="border-t border-linha-fraca">
               {prontas.map((p) => (
                 <li
                   key={p.id}
                   className={
-                    'flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-linha px-3 py-3 ' +
-                    (p.estadoAprovacao === 'com_ajustes' ? 'border-l-8 border-l-pink' : '')
+                    'flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3 ' +
+                    (p.estadoAprovacao === 'com_ajustes' ? 'border-l-2 border-l-pink' : '')
                   }
                 >
                   <input
@@ -354,7 +375,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
                       )
                     }
                     aria-label={`Enviar ${p.titulo}`}
-                    className="size-4 shrink-0 accent-[var(--pink)]"
+                    className="size-5 shrink-0 cursor-pointer accent-[var(--pink)]"
                   />
                   <span className="numeros w-20 shrink-0 text-[12px]">
                     {diaMes(p.dia)} {p.hora}
@@ -379,7 +400,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
       {erroEnvio && <Falhou mensagem={erroEnvio} />}
 
       {equipe && marcados.length > 0 && (
-        <div className="sticky bottom-0 z-10 mt-8 border-t-4 border-linha bg-papel py-4">
+        <div className="vidro-chapa sticky bottom-0 z-10 mt-8 border-t border-linha px-1 py-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="rotulo-forte">{plural(marcados.length, 'peça marcada', 'peças marcadas')}</span>
             <Entrada

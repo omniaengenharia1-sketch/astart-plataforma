@@ -57,7 +57,7 @@ export function Tabela<T>({
               onChange={(e) => setTermo(e.target.value)}
               placeholder={placeholderBusca}
               aria-label={placeholderBusca}
-              className="min-h-10 w-full max-w-72 border-2 border-linha bg-superficie px-3 font-mono text-[12px] placeholder:text-tinta-3 focus:outline-none"
+              className="min-h-10 w-full max-w-72 border border-linha bg-superficie px-3 font-mono text-[12px] placeholder:text-tinta-3 focus:outline-none"
             />
           )}
           {acoes && <div className="ml-auto flex flex-wrap items-center gap-2">{acoes}</div>}
@@ -74,7 +74,7 @@ export function Tabela<T>({
                 <th
                   key={c.chave}
                   scope="col"
-                  className="rotulo-forte border-b-4 border-linha px-3 py-2.5 text-left first:pl-0"
+                  className="rotulo-forte border-b border-linha px-3 py-2.5 text-left first:pl-0"
                   style={c.larguraMin ? { minWidth: c.larguraMin } : undefined}
                 >
                   {c.titulo}
@@ -92,7 +92,7 @@ export function Tabela<T>({
                   aria-selected={ativa}
                   onClick={aoClicar ? () => aoClicar(l) : undefined}
                   className={
-                    'border-b-2 border-linha-fraca ' +
+                    'border-b border-linha-fraca ' +
                     (aoClicar ? 'empurra cursor-pointer ' : '') +
                     (ativa ? 'bg-pink text-sobre-pink' : 'hover:bg-superficie-2')
                   }
@@ -121,7 +121,7 @@ export function Tabela<T>({
           <div
             key={chaveDe(l)}
             onClick={aoClicar ? () => aoClicar(l) : undefined}
-            className={'bloco bg-superficie p-4 ' + (aoClicar ? 'erguer cursor-pointer' : '')}
+            className={'bloco p-4 ' + (aoClicar ? 'erguer cursor-pointer' : '')}
           >
             {resumo
               ? resumo(l)

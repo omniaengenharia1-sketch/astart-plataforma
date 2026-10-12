@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variante = 'primario' | 'secundario' | 'texto';
+type Variante = 'primario' | 'secundario' | 'texto' | 'inverso';
 type Tamanho = 'normal' | 'pequeno';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -9,39 +9,39 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-// A sombra dura encolhe quando o botao e pressionado: o bloco afunda no lugar.
-//
-// Borda e preenchimento NAO entram aqui. Entravam, e a variante 'texto' tentava
-// desfazer com border-0 e px-0: duas classes da mesma familia no mesmo elemento
-// nao se resolvem pela ordem que a gente escreve, e a borda do BASE vencia em
-// silencio — o botao terciario virava um secundario sem sombra.
 const BASE =
-  'inline-flex items-center justify-center gap-2 font-mono font-semibold ' +
-  'uppercase tracking-[0.16em] transition-[transform,box-shadow] duration-75 ' +
-  'disabled:opacity-35 disabled:pointer-events-none select-none';
-
-const COM_SOMBRA =
-  'shadow-[3px_3px_0_var(--sombra)] hover:translate-x-[1px] hover:translate-y-[1px] ' +
-  'hover:shadow-[2px_2px_0_var(--sombra)] active:translate-x-[3px] active:translate-y-[3px] ' +
-  'active:shadow-none';
+  'relative inline-flex items-center justify-center gap-2 rounded-full font-mono font-semibold ' +
+  'uppercase tracking-[0.14em] select-none transition-[transform,box-shadow,background-color] ' +
+  'duration-200 ease-out disabled:opacity-40 disabled:pointer-events-none ' +
+  'active:translate-y-px';
 
 const VARIANTES: Record<Variante, string> = {
-  // Preto sobre o pink: 4,87:1. Branco sobre o pink seria 4,31:1 e reprovaria.
-  primario: `border-2 border-linha bg-pink text-sobre-pink ${COM_SOMBRA}`,
-  secundario: `border-2 border-linha bg-superficie text-tinta ${COM_SOMBRA}`,
-  texto: 'border-b-2 border-linha bg-transparent text-tinta hover:border-pink hover:text-pink',
+  // Pink chapado com brilho por baixo. Texto escuro sobre o pink: 6,4:1.
+  primario:
+    'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink ' +
+    'shadow-[inset_0_1px_0_rgb(255_255_255/0.45),0_14px_34px_-14px_rgb(255_61_154/0.85)] ' +
+    'hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.5),0_18px_42px_-14px_rgb(255_61_154/0.95)] ' +
+    'hover:-translate-y-px',
+  // Lâmina de vidro.
+  secundario:
+    'bg-superficie-2 text-tinta border border-linha backdrop-blur-xl ' +
+    'shadow-[inset_0_1px_0_rgb(255_255_255/0.22)] hover:bg-superficie-3 hover:-translate-y-px',
+  texto: 'bg-transparent text-tinta-2 hover:text-pink-texto risca rounded-none',
+  // Para usar SOBRE o pink: inverte. Pink sobre pink não é botão, é mancha.
+  inverso:
+    'bg-sobre-pink text-pink shadow-[0_10px_26px_-12px_rgb(0_0_0/0.6)] hover:-translate-y-px',
 };
 
 const TAMANHOS: Record<Tamanho, string> = {
-  normal: 'min-h-11 text-[10px]',
-  pequeno: 'min-h-9 text-[9.5px]',
+  normal: 'min-h-11 text-[10.5px]',
+  pequeno: 'min-h-9 text-[10px]',
 };
 
-// O terciario nao tem caixa, entao tambem nao tem respiro lateral.
 const LADOS: Record<Variante, Record<Tamanho, string>> = {
-  primario: { normal: 'px-4', pequeno: 'px-3' },
-  secundario: { normal: 'px-4', pequeno: 'px-3' },
-  texto: { normal: 'px-0', pequeno: 'px-0' },
+  primario: { normal: 'px-5', pequeno: 'px-4' },
+  secundario: { normal: 'px-5', pequeno: 'px-4' },
+  inverso: { normal: 'px-5', pequeno: 'px-4' },
+  texto: { normal: 'px-1', pequeno: 'px-1' },
 };
 
 export function Botao({

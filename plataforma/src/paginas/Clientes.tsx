@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bloco, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
@@ -54,7 +54,13 @@ export function Clientes() {
         busca: (c) => `${c.nome} ${c.slug}`,
         render: (c) => (
           <>
-            <div className="font-bold uppercase">{c.nome}</div>
+            <Link
+              to={`/clientes/${c.id}`}
+              className="risca rounded-sm font-bold uppercase hover:text-pink-texto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {c.nome}
+            </Link>
             <div className="rotulo mt-0.5">{c.slug}</div>
           </>
         ),
@@ -159,7 +165,13 @@ export function Clientes() {
               resumo={(c) => (
                 <>
                   <div className="flex items-start justify-between gap-3">
-                    <span className="font-bold uppercase">{c.nome}</span>
+                    <Link
+                      to={`/clientes/${c.id}`}
+                      className="font-bold uppercase"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {c.nome}
+                    </Link>
                     <Bola c={c} />
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">

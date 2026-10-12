@@ -102,7 +102,7 @@ export function FichaCliente() {
   return (
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
-        <Link to="/clientes" className="rotulo hover:text-pink">
+        <Link to="/clientes" className="rotulo hover:text-pink-texto">
           &lt; clientes
         </Link>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -120,7 +120,7 @@ export function FichaCliente() {
           não aparece desabilitado: não existe. */}
       <nav
         aria-label="Seções do cliente"
-        className="mt-6 flex gap-2 overflow-x-auto border-y-2 border-linha py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-6 flex gap-2 overflow-x-auto border-y border-linha-fraca py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <NavLink
           to={`/clientes/${clienteId}`}
@@ -175,11 +175,11 @@ export function FichaCliente() {
           {ficha.servicos.length === 0 ? (
             <Vazio titulo="Sem serviço contratado." explica="É o contrato que liga as telas deste cliente." />
           ) : (
-            <ul className="border-t-2 border-linha">
+            <ul className="border-t border-linha-fraca">
               {ficha.servicos.map((s) => (
                 <li
                   key={s.id}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-linha px-3 py-3.5"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
                 >
                   <span className="w-44 shrink-0 font-bold uppercase">{s.servicoNome}</span>
                   <Marca>{FORMATO[s.formato]}</Marca>
@@ -197,11 +197,11 @@ export function FichaCliente() {
           {ficha.pendencias.length === 0 ? (
             <p className="py-4 text-tinta-3">Nada voltou com ajuste.</p>
           ) : (
-            <ul className="border-t-2 border-linha">
+            <ul className="border-t border-linha-fraca">
               {ficha.pendencias.map((p) => (
                 <li
                   key={p.id}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-l-8 border-linha border-l-pink px-3 py-3.5"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-l-2 border-linha-fraca border-l-pink px-3 py-3.5"
                 >
                   <Marca>{TIPO_ITEM[p.tipo]}</Marca>
                   <span className="min-w-48 flex-1 font-medium">{p.titulo}</span>
@@ -220,7 +220,7 @@ export function FichaCliente() {
               {ficha.movimentos.map((m, i) => (
                 <li
                   key={`${m.quando}-${i}`}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b-2 border-linha-fraca py-3"
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-linha-fraca py-3"
                 >
                   <span className="rotulo w-24 shrink-0">{haQuanto(m.quando)}</span>
                   <span className="flex-1">{m.oQue}</span>
@@ -230,7 +230,7 @@ export function FichaCliente() {
           )}
         </div>
 
-        <aside>
+        <aside aria-label="Contatos e módulos do cliente">
           <Fita
             acao={
               <Botao tamanho="pequeno" onClick={() => setAbrindoAcesso((v) => !v)}>
@@ -242,7 +242,7 @@ export function FichaCliente() {
           </Fita>
 
           {abrindoAcesso && (
-            <div className="bloco mt-3 bg-superficie p-3">
+            <div className="bloco mt-3 p-3">
               <p className="rotulo normal-case">
                 ele recebe um e-mail para criar a senha. o convite não vence.
               </p>
@@ -292,8 +292,8 @@ export function FichaCliente() {
             </p>
           )}
           {erroAcesso && (
-            <div role="alert" className="bloco mt-3 border-4 bg-alerta-fundo p-3">
-              <span className="rotulo-forte">não deu certo</span>
+            <div role="alert" className="bloco mt-3 bg-alerta-fundo p-3.5">
+              <span className="rotulo-forte text-pink-texto">não deu certo</span>
               <p className="mt-1 text-[13.5px] font-medium">{erroAcesso}</p>
             </div>
           )}
@@ -303,7 +303,7 @@ export function FichaCliente() {
           ) : (
             <ul>
               {ficha.contatos.map((c) => (
-                <li key={c.email} className="border-b-2 border-linha-fraca py-3">
+                <li key={c.email} className="border-b border-linha-fraca py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-bold uppercase">{c.nome}</span>
                     {!c.ativo && <Marca>sem acesso</Marca>}

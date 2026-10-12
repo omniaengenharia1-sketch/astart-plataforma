@@ -62,7 +62,7 @@ function LinhaServico({
   const id = `srv-${s.chave}`;
 
   return (
-    <div className="bloco sombra-dura-p bg-superficie p-4 sm:p-5">
+    <div className="bloco p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="titulao text-[clamp(1.05rem,3vw,1.3rem)]">{s.nome}</h3>
         <Botao variante="texto" tamanho="pequeno" onClick={aoTirar}>
@@ -168,11 +168,11 @@ function LinhaServico({
       </div>
 
       {opcionais.length > 0 && (
-        <div className="mt-4 border-t-2 border-linha-fraca pt-3">
+        <div className="mt-4 border-t border-linha-fraca-fraca pt-3">
           <span className="rotulo-forte">ligar também</span>
           <div className="mt-2 flex flex-wrap gap-4">
             {opcionais.map((m) => (
-              <label key={m.chave} className="flex items-center gap-2 text-[13.5px]">
+              <label key={m.chave} className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[13.5px]">
                 <input
                   type="checkbox"
                   checked={escolha.modulos.includes(m.chave)}
@@ -184,7 +184,7 @@ function LinhaServico({
                         : escolha.modulos.filter((x) => x !== m.chave),
                     })
                   }
-                  className="size-4 accent-[var(--pink)]"
+                  className="size-5 accent-[var(--pink)]"
                 />
                 {m.nome}
               </label>
@@ -294,7 +294,7 @@ export function NovoCliente() {
   return (
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
-        <Link to="/clientes" className="rotulo hover:text-pink">
+        <Link to="/clientes" className="rotulo hover:text-pink-texto">
           &lt; clientes
         </Link>
         <h1 className="titulao mt-2 text-[clamp(1.8rem,5vw,2.8rem)]">Novo cliente</h1>
@@ -304,7 +304,7 @@ export function NovoCliente() {
         </p>
       </div>
 
-      <div className="mt-6 flex gap-2 border-y-2 border-linha py-2">
+      <div className="mt-6 flex gap-2 border-y border-linha-fraca py-2">
         {([
           ['mao', 'Preencher à mão'],
           ['proposta', 'Jogar a proposta'],
@@ -324,7 +324,7 @@ export function NovoCliente() {
       </div>
 
       {aba === 'proposta' ? (
-        <div className="bloco sombra-dura mt-7 max-w-2xl border-4 bg-superficie p-5 sm:p-7">
+        <div className="bloco brilho-p mt-7 max-w-2xl p-5 sm:p-7">
           <div className="rotulo">ainda não ligado</div>
           <h2 className="titulao mt-2 text-[clamp(1.2rem,4vw,1.7rem)]">
             Ler a proposta e montar o cliente sozinho
@@ -335,10 +335,10 @@ export function NovoCliente() {
           </p>
           <p className="mt-3 text-tinta-2">Faltam duas coisas, e as duas são suas:</p>
           <ul className="mt-3 space-y-2">
-            <li className="border-l-4 border-pink pl-3">
+            <li className="border-l-2 border-pink pl-3">
               A chave da API da Anthropic, que é quem lê o PDF.
             </li>
-            <li className="border-l-4 border-pink pl-3">
+            <li className="border-l-2 border-pink pl-3">
               A sua decisão de que a proposta de um cliente pode sair da nossa infraestrutura
               para ser lida. Enquanto isso não estiver decidido, não vou mandar documento de
               cliente para lugar nenhum.
@@ -375,7 +375,7 @@ export function NovoCliente() {
                         sai do nome —{' '}
                         <button
                           type="button"
-                          className="underline hover:text-pink"
+                          className="underline hover:text-pink-texto"
                           onClick={() => {
                             setSlug(endereco);
                             setEditandoSlug(true);
@@ -390,7 +390,7 @@ export function NovoCliente() {
                   {editandoSlug ? (
                     <Entrada id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} />
                   ) : (
-                    <div className="numeros flex min-h-11 items-center border-2 border-linha-fraca bg-superficie-2 px-3 text-[13px] text-tinta-2">
+                    <div className="numeros flex min-h-11 items-center border border-linha-fraca bg-superficie-2 px-3 text-[13px] text-tinta-2">
                       {endereco || '—'}
                     </div>
                   )}
@@ -438,7 +438,7 @@ export function NovoCliente() {
                     type="button"
                     onClick={() => setAbrindo((v) => !v)}
                     aria-expanded={abrindo}
-                    className="flex min-h-12 w-full items-center justify-between border-2 border-dashed border-linha bg-superficie px-4 hover:hachura"
+                    className="flex min-h-12 w-full items-center justify-between border border-dashed border-linha bg-superficie px-4 hover:aurora"
                   >
                     <span className="rotulo-forte">
                       {escolhidos.length === 0 ? 'escolher serviço' : 'adicionar outro serviço'}
@@ -447,13 +447,13 @@ export function NovoCliente() {
                   </button>
 
                   {abrindo && (
-                    <ul className="border-x-2 border-b-2 border-linha">
+                    <ul className="border-b border-linha-fraca">
                       {disponiveis.map((s) => (
                         <li key={s.chave}>
                           <button
                             type="button"
                             onClick={() => adicionar(s.chave)}
-                            className="flex w-full items-center justify-between gap-3 border-b-2 border-linha-fraca px-4 py-3 text-left last:border-0 hover:bg-pink hover:text-sobre-pink"
+                            className="flex w-full items-center justify-between gap-3 border-b border-linha-fraca px-4 py-3 text-left last:border-0 hover:bg-pink hover:text-sobre-pink"
                           >
                             <span className="font-bold uppercase">{s.nome}</span>
                             <span className="rotulo">
@@ -476,7 +476,7 @@ export function NovoCliente() {
               )}
             </div>
 
-            <aside className="lg:sticky lg:top-5">
+            <aside aria-label="Resumo do contrato" className="lg:sticky lg:top-5">
               <Fita>Vai ficar assim</Fita>
               <div className="mt-4 grid gap-4">
                 <Bloco rotulo="Por mês" destaque={reais(mensal)} />
@@ -512,8 +512,8 @@ export function NovoCliente() {
               </Botao>
 
               {erro && (
-                <div role="alert" className="bloco mt-4 border-4 bg-alerta-fundo p-3">
-                  <span className="rotulo-forte">não deu certo</span>
+                <div role="alert" className="bloco mt-4 bg-alerta-fundo p-3.5">
+                  <span className="rotulo-forte text-pink-texto">não deu certo</span>
                   <p className="mt-1 text-[13.5px] font-medium">{erro}</p>
                 </div>
               )}

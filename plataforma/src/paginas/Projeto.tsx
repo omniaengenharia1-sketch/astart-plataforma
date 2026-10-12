@@ -24,7 +24,7 @@ function fases(entregaveis: EntregavelNoProjeto[]): [string, EntregavelNoProjeto
 function Barra({ feitos, total }: { feitos: number; total: number }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="h-3 flex-1 border-2 border-linha">
+      <div className="h-3 flex-1 border border-linha">
         <div
           className="h-full bg-pink"
           style={{ width: `${total === 0 ? 0 : Math.round((feitos / total) * 100)}%` }}
@@ -54,8 +54,8 @@ function Linha({
   return (
     <li
       className={
-        'flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-linha px-3 py-3 ' +
-        (ajuste ? 'border-l-8 border-l-pink' : '')
+        'flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3 ' +
+        (ajuste ? 'border-l-2 border-l-pink' : '')
       }
     >
       {equipe && (
@@ -65,7 +65,7 @@ function Linha({
           disabled={!podeEnviar}
           onChange={(ev) => aoMarcar(ev.target.checked)}
           aria-label={`Enviar ${e.titulo}`}
-          className="size-4 shrink-0 accent-[var(--pink)] disabled:opacity-25"
+          className="size-5 shrink-0 cursor-pointer accent-[var(--pink)] disabled:cursor-default disabled:opacity-25"
         />
       )}
       <span className="min-w-48 flex-1 font-medium">{e.titulo}</span>
@@ -179,7 +179,7 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
             {fases(s.entregaveis).map(([fase, lista]) => (
               <div key={fase} className="mt-5">
                 <div className="rotulo-forte mb-1.5">{fase}</div>
-                <ul className="border-t-2 border-linha">
+                <ul className="border-t border-linha-fraca">
                   {lista.map((e) => (
                     <Linha
                       key={e.id}
@@ -200,7 +200,7 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
                 <div className="rotulo-forte mb-1.5">Datas</div>
                 <ul>
                   {s.marcos.map((m) => (
-                    <li key={m.id} className="flex items-baseline gap-3 border-b-2 border-linha-fraca py-2.5">
+                    <li key={m.id} className="flex items-baseline gap-3 border-b border-linha-fraca py-2.5">
                       <span className="numeros w-14 shrink-0 text-[12.5px]">{diaMes(m.prazo)}</span>
                       <span className="flex-1">{m.titulo}</span>
                       {m.concluidoEm && <Marca>feito</Marca>}
@@ -223,7 +223,7 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
       {/* A barra de envio só existe quando há o que enviar. Ela cola no rodapé
           no celular, que é onde o polegar está. */}
       {equipe && marcados.length > 0 && (
-        <div className="sticky bottom-0 z-10 mt-8 border-t-4 border-linha bg-papel py-4">
+        <div className="vidro-chapa sticky bottom-0 z-10 mt-8 border-t border-linha px-1 py-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="rotulo-forte">
               {plural(marcados.length, 'etapa marcada', 'etapas marcadas')}

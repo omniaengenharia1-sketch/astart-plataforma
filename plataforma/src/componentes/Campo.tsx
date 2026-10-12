@@ -2,8 +2,9 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react
 import { valor as formatarValor } from '../formato';
 
 const CAIXA =
-  'min-h-11 w-full border-2 border-linha bg-superficie px-3 text-[14px] ' +
-  'placeholder:text-tinta-3 focus:outline-none';
+  'min-h-11 w-full rounded-[var(--raio-p)] border border-linha bg-superficie px-3.5 ' +
+  'text-[14px] backdrop-blur-xl transition-colors duration-150 ' +
+  'hover:border-linha focus:outline-none';
 
 /** Rótulo em cima, dica embaixo. A dica explica a regra antes do erro aparecer. */
 export function Campo({
@@ -24,8 +25,8 @@ export function Campo({
       <label htmlFor={id} className="rotulo-forte">
         {rotulo}
       </label>
-      <div className="mt-1.5">{children}</div>
-      {dica && <p className="rotulo mt-1.5 normal-case">{dica}</p>}
+      <div className="mt-2">{children}</div>
+      {dica && <p className="rotulo mt-2 normal-case">{dica}</p>}
     </div>
   );
 }
@@ -60,7 +61,7 @@ export function CampoDinheiro({
 }) {
   return (
     <div className="flex items-stretch">
-      <span className="rotulo-forte flex min-h-11 items-center border-2 border-r-0 border-linha bg-superficie-2 px-3">
+      <span className="rotulo-forte flex min-h-11 items-center rounded-l-[var(--raio-p)] border border-r-0 border-linha bg-superficie-2 px-3.5">
         R$
       </span>
       <input
@@ -72,13 +73,13 @@ export function CampoDinheiro({
           const so = e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 11);
           aoMudar(so === '' ? 0 : Number(so));
         }}
-        className={`${CAIXA} numeros text-right`}
+        className={`${CAIXA} numeros rounded-l-none text-right`}
       />
     </div>
   );
 }
 
-/** Escolha entre poucas opções, como botão. Mais rápido que um select de dois. */
+/** Escolha entre poucas opções, como cápsula. Mais rápido que um select de dois. */
 export function Segmento<T extends string>({
   opcoes,
   valor,
@@ -91,7 +92,11 @@ export function Segmento<T extends string>({
   rotuloGrupo: string;
 }) {
   return (
-    <div role="group" aria-label={rotuloGrupo} className="flex flex-wrap gap-2">
+    <div
+      role="group"
+      aria-label={rotuloGrupo}
+      className="inline-flex flex-wrap gap-1 rounded-full border border-linha bg-superficie p-1 backdrop-blur-xl"
+    >
       {opcoes.map((o) => {
         const ativo = o.valor === valor;
         return (
@@ -101,9 +106,11 @@ export function Segmento<T extends string>({
             aria-pressed={ativo}
             onClick={() => aoEscolher(o.valor)}
             className={
-              'min-h-11 border-2 border-linha px-3 font-mono text-[10px] font-semibold ' +
-              'tracking-[0.16em] uppercase ' +
-              (ativo ? 'bg-pink text-sobre-pink shadow-[3px_3px_0_var(--sombra)]' : 'bg-superficie text-tinta-2')
+              'min-h-9 rounded-full px-4 font-mono text-[10px] font-semibold tracking-[0.14em] ' +
+              'uppercase transition-colors duration-150 ' +
+              (ativo
+                ? 'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink shadow-[0_8px_20px_-10px_rgb(255_61_154/0.9)]'
+                : 'text-tinta-3 hover:text-tinta')
             }
           >
             {o.rotulo}

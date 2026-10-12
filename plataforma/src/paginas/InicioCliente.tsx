@@ -53,14 +53,16 @@ export function InicioCliente({ painel, nome }: { painel: PainelCliente; nome: s
       <div className="mt-7 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
         {aprovar > 0 ? (
           <Cartao rotulo="Para aprovar" destaque={`${aprovar} ${aprovar === 1 ? 'item' : 'itens'}`} forte>
-            <p className="mt-1 text-[13px] text-tinta-2">
+            {/* Dentro do cartao pink TODO texto e do pink: tinta-2 aqui dava
+                branco sobre pink, 1,57:1. */}
+            <p className="mt-1 text-[13px] text-sobre-pink">
               {painel.paraAprovar
                 .slice(0, 3)
                 .map((i) => i.titulo)
                 .join(' · ')}
               {aprovar > 3 && ` · e mais ${aprovar - 3}`}
             </p>
-            <Botao variante="primario" className="mt-4" onClick={() => navegar('/portal/aprovar')}>
+            <Botao variante="inverso" className="mt-4" onClick={() => navegar('/portal/aprovar')}>
               Abrir
             </Botao>
           </Cartao>
@@ -133,7 +135,7 @@ export function InicioCliente({ painel, nome }: { painel: PainelCliente; nome: s
                 <span
                   key={i}
                   className={
-                    'h-3 flex-1 border-2 border-linha ' +
+                    'h-3 flex-1 border border-linha ' +
                     (i < painel.projeto!.entregues ? 'bg-pink' : 'bg-superficie')
                   }
                 />

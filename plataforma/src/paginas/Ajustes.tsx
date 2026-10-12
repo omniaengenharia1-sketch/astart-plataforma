@@ -104,7 +104,7 @@ export function Ajustes() {
       </div>
 
       {abrindo && dados.souAdmin && (
-        <div className="bloco sombra-dura-p mt-7 bg-superficie p-4 sm:p-5">
+        <div className="bloco mt-7 p-4 sm:p-5">
           <div className="rotulo-forte">convidar para a equipe</div>
           <p className="rotulo mt-1.5 normal-case">
             a pessoa recebe um e-mail para criar a senha dela. o convite não vence.
@@ -156,8 +156,8 @@ export function Ajustes() {
             </Botao>
           </div>
           {erroForm && (
-            <div role="alert" className="bloco mt-4 border-4 bg-alerta-fundo p-3">
-              <span className="rotulo-forte">não deu certo</span>
+            <div role="alert" className="bloco mt-4 bg-alerta-fundo p-3.5">
+              <span className="rotulo-forte text-pink-texto">não deu certo</span>
               <p className="mt-1 text-[13.5px] font-medium">{erroForm}</p>
             </div>
           )}
@@ -174,11 +174,11 @@ export function Ajustes() {
       {dados.convites.length > 0 && (
         <section className="mt-9">
           <Fita>Convite aberto</Fita>
-          <ul className="border-t-2 border-linha">
+          <ul className="border-t border-linha-fraca">
             {dados.convites.map((c) => (
               <li
                 key={c.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-linha px-3 py-3"
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3"
               >
                 <span className="w-44 shrink-0 font-bold uppercase">{c.nome ?? '—'}</span>
                 <span className="min-w-48 flex-1 font-mono text-[12.5px] break-all">{c.email}</span>
@@ -207,12 +207,12 @@ export function Ajustes() {
 
       <section className="mt-9">
         <Fita>Quem tem acesso</Fita>
-        <ul className="border-t-2 border-linha">
+        <ul className="border-t border-linha-fraca">
           {dados.pessoas.map((p) => (
             <li
               key={p.userId}
               className={
-                'flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-linha px-3 py-3 ' +
+                'flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3 ' +
                 (p.ativo ? '' : 'text-tinta-3')
               }
             >

@@ -370,25 +370,45 @@ Fila, Financeiro, Comercial, Ajustes), o cadastro de cliente, as 14 abas da fich
 do cliente, o editor de peça, as 12 telas do portal e o link de quem não tem conta.
 Inclui o estado vazio do primeiro dia.
 
-### Efeitos
+### A linguagem visual: vidro líquido
 
-Brutalismo não é ausência de movimento — é movimento sem maquiagem. Nada de
-desfoque, nada de gradiente, nada de sombra suave. O que se move aqui se move
-em passos duros e curtos (`steps(2, end)`, 90ms) e sempre diz alguma coisa:
+Preto, branco e o pink da marca, em lâminas translúcidas sobre um campo escuro
+com auroras. O vidro é material, não enfeite — e material tem regra:
+
+1. **O campo tem cor; as lâminas quase não têm.** Painel com cor própria vira
+   plástico. A cor vem das três auroras (pink, violeta, ciano) presas à janela,
+   mais um grão por cima — sem grão, dreamcore vira render de banco de imagem.
+2. **Vidro só onde há camada de verdade:** painel, cabeçalho, barra fixa. Linha
+   de lista não leva `backdrop-filter`; cem lâminas numa tela derrubam o
+   telefone de qualquer um.
+3. **A iridescência mora em 1px.** O fio da borda do painel é um degradê
+   pink → violeta → ciano com máscara. Em bloco, violeta e ciano nunca aparecem:
+   o palco é preto, branco e pink.
+4. **Dois pinks.** `--pink` preenche (vive atrás de texto escuro) e
+   `--pink-texto` escreve (precisa dos 4,5:1 sozinho). Um só não serve aos dois,
+   e o degradê dos botões tem outras duas pontas, que escurecem no tema claro
+   porque lá o texto em cima é branco.
 
 | Efeito | Onde | O que comunica |
 |---|---|---|
-| `erguer` | cartão clicável | sai do papel no hover, afunda no clique |
-| `empurra` | linha de lista que abre algo | anda 5px e mostra uma barra pink **fora** da linha |
-| `hachura` | vazio, prévia que não existe, dia livre do calendário | "cabe coisa aqui" |
-| `piscando` | carregando | quadrado pink que pisca, não spinner |
-| `risca` | item de menu | sublinhado pink que cresce da esquerda |
-| `entra` | a tela inteira, por rota | sobe 6px em 160ms, uma vez |
-| sombra pink no foco | campo em foco | além do contorno, a sombra dura |
-| `::selection` | texto selecionado | pink da marca |
+| `bloco` | painel | a lâmina: desfoque, brilho interno, queda longa, fio iridescente |
+| `erguer` | cartão clicável | sobe 3px e o halo cresce |
+| `empurra` | linha de lista que abre algo | acende e ganha um fio pink à esquerda |
+| `aurora` | vazio, prévia que não existe, dia livre do calendário | névoa: "cabe coisa aqui" |
+| `piscando` | carregando | ponto pink que pulsa, não spinner |
+| `risca` | item de menu | fio iridescente que cresce debaixo |
+| `entra` | a tela inteira, por rota | sobe 10px saindo do desfoque, 320ms |
+| foco | qualquer controle | dois anéis: um vão da cor do fundo e um fio pink — aparece até sobre o próprio pink |
 
-Tudo cai para o estado final sob `prefers-reduced-motion: reduce` — quem pediu
-menos movimento recebe a tela parada, nunca um quadro travado no meio.
+Tudo cai para o estado final sob `prefers-reduced-motion: reduce`, e
+`prefers-reduced-transparency: reduce` troca o vidro por lâmina opaca.
+
+**A logo** são dois arquivos, não um com filtro: inverter comeria o quadradinho
+verde da marca. Qual aparece é decidido no CSS, porque o tema pode vir do
+sistema ou do atributo `data-tema`.
+
+A auditoria de contraste, acessibilidade, heurísticas e jornada está em
+[`ux.md`](ux.md), com os roteiros que medem tudo isso no navegador.
 
 ### O que já está construído em `plataforma/`
 

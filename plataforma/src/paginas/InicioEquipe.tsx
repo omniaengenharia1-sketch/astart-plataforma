@@ -57,14 +57,14 @@ export function InicioEquipe() {
               explica="Nenhuma peça parada, nenhuma publicação falha, nenhuma cobrança vencida."
             />
           ) : (
-            <ul className="border-t-2 border-linha">
+            <ul className="border-t border-linha-fraca">
               {painel.pendencias.map((p) => (
                 <li
                   key={p.id}
                   className={
-                    'flex flex-wrap items-center gap-x-4 gap-y-2 border-x-2 border-b-2 border-linha ' +
+                    'flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca ' +
                     'px-3 py-3.5 ' +
-                    (p.urgente ? 'border-l-8 border-l-pink' : '')
+                    (p.urgente ? 'border-l-2 border-l-pink' : '')
                   }
                 >
                   <span className="w-40 shrink-0 font-bold uppercase">{p.clienteNome}</span>
@@ -79,14 +79,14 @@ export function InicioEquipe() {
           )}
         </section>
 
-        <aside>
+        <aside aria-label="Agenda da semana">
           <Fita>Sai hoje</Fita>
           {painel.saiHoje.length === 0 ? (
             <p className="py-4 text-tinta-3">Nada sai hoje.</p>
           ) : (
             <ul>
               {painel.saiHoje.map((s) => (
-                <li key={s.id} className="flex items-baseline gap-3 border-b-2 border-linha-fraca py-3">
+                <li key={s.id} className="flex items-baseline gap-3 border-b border-linha-fraca py-3">
                   <span className="numeros w-12 shrink-0 text-[12.5px]">{s.hora}</span>
                   <span className="flex-1">{s.clienteNome}</span>
                   <span className="rotulo">{s.tipo}</span>
@@ -102,7 +102,7 @@ export function InicioEquipe() {
           ) : (
             <ul>
               {painel.semana.map((c) => (
-                <li key={c.id} className="flex items-baseline gap-3 border-b-2 border-linha-fraca py-3">
+                <li key={c.id} className="flex items-baseline gap-3 border-b border-linha-fraca py-3">
                   <span className="numeros w-14 shrink-0 text-[12.5px]">
                     {c.data.slice(8, 10)}/{c.data.slice(5, 7)}
                   </span>

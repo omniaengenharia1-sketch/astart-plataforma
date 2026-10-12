@@ -1,7 +1,35 @@
 import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSessao } from '../sessao';
+import { Logo } from './Marca';
 import type { ChaveModulo } from '../dados/tipos';
+
+/**
+ * O título da aba do navegador. Sem isso toda tela se chama "Astart —
+ * Plataforma", e quem trabalha com seis abas abertas não acha nenhuma.
+ */
+function useTitulo(itens: ItemMenu[], pathname: string, sufixo: string) {
+  useEffect(() => {
+    const atual = itens
+      .filter((i) => (i.para === '/' ? pathname === '/' : pathname.startsWith(i.para)))
+      .sort((a, b) => b.para.length - a.para.length)[0];
+    document.title = atual ? `${atual.rotulo} · ${sufixo}` : sufixo;
+  }, [itens, pathname, sufixo]);
+}
+
+/** Primeiro foco da página: pula o menu inteiro e cai no conteúdo. */
+function PularParaConteudo() {
+  return (
+    <a
+      href="#conteudo"
+      className="sr-only rounded-full bg-superficie-3 px-4 py-2 focus:not-sr-only focus:absolute
+ focus:top-3 focus:left-3 focus:z-50 focus:inline-block"
+    >
+      Pular para o conteúdo
+    </a>
+  );
+}
 
 const PAPEL: Record<string, string> = {
   admin: 'direção',
@@ -38,8 +66,8 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
   return (
     <nav
       aria-label="Seções"
-      className="flex gap-6 overflow-x-auto border-b border-linha px-5 py-2.5 sm:px-8 lg:px-12
- [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="vidro-chapa sticky top-0 z-30 flex gap-2 overflow-x-auto border-b border-linha-fraca
+ px-5 py-2 sm:px-8 lg:px-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {visiveis.map((i) => {
         const ativo = i.para === '/' ? pathname === '/' : pathname.startsWith(i.para);
@@ -49,19 +77,17 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
             to={i.para}
             aria-current={ativo ? 'page' : undefined}
             className={
-              'risca flex shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 font-mono ' +
-              'text-[10px] font-semibold tracking-[0.16em] uppercase ' +
-              (ativo ? 'bg-tinta text-papel' : 'text-tinta-3 hover:text-tinta')
+              'risca flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 font-mono ' +
+              'text-[10.5px] font-semibold tracking-[0.14em] whitespace-nowrap uppercase ' +
+              'transition-colors duration-150 ' +
+              (ativo
+                ? 'bg-superficie-3 text-tinta shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]'
+                : 'text-tinta-3 hover:text-tinta')
             }
           >
             {i.rotulo}
             {i.selo !== undefined && i.selo > 0 && (
-              <span
-                className={
-                  'px-1.5 py-px text-[9px] ' +
-                  (ativo ? 'bg-pink text-sobre-pink' : 'bg-pink text-sobre-pink')
-                }
-              >
+              <span className="rounded-full bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] px-2 py-px text-[9.5px] text-sobre-pink shadow-[0_6px_16px_-8px_rgb(255_61_154/0.9)]">
                 {i.selo}
               </span>
             )}
@@ -72,17 +98,32 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
   );
 }
 
-function Nameplate({ marca, sub, quem }: { marca: string; sub: string; quem: string }) {
+/**
+ * `marca` nulo = o cabeçalho é da Astart e mostra a logo. No portal do cliente
+ * quem aparece grande é o nome DELE: a plataforma é nossa, a marca da tela é a
+ * dele. A assinatura da Astart fica pequena embaixo.
+ */
+function Nameplate({ marca, sub, quem }: { marca: string | null; sub: string; quem: string }) {
   const { sair } = useSessao();
   return (
-    <header className="flex items-end justify-between gap-4 border-b-2 border-tinta px-5 pt-5 pb-3 sm:px-8 lg:px-12">
-      <div>
-        <div className="titulao text-[clamp(1.5rem,4vw,2.1rem)]">{marca}</div>
-        <div className="rotulo mt-1">{sub}</div>
+    <header className="flex items-end justify-between gap-4 px-5 pt-6 pb-4 sm:px-8 lg:px-12">
+      <div className="min-w-0">
+        {marca === null ? (
+          <Logo altura={34} />
+        ) : (
+          <div className="titulao truncate text-[clamp(1.5rem,4vw,2.1rem)]">{marca}</div>
+        )}
+        <div className="rotulo mt-1.5 flex items-center gap-2">
+          {sub}
+          {marca !== null && <Logo altura={13} className="opacity-70" />}
+        </div>
       </div>
       {/* No celular so a palavra: o botao de sair existia apenas em sm+, e quem
           entrasse pelo telefone nao tinha como sair da propria conta. */}
-      <button onClick={() => void sair()} className="rotulo shrink-0 hover:text-pink">
+      <button
+        onClick={() => void sair()}
+        className="rotulo risca shrink-0 rounded-full px-1 hover:text-pink-texto"
+      >
         <span className="hidden sm:inline">{quem} · </span>sair
       </button>
     </header>
@@ -93,11 +134,16 @@ function AvisoExemplo() {
   const { ligado } = useSessao();
   if (ligado) return null;
   return (
-    <div className="border-b-2 border-linha bg-pink px-5 py-2 sm:px-8 lg:px-12">
-      <span className="rotulo-forte text-sobre-pink">
+    // <aside> e nao <div>: todo conteudo da pagina tem de morar dentro de uma
+    // regiao com nome, senao quem navega por marcos pula este aviso.
+    <aside
+      aria-label="Aviso do ambiente"
+      className="border-b border-linha-fraca bg-pink-fundo px-5 py-2 sm:px-8 lg:px-12"
+    >
+      <span className="rotulo-forte text-pink-texto">
         modo exemplo — sem Supabase configurado, os dados desta tela são fictícios
       </span>
-    </div>
+    </aside>
   );
 }
 
@@ -108,14 +154,17 @@ export function CascaEquipe({ children }: { children: ReactNode }) {
     sessao.tipo === 'equipe'
       ? `${sessao.perfil.nome ?? sessao.perfil.email} · ${PAPEL[sessao.perfil.papel] ?? sessao.perfil.papel}`
       : '';
+  useTitulo(MENU_EQUIPE, pathname, 'Astart');
+
   return (
-    <div className="min-h-dvh bg-papel text-tinta">
-      <Nameplate marca="Astart" sub="Plataforma interna" quem={quem} />
+    <div className="min-h-dvh text-tinta">
+      <PularParaConteudo />
+      <Nameplate marca={null} sub="plataforma interna" quem={quem} />
       <Menu itens={MENU_EQUIPE} />
       <AvisoExemplo />
       {/* A chave e a rota: sem ela a animacao de entrada roda uma vez so, na
           primeira tela, e as outras aparecem secas. */}
-      <main key={pathname} className="entra">
+      <main id="conteudo" key={pathname} className="entra" tabIndex={-1}>
         {children}
       </main>
     </div>
@@ -151,12 +200,15 @@ export function CascaCliente({
     { para: '/portal/feedback', rotulo: 'Feedback', modulo: 'nps' },
   ];
 
+  useTitulo(itens, pathname, nome || 'Astart');
+
   return (
-    <div className="min-h-dvh bg-papel text-tinta">
-      <Nameplate marca={nome} sub="por Astart Studio" quem={quem} />
+    <div className="min-h-dvh text-tinta">
+      <PularParaConteudo />
+      <Nameplate marca={nome} sub="por" quem={quem} />
       <Menu itens={itens} modulos={modulos} />
       <AvisoExemplo />
-      <main key={pathname} className="entra">
+      <main id="conteudo" key={pathname} className="entra" tabIndex={-1}>
         {children}
       </main>
     </div>

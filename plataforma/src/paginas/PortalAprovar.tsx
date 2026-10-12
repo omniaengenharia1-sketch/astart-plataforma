@@ -43,7 +43,7 @@ function Item({
   const faltaTexto = aberto === 'ajuste' && texto.trim().length === 0;
 
   return (
-    <li className="bloco sombra-dura-p erguer bg-superficie p-4 sm:p-5">
+    <li className="bloco erguer p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -56,8 +56,8 @@ function Item({
 
       {/* O preview do conteúdo entra aqui quando a mídia estiver no Storage.
           Até lá, a tela não finge ter imagem: diz o que ainda não tem. */}
-      <div className="hachura mt-4 border-2 border-dashed border-linha-fraca px-4 py-8 text-center">
-        <span className="rotulo bg-superficie px-2 py-1">a prévia do material aparece aqui</span>
+      <div className="aurora mt-4 border border-dashed border-linha px-4 py-8 text-center">
+        <span className="rotulo-forte rounded-full bg-superficie-2 px-3 py-1.5 text-tinta">a prévia do material aparece aqui</span>
       </div>
 
       {aberto === null && (
@@ -75,7 +75,7 @@ function Item({
       )}
 
       {aberto !== null && (
-        <div className="mt-4 border-t-2 border-linha pt-4">
+        <div className="mt-4 border-t border-linha-fraca pt-4">
           <label htmlFor={`texto-${item.id}`} className="rotulo-forte">
             {aberto === 'ajuste' ? 'o que precisa mudar' : 'por que não vai usar (opcional)'}
           </label>
@@ -90,7 +90,7 @@ function Item({
                 ? 'Ex.: trocar a foto do primeiro quadro, o produto saiu escuro.'
                 : 'Ex.: a promoção foi cancelada.'
             }
-            className="mt-2 w-full resize-y border-2 border-linha bg-superficie px-3 py-2 text-[14px] placeholder:text-tinta-3 focus:outline-none"
+            className="mt-2 w-full resize-y border border-linha bg-superficie px-3 py-2 text-[14px] placeholder:text-tinta-3 focus:outline-none"
           />
           {aberto === 'ajuste' && (
             <p className="rotulo mt-1.5">
@@ -121,8 +121,8 @@ function Item({
       )}
 
       {erro && (
-        <div role="alert" className="mt-4 border-2 border-linha bg-alerta-fundo px-3 py-2">
-          <span className="rotulo-forte">não deu certo</span>
+        <div role="alert" className="bloco mt-4 bg-alerta-fundo px-3.5 py-2.5">
+          <span className="rotulo-forte text-pink-texto">não deu certo</span>
           <p className="mt-1 text-[13.5px] font-medium">{erro}</p>
         </div>
       )}

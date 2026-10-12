@@ -12,11 +12,8 @@ export function Carregando({ oQue }: { oQue: string }) {
 /** Falha nunca é silenciosa: o que quebrou, em português, e a ação. */
 export function Falhou({ mensagem, tentar }: { mensagem: string; tentar?: () => void }) {
   return (
-    <div
-      role="alert"
-      className="bloco sombra-dura mx-5 my-10 border-4 bg-alerta-fundo p-5 sm:mx-8 lg:mx-12"
-    >
-      <div className="rotulo-forte">não deu certo</div>
+    <div role="alert" className="bloco brilho-p mx-5 my-10 bg-alerta-fundo p-5 sm:mx-8 lg:mx-12">
+      <div className="rotulo-forte text-pink-texto">não deu certo</div>
       <p className="mt-2 text-[15px] font-medium">{mensagem}</p>
       {tentar && (
         <Botao onClick={tentar} className="mt-4">
@@ -30,9 +27,9 @@ export function Falhou({ mensagem, tentar }: { mensagem: string; tentar?: () => 
 /** O primeiro dia de cada tela: o que falta, e o botão que resolve. */
 export function Vazio({ titulo, explica, acao }: { titulo: string; explica?: string; acao?: ReactNode }) {
   return (
-    <div className="bloco sombra-dura mx-auto my-10 max-w-xl border-4 bg-superficie text-center">
-      <div className="hachura h-5 border-b-2 border-linha" />
-      <div className="px-6 py-10 sm:px-10">
+    <div className="bloco mx-auto my-10 max-w-xl overflow-hidden text-center">
+      <div className="aurora h-20" />
+      <div className="px-6 py-9 sm:px-10">
         <div className="rotulo">nada por aqui ainda</div>
         <h2 className="titulao mt-3 text-[clamp(1.3rem,4vw,1.9rem)]">{titulo}</h2>
         {explica && <p className="mt-3 text-tinta-2">{explica}</p>}

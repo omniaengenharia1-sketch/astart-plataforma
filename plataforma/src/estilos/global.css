@@ -1,79 +1,129 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Astart — brutalista.
+   Astart — vidro líquido.
 
-   Preto, branco e o pink da marca. Nada de meio-tom decorativo: o cinza existe
-   só para texto secundário e para o que está desligado.
+   Preto, branco e o pink da marca. O vidro é material, não enfeite: cada
+   painel é uma lâmina translúcida sobre um campo escuro com auroras, com borda
+   iridescente de 1px e brilho interno em cima. O que está atrás aparece
+   desfocado — é isso que dá a profundidade.
 
-   Texto PRETO sobre o pink, não branco: dá 4,87:1 contra 4,31:1, e é o único
-   dos dois que passa em AA para texto normal. De quebra, é mais duro.
+   Três regras que seguram o estilo:
 
-   Nada de canto arredondado, nada de sombra difusa. A única sombra é dura e
-   deslocada — ela é estrutura, não profundidade.
+   1. O CAMPO é escuro e tem cor; as LÂMINAS são quase sem cor. Se o painel
+      ganhar cor própria, vira plástico.
+   2. Vidro só onde há camada de verdade: painel, cabeçalho, barra fixa.
+      Linha de lista não leva backdrop-filter — cem lâminas numa tela derrubam
+      o telefone de qualquer um.
+   3. Texto nunca mora no vidro sozinho. Toda cor de texto foi medida contra o
+      fundo COMPOSTO (lâmina sobre campo), não contra o campo.
    --------------------------------------------------------------------------- */
+
 :root {
-  --papel: #ffffff;
-  --superficie: #ffffff;
-  --superficie-2: #f2f2f2;
-  --superficie-3: #e4e4e4;
-  --linha: #000000;
-  --linha-fraca: #cccccc;
-  --tinta: #000000;
-  --tinta-2: #3d3d3d;
-  --tinta-3: #767676;
-  --pink: #ea1a6e;
-  --pink-fundo: #ffd9e7;
-  --sobre-pink: #000000;
-  --sombra: #000000;
-  /* Estado: desenhado com peso e rótulo, não com paleta de semáforo. */
-  --alerta: #ea1a6e;
-  --alerta-fundo: #ffd9e7;
-  --calmo: #767676;
+  /* O campo */
+  --papel: #06060b;
+  --papel-2: #0b0a14;
+
+  /* As lâminas */
+  --superficie: rgb(255 255 255 / 0.055);
+  --superficie-2: rgb(255 255 255 / 0.10);
+  --superficie-3: rgb(255 255 255 / 0.16);
+  --linha: rgb(255 255 255 / 0.18);
+  --linha-fraca: rgb(255 255 255 / 0.09);
+
+  /* A tinta */
+  --tinta: #ffffff;
+  --tinta-2: rgb(255 255 255 / 0.76);
+  --tinta-3: rgb(255 255 255 / 0.62);
+
+  /* A marca */
+  --pink: #ff3d9a;
+  --pink-claro: #ffa6d2;
+  --pink-fundo: rgb(255 61 154 / 0.16);
+  --sobre-pink: #0a0510;
+  /* O degrade do pink tem token proprio porque ele muda de ponta no tema
+     claro: lá o texto em cima é branco, e um topo claro reprovaria. */
+  --pink-topo: #ffa6d2;
+  --pink-base: #ff3d9a;
+  /* Pink de TEXTO é outro pink. O de preenchimento vive atrás de texto escuro;
+     este vive sobre fundo, e precisa dos 4,5:1 por conta própria. */
+  --pink-texto: #ff7ab8;
+
+  /* A iridescência: só no fio da borda e nas auroras. O palco é preto, branco
+     e pink — violeta e ciano aparecem em 1px e em névoa, nunca em bloco. */
+  --violeta: #a06bff;
+  --ciano: #5ee7ff;
+  --iris: linear-gradient(100deg, var(--pink), var(--violeta) 48%, var(--ciano));
+
+  --alerta: var(--pink);
+  --alerta-fundo: rgb(255 61 154 / 0.14);
+  --calmo: rgb(255 255 255 / 0.5);
+  --sombra: rgb(0 0 0 / 0.55);
+
+  --vidro-brilho: inset 0 1px 0 rgb(255 255 255 / 0.3);
+  --vidro-queda: 0 24px 60px -28px rgb(0 0 0 / 0.9);
+  --raio: 22px;
+  --raio-p: 14px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) {
-    --papel: #000000;
-    --superficie: #0b0b0b;
-    --superficie-2: #141414;
-    --superficie-3: #1f1f1f;
-    --linha: #ffffff;
-    --linha-fraca: #3a3a3a;
-    --tinta: #ffffff;
-    --tinta-2: #c4c4c4;
-    --tinta-3: #8a8a8a;
-    --pink: #ff2d7e;
-    --pink-fundo: #3d0a1f;
-    --sobre-pink: #000000;
-    --sombra: #ffffff;
-    --alerta: #ff2d7e;
-    --alerta-fundo: #3d0a1f;
-    --calmo: #8a8a8a;
+/* Claro: o mesmo vidro, de dia. Lâmina branca leitosa sobre campo rosado. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema="escuro"]) {
+    --papel: #fbf7fc;
+    --papel-2: #fdeef7;
+    --superficie: rgb(255 255 255 / 0.66);
+    --superficie-2: rgb(255 255 255 / 0.85);
+    --superficie-3: rgb(255 255 255 / 0.95);
+    --linha: rgb(10 5 16 / 0.14);
+    --linha-fraca: rgb(10 5 16 / 0.08);
+    --tinta: #0a0510;
+    --tinta-2: rgb(10 5 16 / 0.82);
+    --tinta-3: rgb(10 5 16 / 0.68);
+    /* Pink fechado: #ff3d9a sobre branco dá 2,6:1. Este dá 5,9:1, e ainda
+       passa (4,8:1) sobre o próprio --pink-fundo, que é onde ele mais aparece. */
+    --pink: #c2105f;
+    --pink-claro: #ff8fc4;
+    --pink-fundo: rgb(194 16 95 / 0.12);
+    --sobre-pink: #ffffff;
+    --pink-topo: #c2105f;
+    --pink-base: #9b0b4c;
+    --pink-texto: #a30d50;
+    --alerta-fundo: rgb(194 16 95 / 0.1);
+    --calmo: rgb(10 5 16 / 0.5);
+    --sombra: rgb(60 10 40 / 0.18);
+    --vidro-brilho: inset 0 1px 0 rgb(255 255 255 / 0.9);
+    --vidro-queda: 0 20px 50px -26px rgb(60 10 40 / 0.5);
   }
 }
 
-:root[data-tema="escuro"] {
-  --papel: #000000;
-  --superficie: #0b0b0b;
-  --superficie-2: #141414;
-  --superficie-3: #1f1f1f;
-  --linha: #ffffff;
-  --linha-fraca: #3a3a3a;
-  --tinta: #ffffff;
-  --tinta-2: #c4c4c4;
-  --tinta-3: #8a8a8a;
-  --pink: #ff2d7e;
-  --pink-fundo: #3d0a1f;
-  --sobre-pink: #000000;
-  --sombra: #ffffff;
-  --alerta: #ff2d7e;
-  --alerta-fundo: #3d0a1f;
-  --calmo: #8a8a8a;
+:root[data-tema="claro"] {
+  --papel: #fbf7fc;
+  --papel-2: #fdeef7;
+  --superficie: rgb(255 255 255 / 0.66);
+  --superficie-2: rgb(255 255 255 / 0.85);
+  --superficie-3: rgb(255 255 255 / 0.95);
+  --linha: rgb(10 5 16 / 0.14);
+  --linha-fraca: rgb(10 5 16 / 0.08);
+  --tinta: #0a0510;
+  --tinta-2: rgb(10 5 16 / 0.82);
+  --tinta-3: rgb(10 5 16 / 0.68);
+  --pink: #c2105f;
+  --pink-claro: #ff8fc4;
+  --pink-fundo: rgb(194 16 95 / 0.12);
+  --sobre-pink: #ffffff;
+  --pink-topo: #c2105f;
+  --pink-base: #9b0b4c;
+  --pink-texto: #a30d50;
+  --alerta-fundo: rgb(194 16 95 / 0.1);
+  --calmo: rgb(10 5 16 / 0.5);
+  --sombra: rgb(60 10 40 / 0.18);
+  --vidro-brilho: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --vidro-queda: 0 20px 50px -26px rgb(60 10 40 / 0.5);
 }
 
 @theme inline {
   --color-papel: var(--papel);
+  --color-papel-2: var(--papel-2);
   --color-superficie: var(--superficie);
   --color-superficie-2: var(--superficie-2);
   --color-superficie-3: var(--superficie-3);
@@ -83,6 +133,10 @@
   --color-tinta-2: var(--tinta-2);
   --color-tinta-3: var(--tinta-3);
   --color-pink: var(--pink);
+  --color-pink-claro: var(--pink-claro);
+  --color-pink-topo: var(--pink-topo);
+  --color-pink-base: var(--pink-base);
+  --color-pink-texto: var(--pink-texto);
   --color-pink-fundo: var(--pink-fundo);
   --color-sobre-pink: var(--sobre-pink);
   --color-alerta: var(--alerta);
@@ -93,27 +147,71 @@
   --font-sans: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --radius-none: 0;
+  --radius-vidro: var(--raio);
 }
 
-html { color-scheme: light dark; }
+html {
+  color-scheme: dark light;
+  background: var(--papel);
+}
 
 body {
   margin: 0;
-  background: var(--papel);
+  min-height: 100dvh;
   color: var(--tinta);
   font-family: var(--font-sans);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+
+  /* As auroras. Ficam presas à janela para a página rolar POR DENTRO da luz,
+     em vez de arrastar a luz junto. */
+  background:
+    radial-gradient(58rem 42rem at 12% -12%, rgb(255 61 154 / 0.3), transparent 62%),
+    radial-gradient(46rem 38rem at 96% 2%, rgb(160 107 255 / 0.22), transparent 58%),
+    radial-gradient(42rem 34rem at 58% 112%, rgb(94 231 255 / 0.14), transparent 60%),
+    var(--papel);
+  background-attachment: fixed;
 }
 
-/* Canto vivo em tudo. Brutalismo com borda arredondada é contradição. */
-*, *::before, *::after { border-radius: 0 !important; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema="escuro"]) body {
+    background:
+      radial-gradient(58rem 42rem at 12% -12%, rgb(255 61 154 / 0.24), transparent 62%),
+      radial-gradient(46rem 38rem at 96% 2%, rgb(160 107 255 / 0.16), transparent 58%),
+      radial-gradient(42rem 34rem at 58% 112%, rgb(94 231 255 / 0.14), transparent 60%),
+      var(--papel);
+    background-attachment: fixed;
+  }
+}
 
+/* Grão. Dreamcore sem grão vira render de banco de imagem. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23r)' opacity='.35'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* O anel de foco é de duas camadas: um vão da cor do fundo e um fio pink por
+   fora. Assim ele aparece igual sobre vidro, sobre preto e sobre o próprio
+   pink — onde um contorno pink sozinho sumiria. */
 :focus-visible {
-  outline: 3px solid var(--pink);
+  outline: 2px solid transparent; /* o modo de alto contraste do Windows usa este */
   outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--papel),
+    0 0 0 4px var(--pink),
+    0 0 18px -2px rgb(255 61 154 / 0.7);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -123,25 +221,33 @@ body {
   }
 }
 
+/* Quem pede menos transparência recebe lâmina opaca, sem desfoque. */
+@media (prefers-reduced-transparency: reduce) {
+  .bloco, .vidro-chapa {
+    backdrop-filter: none !important;
+    background: var(--papel-2) !important;
+  }
+}
+
 /* --- utilitários ---------------------------------------------------------- */
 
-/** Rótulo: mono, caixa alta, espaçado. É a voz estrutural da interface. */
+/** Rótulo: mono, caixa alta, espaçado. A voz estrutural da interface. */
 @utility rotulo {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--tinta-3);
 }
 
 @utility rotulo-forte {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--tinta);
+  color: var(--tinta-2);
 }
 
 @utility numeros {
@@ -150,165 +256,220 @@ body {
   letter-spacing: -0.01em;
 }
 
-/** Título: grotesca preta, caixa alta, bem apertada. */
+/** Título: grotesca pesada, caixa alta, apertada. */
 @utility titulao {
-  font-weight: 900;
-  letter-spacing: -0.035em;
-  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
   text-transform: uppercase;
 }
 
-/** A sombra é dura e deslocada: estrutura, não profundidade. */
-@utility sombra-dura {
-  box-shadow: 5px 5px 0 var(--sombra);
-}
-@utility sombra-dura-p {
-  box-shadow: 3px 3px 0 var(--sombra);
+/** Número grande em degradê. Só nos destaques — vira ruído se repetir. */
+@utility iris-texto {
+  background: var(--iris);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-/** Bloco: a caixa padrão. Borda grossa, fundo chapado, sombra deslocada. */
-/* Sem `background` de proposito: se o bloco pintasse o fundo, brigaria com
-   um `bg-*` na mesma tag e venceria em silencio. Quem usa escolhe o fundo. */
+/** A lâmina. Vidro de verdade: desfoque do que está atrás, brilho interno em
+    cima, queda longa embaixo e um fio iridescente na borda. */
 @utility bloco {
-  border: 2px solid var(--linha);
+  position: relative;
+  border-radius: var(--raio);
+  background: linear-gradient(
+    158deg,
+    color-mix(in oklab, var(--superficie) 100%, white 6%),
+    var(--superficie)
+  );
+  border: 1px solid var(--linha-fraca);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: var(--vidro-brilho), var(--vidro-queda);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--iris);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0.45;
+    pointer-events: none;
+  }
 }
 
-/** Fita: barra chapada preta com texto do papel. Separa seção. */
+/** Chapa de vidro sem o fio iridescente: cabeçalho, barra fixa, menu. */
+@utility vidro-chapa {
+  background: color-mix(in oklab, var(--papel) 62%, transparent);
+  backdrop-filter: blur(26px) saturate(140%);
+  -webkit-backdrop-filter: blur(26px) saturate(140%);
+}
+
+/** O brilho que substituiu a sombra dura. Halo pink, sem contorno. */
+@utility brilho {
+  box-shadow:
+    var(--vidro-brilho),
+    0 0 0 1px rgb(255 61 154 / 0.35),
+    0 18px 50px -20px rgb(255 61 154 / 0.55);
+}
+
+@utility brilho-p {
+  box-shadow:
+    var(--vidro-brilho),
+    0 10px 30px -16px rgb(255 61 154 / 0.45);
+}
+
+/** Fita: o cabeçalho de seção. Era uma barra chapada; virou um fio de luz. */
 @utility fita {
-  background: var(--tinta);
-  color: var(--papel);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  padding: 0.4rem 0.7rem;
+  color: var(--tinta);
+  padding: 0.35rem 0;
+
+  &::before {
+    content: "";
+    width: 1.6rem;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--iris);
+  }
 }
 
-/* ---------------------------------------------------------------------------
-   Efeitos.
-
-   Brutalismo não é ausência de movimento — é movimento sem maquiagem. Nada de
-   desfoque, nada de gradiente, nada de sombra suave. O que se move aqui se
-   move em passos duros e curtos, e sempre diz alguma coisa: o que é clicável
-   afunda, o que está carregando pisca, o que está vazio é hachurado.
-
-   Tudo passa pelo @media (prefers-reduced-motion: reduce) lá de cima, que
-   derruba a duração de qualquer transição para quem pediu menos movimento.
-   --------------------------------------------------------------------------- */
-
-/* Seleção de texto no pink da marca. Detalhe que ninguém pede e todo mundo vê. */
-::selection {
-  background: var(--pink);
-  color: var(--sobre-pink);
+/** Aurora: o lugar onde ainda não há nada. Névoa, não listra. */
+@utility aurora {
+  background:
+    radial-gradient(14rem 8rem at 20% 20%, rgb(255 61 154 / 0.22), transparent 70%),
+    radial-gradient(12rem 8rem at 80% 80%, rgb(94 231 255 / 0.16), transparent 70%),
+    var(--superficie);
 }
 
-/** Erguer: o bloco sai do papel ao passar o mouse e afunda ao ser clicado. */
+/** Erguer: a lâmina sobe e o halo cresce. */
 @utility erguer {
   transition:
-    transform 90ms steps(2, end),
-    box-shadow 90ms steps(2, end);
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 180ms ease,
+    border-color 180ms ease;
 
   &:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 5px 5px 0 var(--sombra);
+    transform: translateY(-3px);
+    border-color: color-mix(in oklab, var(--pink) 45%, transparent);
+    box-shadow:
+      var(--vidro-brilho),
+      0 28px 60px -26px rgb(255 61 154 / 0.6);
   }
   &:active {
-    transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0 var(--sombra);
+    transform: translateY(-1px);
   }
 }
 
-/** Empurrar: a linha de lista anda para a direita e ganha uma barra pink. */
+/** Empurra: a linha acende e ganha um fio iridescente à esquerda. */
 @utility empurra {
   transition:
-    transform 90ms steps(2, end),
-    box-shadow 90ms steps(2, end);
+    background-color 160ms ease,
+    box-shadow 160ms ease;
 
   &:hover {
-    transform: translateX(5px);
-    /* A barra fica FORA, no espaço que a linha deixou ao andar. Por dentro ela
-       passava por cima da primeira coluna e comia a primeira letra. */
-    box-shadow: -5px 0 0 var(--pink);
+    background-color: var(--superficie-2);
+    box-shadow: inset 3px 0 0 var(--pink);
   }
 }
 
-/** Hachura: listras a 45°. O desenho do vazio e do que ainda não existe. */
-@utility hachura {
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent 0 7px,
-    var(--linha-fraca) 7px 8px
-  );
-}
-
-/** Quadrado que pisca, do tamanho do texto. É o nosso cursor de carregando. */
+/** Ponto que pulsa: o nosso carregando. */
 @utility piscando {
   &::after {
     content: "";
     display: inline-block;
-    width: 0.62em;
-    height: 0.62em;
-    margin-left: 0.5em;
+    width: 0.55em;
+    height: 0.55em;
+    margin-left: 0.6em;
+    border-radius: 999px;
     background: var(--pink);
-    animation: pisca 900ms steps(1, end) infinite;
+    box-shadow: 0 0 12px 2px rgb(255 61 154 / 0.8);
+    animation: pulsa 1.2s ease-in-out infinite;
   }
 }
 
-@keyframes pisca {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+@keyframes pulsa {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
-/** Sublinhado que cresce da esquerda. Só no que leva para outro lugar. */
+/** Risca: fio iridescente que cresce sob o item de menu. */
 @utility risca {
   position: relative;
 
   &::after {
     content: "";
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -2px;
+    left: 10%;
+    right: 10%;
+    bottom: 2px;
     height: 2px;
-    background: var(--pink);
+    border-radius: 999px;
+    background: var(--iris);
     transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 120ms ease-out;
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   &:hover::after {
     transform: scaleX(1);
   }
 }
 
-/** A tela que entra sobe dois pixels. Curto de propósito: 160ms, uma vez. */
+/** A tela entra subindo e saindo do desfoque. */
 @utility entra {
-  animation: entra-tela 160ms ease-out both;
+  animation: entra-tela 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes entra-tela {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateY(10px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
 }
 
-/* Campo em foco ganha a sombra dura no pink, além do contorno. */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline-offset: 0;
-  box-shadow: 4px 4px 0 var(--pink);
+::selection {
+  background: var(--pink);
+  color: var(--sobre-pink);
 }
 
-/* Quem pediu menos movimento recebe o estado final, nunca um quadro travado. */
+/* Campo de formulário: lâmina fosca, borda que acende no foco. */
+input, textarea, select {
+  color: var(--tinta);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--tinta-3);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .piscando::after { animation: none; }
+  .piscando::after { animation: none; opacity: 1; }
   .entra { animation: none; }
-  .erguer:hover,
-  .empurra:hover { transform: none; }
+  .erguer:hover { transform: none; }
 }
+
+/* --- a logo ---------------------------------------------------------------
+   Dois arquivos, trocados por tema. O padrão é escuro, então o padrão é a
+   versão em branco; no claro entra a versão em tinta.
+   -------------------------------------------------------------------------- */
+.marca-tinta { display: none; }
+.marca-papel { display: block; }
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema="escuro"]) .marca-papel { display: none; }
+  :root:not([data-tema="escuro"]) .marca-tinta { display: block; }
+}
+
+:root[data-tema="claro"] .marca-papel { display: none; }
+:root[data-tema="claro"] .marca-tinta { display: block; }

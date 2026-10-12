@@ -13,8 +13,8 @@ function Linha({ item, aoAbrir }: { item: ItemNaFila; aoAbrir: () => void }) {
   return (
     <li
       className={
-        'border-x-2 border-b-2 border-linha px-3 py-3.5 ' +
-        (ajuste ? 'border-l-8 border-l-pink' : '')
+        'border-b border-linha-fraca px-3 py-3.5 ' +
+        (ajuste ? 'border-l-2 border-l-pink' : '')
       }
     >
       <div className="flex items-start gap-3">
@@ -36,7 +36,7 @@ function Linha({ item, aoAbrir }: { item: ItemNaFila; aoAbrir: () => void }) {
       {/* O comentário é o que diz o que fazer. Fica na fila, não atrás de um
           clique: a equipe precisa decidir a ordem do dia olhando a lista. */}
       {ajuste && item.comentario && (
-        <blockquote className="mt-2.5 border-l-4 border-linha bg-superficie-2 px-3 py-2 text-[13px]">
+        <blockquote className="mt-2.5 rounded-[var(--raio-p)] border-l-2 border-pink bg-superficie-2 px-3.5 py-2.5 text-[13px]">
           <span className="rotulo">{item.respondidoPor ?? 'o cliente'} escreveu</span>
           <p className="mt-1">{item.comentario}</p>
         </blockquote>
@@ -134,7 +134,7 @@ export function Aprovacoes() {
             {ajustes.length === 0 ? (
               <p className="py-4 text-tinta-3">Nada voltou com ajuste.</p>
             ) : (
-              <ul className="border-t-2 border-linha">
+              <ul className="border-t border-linha-fraca">
                 {ajustes.map((i) => (
                   <Linha key={i.id} item={i} aoAbrir={() => navegar(`/clientes/${i.clienteId}`)} />
                 ))}
@@ -147,7 +147,7 @@ export function Aprovacoes() {
             {esperando.length === 0 ? (
               <p className="py-4 text-tinta-3">Nada enviado sem resposta.</p>
             ) : (
-              <ul className="border-t-2 border-linha">
+              <ul className="border-t border-linha-fraca">
                 {esperando.map((i) => (
                   <Linha key={i.id} item={i} aoAbrir={() => navegar(`/clientes/${i.clienteId}`)} />
                 ))}
