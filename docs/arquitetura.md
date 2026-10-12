@@ -493,6 +493,14 @@ Tudo cai para o estado final sob `prefers-reduced-motion: reduce`, e
 verde da marca. Qual aparece é decidido no CSS, porque o tema pode vir do
 sistema ou do atributo `data-tema`.
 
+**O tema segue o aparelho**, sem botão: `prefers-color-scheme` manda, e junto com
+os tokens trocam os dois rosas, a logo, o ícone da aba (media query dentro do
+`favicon.svg`) e o `theme-color` que pinta a barra do navegador. `data-tema` no
+`<html>` tem precedência e existe como gancho — nada escreve nele hoje. O
+`tema.mjs` cobra isso nas 16 telas, medindo luminância: é o único roteiro que
+enxerga "painel escuro no tema claro", porque contraste e axe acham uma página
+vazia perfeita.
+
 A auditoria de contraste, acessibilidade, heurísticas e jornada está em
 [`ux.md`](ux.md), com os roteiros que medem tudo isso no navegador.
 

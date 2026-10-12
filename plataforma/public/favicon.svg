@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    O ícone da aba acompanha o tema do aparelho, como o resto da plataforma.
+    Arquivo em vez de data: URI porque aqui cabe comentário e cabe media query.
+    Navegador que ignora o @media fica com o escuro, que é o padrão da marca.
+  -->
+  <style>
+    .campo { fill: #06060b }
+    .ponto { fill: #ff3d9a }
+    @media (prefers-color-scheme: light) {
+      .campo { fill: #fbf7fc }
+      .ponto { fill: #c2105f }
+    }
+  </style>
+  <rect class="campo" width="32" height="32" rx="8"/>
+  <circle class="ponto" cx="16" cy="16" r="7"/>
+</svg>

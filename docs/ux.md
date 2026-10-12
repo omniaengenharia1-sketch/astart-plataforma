@@ -158,6 +158,7 @@ Ou um por um:
 | Script | O que percorre |
 |---|---|
 | `telas` | cada tela abre com dado dentro, nas duas larguras — e o que a operação **não** vê |
+| `tema` | as 16 telas nos dois temas: fundo, texto, logo e barra do navegador |
 | `olhar` | jornada da equipe + ciclo de aprovação de peça |
 | `projeto` | entregável: envia, cliente responde, a volta aparece na ficha |
 | `cadastro` | cadastra cliente com contrato, bate na trava de endereço repetido |
@@ -202,6 +203,50 @@ Três coisas que esse roteiro ensinou:
   a continuidade que o teste existia para provar.
 
 ---
+
+## 5a. O tema segue o aparelho
+
+Sem botão, como no iPhone: `prefers-color-scheme` decide, e a plataforma vira
+junto. Quatro coisas trocam, não só a cor de fundo:
+
+1. **Os tokens.** `--papel` vai de `#06060b` a `#fbf7fc`, as lâminas de branco a
+   6% viram branco a 66%, e as linhas de brancas a quase-pretas.
+2. **Os dois rosas.** `--pink` (preenchimento) e `--pink-texto` (escrita) escurecem
+   no claro — `#ff3d9a` sobre branco dá 1,9:1, que é mancha, não texto. No claro
+   viram `#c2105f` e `#a30d50`, e o texto em cima dos botões passa de escuro para
+   branco.
+3. **A logo.** São dois arquivos, não um com filtro: inverter comeria o
+   quadradinho verde da marca. Quem troca é o CSS, porque o tema pode vir do
+   sistema **ou** do atributo `data-tema`.
+4. **O ícone da aba e a barra do navegador.** `favicon.svg` tem a media query
+   dentro do próprio SVG, e há um `theme-color` para cada tema — é ele que deixa
+   o topo da tela do iPhone preto ou branco junto com a página.
+
+O `data-tema="claro"` / `data-tema="escuro"` no `<html>` existe e tem precedência
+sobre o sistema. Nada no front escreve esse atributo hoje: é o gancho pronto para
+o dia que alguém pedir um botão de trocar à mão.
+
+### Por que um roteiro só para isso
+
+`contraste` mede a cor do texto contra o fundo e `acessibilidade` roda o axe.
+Nenhum dos dois vê **tela em branco** nem **painel escuro no tema claro** — os
+dois acham tudo ótimo numa página vazia. O `tema.mjs` mede luminância: fundo do
+lado certo, texto do lado oposto, logo certa, e nada grande com opacidade abaixo
+de 0,9 depois da animação assentar.
+
+Essa última linha nasceu de um erro meu, duas vezes seguidas. Primeiro tirei um
+print 400 ms depois de trocar de aba e concluí que o tema claro estava quebrado —
+a tela estava só no meio da animação de entrada (a escada vai até 820 ms: 520 de
+animação mais 300 de atraso no último cartão). Então escrevi o roteiro dormindo
+900 ms antes de medir. Passou dez vezes e falhou na décima primeira, quando a
+máquina estava ocupada com os outros nove roteiros: a aba Contrato ainda tinha
+três cartões a meio caminho.
+
+Agora ele espera a **condição**, não o relógio: fica perguntando se sobrou algo
+abaixo de 0,9 de opacidade, até 8 segundos. Se assentar em 300 ms, segue em
+300 ms; se nunca assentar, acusa dizendo qual elemento ficou. Teste que depende
+de a máquina estar folgada não é teste, é sorte — e o falso positivo custa mais
+caro que o bug, porque ensina a ignorar o vermelho.
 
 ## 5b. As três personas do modo exemplo
 

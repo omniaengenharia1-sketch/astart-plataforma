@@ -17,7 +17,8 @@
     "calendario": "node calendario.mjs",
     "acessos": "node acessos.mjs",
     "galeria": "node galeria.mjs",
-    "roteiros": "node telas.mjs && node olhar.mjs && node projeto.mjs && node cadastro.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node acessibilidade.mjs && node contraste.mjs"
+    "roteiros": "node telas.mjs && node olhar.mjs && node tema.mjs && node projeto.mjs && node cadastro.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node acessibilidade.mjs && node contraste.mjs",
+    "tema": "node tema.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
