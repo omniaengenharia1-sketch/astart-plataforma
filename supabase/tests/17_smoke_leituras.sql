@@ -173,6 +173,80 @@ begin
     'nem ambientes, que vem do site');
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- 5. as escritas novas (0037)
+-- ---------------------------------------------------------------------------
+do $$
+declare n jsonb := public.nps_do_cliente('a0000000-0000-0000-0000-00000000000a');
+begin
+  perform public.afirma(n->'pendente' = 'null'::jsonb or n->'pendente' is null,
+    'a pesquisa deste mes ja foi respondida, entao nao ha pendente');
+  perform public.afirma(jsonb_array_length(n->'respondidas') = 1, 'e a respondida aparece');
+
+  -- Responder duas vezes nao e NPS, e enquete.
+  begin
+    perform public.responder_nps('d3000000-0000-0000-0000-000000000001', 8::smallint, 'de novo');
+    raise exception 'FALHOU: respondeu a mesma pesquisa duas vezes';
+  exception when others then
+    if position('ja foi respondida' in sqlerrm) = 0 then raise; end if;
+  end;
+
+  -- Sem manutencao no contrato, nao ha chamado. A funcao e SECURITY DEFINER:
+  -- se ela nao conferir o modulo, entrega o que a politica recusava.
+  begin
+    perform public.abrir_chamado('a0000000-0000-0000-0000-00000000000a', 'Teste sem contrato');
+    raise exception 'FALHOU: abriu chamado sem manutencao contratada';
+  exception when others then
+    if position('nao tem manutencao' in sqlerrm) = 0 then raise; end if;
+  end;
+end $$;
+
+-- Agora com o site contratado, que e o que liga a manutencao.
+reset role;
+insert into public.cliente_servicos (cliente_id, servico_id, formato, valor_centavos, parcelas, inicio)
+select 'a0000000-0000-0000-0000-00000000000a', s.id, 'projeto', 1200000, 3, current_date
+  from public.servicos s where s.chave = 'website';
+set role authenticated;
+set "teste.uid" = '20000000-0000-0000-0000-00000000000a';
+
+do $$ begin
+  perform public.abrir_chamado('a0000000-0000-0000-0000-00000000000a', 'O site saiu do ar');
+  perform public.afirma(
+    (select aberto_por_nome from public.chamados
+      where cliente_id = 'a0000000-0000-0000-0000-00000000000a') = 'Bruna',
+    'o chamado fica no nome de quem abriu');
+  perform public.afirma(
+    (select aberto_por_tipo from public.chamados
+      where cliente_id = 'a0000000-0000-0000-0000-00000000000a')::text = 'cliente',
+    'e marcado como aberto pelo cliente');
+
+  begin
+    perform public.abrir_chamado('b0000000-0000-0000-0000-00000000000b', 'Chamado alheio');
+    raise exception 'FALHOU: abriu chamado em cliente que nao e dele';
+  exception when others then
+    if position('Sem permissao' in sqlerrm) = 0 then raise; end if;
+  end;
+end $$;
+
+-- O funil, do lado da equipe.
+set "teste.uid" = '10000000-0000-0000-0000-000000000002';
+do $$
+declare v_lead uuid;
+begin
+  select id into v_lead from public.leads where nome = 'Marina';
+  begin
+    perform public.mover_lead(v_lead, 'perdido');
+    raise exception 'FALHOU: perdeu o lead sem motivo';
+  exception when others then
+    if position('precisa de motivo' in sqlerrm) = 0 then raise; end if;
+  end;
+  perform public.mover_lead(v_lead, 'perdido', 'Fechou com outra agência');
+  perform public.afirma(
+    (select etapa::text from public.leads where id = v_lead) = 'perdido',
+    'com motivo, o lead sai do funil');
+  perform public.afirma((public.funil()->>'abertos')::int = 0, 'e o funil esvazia');
+end $$;
+
 reset role;
 
 do $$ begin
