@@ -49,9 +49,9 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
             to={i.para}
             aria-current={ativo ? 'page' : undefined}
             className={
-              'flex shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 font-mono ' +
+              'risca flex shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 font-mono ' +
               'text-[10px] font-semibold tracking-[0.16em] uppercase ' +
-              (ativo ? 'bg-tinta text-papel' : 'text-tinta-3 hover:bg-superficie-2 hover:text-tinta')
+              (ativo ? 'bg-tinta text-papel' : 'text-tinta-3 hover:text-tinta')
             }
           >
             {i.rotulo}
@@ -103,6 +103,7 @@ function AvisoExemplo() {
 
 export function CascaEquipe({ children }: { children: ReactNode }) {
   const { sessao } = useSessao();
+  const { pathname } = useLocation();
   const quem =
     sessao.tipo === 'equipe'
       ? `${sessao.perfil.nome ?? sessao.perfil.email} · ${PAPEL[sessao.perfil.papel] ?? sessao.perfil.papel}`
@@ -112,7 +113,11 @@ export function CascaEquipe({ children }: { children: ReactNode }) {
       <Nameplate marca="Astart" sub="Plataforma interna" quem={quem} />
       <Menu itens={MENU_EQUIPE} />
       <AvisoExemplo />
-      <main>{children}</main>
+      {/* A chave e a rota: sem ela a animacao de entrada roda uma vez so, na
+          primeira tela, e as outras aparecem secas. */}
+      <main key={pathname} className="entra">
+        {children}
+      </main>
     </div>
   );
 }
@@ -127,6 +132,7 @@ export function CascaCliente({
   children: ReactNode;
 }) {
   const { sessao } = useSessao();
+  const { pathname } = useLocation();
   const nome = sessao.tipo === 'cliente' ? sessao.clienteAtual.nome : '';
   const quem = sessao.tipo === 'cliente' ? sessao.nome : '';
 
@@ -150,7 +156,9 @@ export function CascaCliente({
       <Nameplate marca={nome} sub="por Astart Studio" quem={quem} />
       <Menu itens={itens} modulos={modulos} />
       <AvisoExemplo />
-      <main>{children}</main>
+      <main key={pathname} className="entra">
+        {children}
+      </main>
     </div>
   );
 }

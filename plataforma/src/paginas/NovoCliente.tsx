@@ -438,7 +438,7 @@ export function NovoCliente() {
                     type="button"
                     onClick={() => setAbrindo((v) => !v)}
                     aria-expanded={abrindo}
-                    className="flex min-h-12 w-full items-center justify-between border-2 border-dashed border-linha bg-superficie px-4 hover:bg-superficie-2"
+                    className="flex min-h-12 w-full items-center justify-between border-2 border-dashed border-linha bg-superficie px-4 hover:hachura"
                   >
                     <span className="rotulo-forte">
                       {escolhidos.length === 0 ? 'escolher serviço' : 'adicionar outro serviço'}

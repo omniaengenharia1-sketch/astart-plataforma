@@ -370,6 +370,26 @@ Fila, Financeiro, Comercial, Ajustes), o cadastro de cliente, as 14 abas da fich
 do cliente, o editor de peça, as 12 telas do portal e o link de quem não tem conta.
 Inclui o estado vazio do primeiro dia.
 
+### Efeitos
+
+Brutalismo não é ausência de movimento — é movimento sem maquiagem. Nada de
+desfoque, nada de gradiente, nada de sombra suave. O que se move aqui se move
+em passos duros e curtos (`steps(2, end)`, 90ms) e sempre diz alguma coisa:
+
+| Efeito | Onde | O que comunica |
+|---|---|---|
+| `erguer` | cartão clicável | sai do papel no hover, afunda no clique |
+| `empurra` | linha de lista que abre algo | anda 5px e mostra uma barra pink **fora** da linha |
+| `hachura` | vazio, prévia que não existe, dia livre do calendário | "cabe coisa aqui" |
+| `piscando` | carregando | quadrado pink que pisca, não spinner |
+| `risca` | item de menu | sublinhado pink que cresce da esquerda |
+| `entra` | a tela inteira, por rota | sobe 6px em 160ms, uma vez |
+| sombra pink no foco | campo em foco | além do contorno, a sombra dura |
+| `::selection` | texto selecionado | pink da marca |
+
+Tudo cai para o estado final sob `prefers-reduced-motion: reduce` — quem pediu
+menos movimento recebe a tela parada, nunca um quadro travado no meio.
+
 ### O que já está construído em `plataforma/`
 
 O protótipo acima é o desenho. Isto é o que existe em React, lendo os RPC do banco

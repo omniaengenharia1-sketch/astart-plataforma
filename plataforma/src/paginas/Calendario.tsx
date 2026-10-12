@@ -283,7 +283,8 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
               className={
                 'min-h-28 border-r-2 border-b-2 border-linha-fraca p-1.5 ' +
                 (dia === hojeISO() ? 'bg-pink-fundo ' : '') +
-                (dia && equipe ? 'cursor-pointer hover:bg-superficie-2' : '')
+                // Hachura no dia vazio ao passar o mouse: "cabe coisa aqui".
+                (dia && equipe ? 'cursor-pointer hover:hachura' : '')
               }
               onClick={dia && equipe ? () => { setNovoDia(dia); setErroForm(null); } : undefined}
             >

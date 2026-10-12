@@ -43,7 +43,7 @@ function Item({
   const faltaTexto = aberto === 'ajuste' && texto.trim().length === 0;
 
   return (
-    <li className="bloco sombra-dura-p bg-superficie p-4 sm:p-5">
+    <li className="bloco sombra-dura-p erguer bg-superficie p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -56,8 +56,8 @@ function Item({
 
       {/* O preview do conteúdo entra aqui quando a mídia estiver no Storage.
           Até lá, a tela não finge ter imagem: diz o que ainda não tem. */}
-      <div className="mt-4 border-2 border-dashed border-linha-fraca px-4 py-8 text-center">
-        <span className="rotulo">a prévia do material aparece aqui</span>
+      <div className="hachura mt-4 border-2 border-dashed border-linha-fraca px-4 py-8 text-center">
+        <span className="rotulo bg-superficie px-2 py-1">a prévia do material aparece aqui</span>
       </div>
 
       {aberto === null && (

@@ -184,3 +184,131 @@ body {
   text-transform: uppercase;
   padding: 0.4rem 0.7rem;
 }
+
+/* ---------------------------------------------------------------------------
+   Efeitos.
+
+   Brutalismo não é ausência de movimento — é movimento sem maquiagem. Nada de
+   desfoque, nada de gradiente, nada de sombra suave. O que se move aqui se
+   move em passos duros e curtos, e sempre diz alguma coisa: o que é clicável
+   afunda, o que está carregando pisca, o que está vazio é hachurado.
+
+   Tudo passa pelo @media (prefers-reduced-motion: reduce) lá de cima, que
+   derruba a duração de qualquer transição para quem pediu menos movimento.
+   --------------------------------------------------------------------------- */
+
+/* Seleção de texto no pink da marca. Detalhe que ninguém pede e todo mundo vê. */
+::selection {
+  background: var(--pink);
+  color: var(--sobre-pink);
+}
+
+/** Erguer: o bloco sai do papel ao passar o mouse e afunda ao ser clicado. */
+@utility erguer {
+  transition:
+    transform 90ms steps(2, end),
+    box-shadow 90ms steps(2, end);
+
+  &:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--sombra);
+  }
+  &:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--sombra);
+  }
+}
+
+/** Empurrar: a linha de lista anda para a direita e ganha uma barra pink. */
+@utility empurra {
+  transition:
+    transform 90ms steps(2, end),
+    box-shadow 90ms steps(2, end);
+
+  &:hover {
+    transform: translateX(5px);
+    /* A barra fica FORA, no espaço que a linha deixou ao andar. Por dentro ela
+       passava por cima da primeira coluna e comia a primeira letra. */
+    box-shadow: -5px 0 0 var(--pink);
+  }
+}
+
+/** Hachura: listras a 45°. O desenho do vazio e do que ainda não existe. */
+@utility hachura {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 7px,
+    var(--linha-fraca) 7px 8px
+  );
+}
+
+/** Quadrado que pisca, do tamanho do texto. É o nosso cursor de carregando. */
+@utility piscando {
+  &::after {
+    content: "";
+    display: inline-block;
+    width: 0.62em;
+    height: 0.62em;
+    margin-left: 0.5em;
+    background: var(--pink);
+    animation: pisca 900ms steps(1, end) infinite;
+  }
+}
+
+@keyframes pisca {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/** Sublinhado que cresce da esquerda. Só no que leva para outro lugar. */
+@utility risca {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 2px;
+    background: var(--pink);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 120ms ease-out;
+  }
+  &:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+/** A tela que entra sobe dois pixels. Curto de propósito: 160ms, uma vez. */
+@utility entra {
+  animation: entra-tela 160ms ease-out both;
+}
+
+@keyframes entra-tela {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Campo em foco ganha a sombra dura no pink, além do contorno. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+  box-shadow: 4px 4px 0 var(--pink);
+}
+
+/* Quem pediu menos movimento recebe o estado final, nunca um quadro travado. */
+@media (prefers-reduced-motion: reduce) {
+  .piscando::after { animation: none; }
+  .entra { animation: none; }
+  .erguer:hover,
+  .empurra:hover { transform: none; }
+}

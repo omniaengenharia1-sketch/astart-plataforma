@@ -93,7 +93,7 @@ export function Tabela<T>({
                   onClick={aoClicar ? () => aoClicar(l) : undefined}
                   className={
                     'border-b-2 border-linha-fraca ' +
-                    (aoClicar ? 'cursor-pointer ' : '') +
+                    (aoClicar ? 'empurra cursor-pointer ' : '') +
                     (ativa ? 'bg-pink text-sobre-pink' : 'hover:bg-superficie-2')
                   }
                 >
@@ -121,7 +121,7 @@ export function Tabela<T>({
           <div
             key={chaveDe(l)}
             onClick={aoClicar ? () => aoClicar(l) : undefined}
-            className={'bloco bg-superficie p-4 ' + (aoClicar ? 'cursor-pointer' : '')}
+            className={'bloco bg-superficie p-4 ' + (aoClicar ? 'erguer cursor-pointer' : '')}
           >
             {resumo
               ? resumo(l)
