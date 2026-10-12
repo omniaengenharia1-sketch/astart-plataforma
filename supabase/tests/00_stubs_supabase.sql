@@ -56,6 +56,14 @@ returns bigint language sql as $$ select 1::bigint $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 
+-- No Supabase de verdade `authenticated` alcanca storage.objects e e o RLS que
+-- decide linha por linha. Sem estes grants, um teste de politica de bucket
+-- falharia por falta de permissao de schema e passaria a impressao de que a
+-- politica negou — negar por motivo errado nao prova nada.
+grant usage on schema storage to anon, authenticated, service_role;
+grant select, insert, update, delete on storage.objects to authenticated, service_role;
+grant select on storage.buckets to anon, authenticated, service_role;
+
 -- Privilegios default equivalentes aos do Supabase.
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;

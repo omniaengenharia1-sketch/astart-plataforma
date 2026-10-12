@@ -291,6 +291,17 @@ E os módulos:
 | `0025` | comercial (CRM) com as 13 etapas |
 | `0026` | `minha_sessao()`, `painel_equipe()` e `painel_cliente()` — o que cada início lê |
 | `0027` | `lista_clientes()`, `fila_aprovacoes()` e `ficha_cliente()` — o que as telas de dentro leem |
+| `0028` | `catalogo()` e `criar_cliente()` — cliente e contrato na mesma transação |
+| `0029` | `item_do_entregavel()` e `enviar_para_aprovacao()` — o lote que não reenvia o que já está na mão do cliente |
+| `0030` | `calendario_do_cliente()`, `criar_peca()` e `mover_peca()` — o mês já no fuso do cliente |
+| `0031` | `equipe_e_convites()`, desativar, reativar e tirar acesso |
+| `0032` | o gatilho que impede alguém de se promover a admin |
+| `0033` | ajustes de leitura pedidos pelas telas da ficha |
+| `0034` | galeria própria: links por token, favoritos e downloads |
+| `0035` | o bucket `galerias`, privado, com o caminho decidindo o dono |
+| `0036` | as nove leituras que faltavam: financeiro, fila, agenda, grid, NPS, funil, campanhas, ambientes |
+| `0037` | as quatro escritas que faltavam: responder NPS, mover lead, abrir chamado |
+| `0038` | o cliente lê a mídia do próprio post — sem isso o Grid do portal era um grid vazio |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -333,6 +344,13 @@ abaixo passou batido por toda a auditoria).
    gatilho, porque privilégio de coluna (`grant update (nome, …)`) tiraria o
    direito do admin também. O teste `15_escalada_de_privilegio.sql` tenta a
    promoção e mais cinco caminhos, e falha se a `0032` sair.
+
+A quinta: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
+antes do cast.** A `0035` e a `0038` leem o dono do arquivo a partir do caminho,
+e as duas funções rodam dentro do `using` da política do bucket. Um nome de
+arquivo fora da convenção fazendo `::uuid` estourar não derrubaria só aquele
+arquivo: derrubaria toda leitura de storage, para todo mundo. Por isso o regex
+vem antes do cast, e os testes `16` e `18` passam um caminho torto de propósito.
 
 E duas de teste:
 
