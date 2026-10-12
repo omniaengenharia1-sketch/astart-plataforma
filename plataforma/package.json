@@ -11,7 +11,13 @@
     "olhar": "node olhar.mjs",
     "contraste": "node contraste.mjs",
     "acessibilidade": "node acessibilidade.mjs",
-    "telas": "node telas.mjs"
+    "telas": "node telas.mjs",
+    "projeto": "node projeto.mjs",
+    "cadastro": "node cadastro.mjs",
+    "calendario": "node calendario.mjs",
+    "acessos": "node acessos.mjs",
+    "galeria": "node galeria.mjs",
+    "roteiros": "node telas.mjs && node olhar.mjs && node projeto.mjs && node cadastro.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node acessibilidade.mjs && node contraste.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

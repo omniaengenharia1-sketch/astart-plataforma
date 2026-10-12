@@ -150,12 +150,26 @@ confere que o comentário aparece na fila da equipe, do outro lado.
 ```bash
 cd plataforma && npm run build && npx vite preview --port 4178
 # noutro terminal:
-npm run contraste       # contraste composto, dois temas, 15 telas
-npm run acessibilidade  # axe-core, 2 larguras × 2 temas × 2 papéis
-npm run olhar           # jornada da equipe + ciclo de aprovação
-npm run telas           # cada tela abre, com dado dentro, nas duas larguras
-                        # — e o que a operação NÃO vê
+npm run roteiros        # os nove, em sequência
 ```
+
+Ou um por um:
+
+| Script | O que percorre |
+|---|---|
+| `telas` | cada tela abre com dado dentro, nas duas larguras — e o que a operação **não** vê |
+| `olhar` | jornada da equipe + ciclo de aprovação de peça |
+| `projeto` | entregável: envia, cliente responde, a volta aparece na ficha |
+| `cadastro` | cadastra cliente com contrato, bate na trava de endereço repetido |
+| `calendario` | mês de conteúdo, criar peça, mover peça |
+| `acessos` | convidar equipe, dar acesso a contato do cliente, tirar acesso |
+| `galeria` | subir arquivo, gerar link, abrir o álbum sem conta |
+| `acessibilidade` | axe-core, 2 larguras × 2 temas × 2 papéis |
+| `contraste` | contraste composto, dois temas, 15 telas |
+
+Os cinco do meio moravam só no diretório de rascunho desta sessão até agora —
+teste que vive fora do repositório é teste que não existe, porque o container é
+reciclado. Entraram com os `npm run` acima.
 
 Os quatro acham o Chromium do ambiente por conta (`navegador.mjs`): o
 `playwright-core` procura um número de build exato e morre pedindo

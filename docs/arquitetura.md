@@ -331,6 +331,7 @@ E os módulos:
 | `0037` | as quatro escritas que faltavam: responder NPS, mover lead, abrir chamado |
 | `0038` | o cliente lê a mídia do próprio post — sem isso o Grid do portal era um grid vazio |
 | `0039` | o dinheiro é só de quem cuida dele, o comercial fecha junto, e o admin ganha mudar papel e tirar cliente do ar |
+| `0040` | `primeiro_admin()` — a porta do primeiro dia, que se fecha sozinha |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -394,14 +395,23 @@ DEFINER, que conferem o papel. Isso tira o acesso direto do admin também, de
 propósito — e é justamente o motivo de a `0032` **não** ter usado privilégio de
 coluna para `perfis.papel`: lá não havia função no caminho, aqui há.
 
-A sétima: **`for all` inclui `delete`.** A política de `clientes` da `0006` era
+A sétima: **banco novo nasce trancado.** `perfis` vazia significa
+`usuario_admin()` falso para todos, e a Edge Function de convite recusa todo
+mundo — inclusive quem acabou de criar o projeto. Nenhum teste pegaria isso,
+porque todo teste insere o seu próprio perfil de admin na primeira linha. A
+`0040` resolve com uma função que promove a primeira conta e recusa a partir do
+segundo uso: a porta se fecha sozinha. Ela é de `service_role`, não de
+`authenticated` — se fosse chamável por quem está logado, numa base recém-criada
+a primeira pessoa a aparecer se promoveria a dona.
+
+A oitava: **`for all` inclui `delete`.** A política de `clientes` da `0006` era
 `for all using (usuario_edita())`, então qualquer pessoa de operação podia
 apagar um cliente — e o cascade levaria posts, cobranças, galerias e aprovações
 com ele. A `0039` separa em três políticas e deixa delete só para admin. Mesmo
 ele passa por `remover_cliente()`, que recusa quem tem histórico e manda usar
 `desativar_cliente()`.
 
-A oitava: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
+A nona: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
 antes do cast.** A `0035` e a `0038` leem o dono do arquivo a partir do caminho,
 e as duas funções rodam dentro do `using` da política do bucket. Um nome de
 arquivo fora da convenção fazendo `::uuid` estourar não derrubaria só aquele
@@ -435,14 +445,16 @@ supabase/tests/rodar.sh
 (Entrada, Cadastro, Aprovação):
 <https://claude.ai/artifact/Sjwz1yLNgK4GSJkQRDRDVc>
 
-**MVP navegável** — as 45 telas do mapa, ligadas, responsivo, abre no celular:
-<https://claude.ai/artifact/5nuLBonHy1jE5nyVmAZi7y>
-Fonte em `docs/proto/plataforma-astart.html` (arquivo único, sem dependências).
+**MVP navegável (histórico)** — o protótipo de arquivo único que desenhou as 45
+telas antes de existir código: <https://claude.ai/artifact/5nuLBonHy1jE5nyVmAZi7y>
 
-Cobre a entrada, o painel da equipe inteiro (Início, Clientes, Aprovações, Agenda,
-Fila, Financeiro, Comercial, Ajustes), o cadastro de cliente, as 14 abas da ficha
-do cliente, o editor de peça, as 12 telas do portal e o link de quem não tem conta.
-Inclui o estado vazio do primeiro dia.
+O arquivo-fonte dele saiu do repositório: a plataforma de verdade tem todas essas
+telas, em React, com as regras no banco. Protótipo e produto divergindo é pior que
+protótipo nenhum — quem for conferir o comportamento tem de abrir a prévia, não
+uma maquete que não sabe das últimas quinze decisões.
+
+**Prévia da plataforma** — modo exemplo, três acessos (direção, operação,
+cliente): <https://claude.ai/artifact/9gnztdQQQjjpJ96mBgW7Ep>
 
 ### A linguagem visual: vidro líquido
 
