@@ -138,6 +138,26 @@ segredo precisa sair do painel:
 Sem o `.env.local` a plataforma abre em **modo exemplo**, com dados fictícios e
 um aviso no topo. Nada finge estar ligado.
 
+6. **O front no ar.** Projeto novo no Vercel, importando este repositório, com
+   **Root Directory = `plataforma`**. O resto ele detecta (Vite, `npm run
+   build`, saída em `dist`). Duas variáveis de ambiente, as mesmas públicas do
+   passo 5:
+
+   ```
+   VITE_SUPABASE_URL=https://<ref>.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
+   ```
+
+   E **não** defina `VITE_PREVIA` lá: com ela a build vira modo exemplo, e o
+   site no ar mostraria dados fictícios.
+
+   O `plataforma/vercel.json` existe por um motivo só, e é o mesmo do ObrasPro:
+   a rota é URL limpa (`BrowserRouter`), então abrir `/clientes/<id>` direto ou
+   apertar F5 ali pede ao servidor um arquivo que não existe. O rewrite manda
+   tudo para o `index.html` e quem resolve a rota é o React. Sem ele, tela
+   branca em qualquer recarga fora da raiz — e só aparece quando alguém
+   recarrega, nunca navegando por cliques.
+
 ## Rodar
 
 ```bash
