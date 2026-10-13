@@ -43,6 +43,36 @@ const vazou = rede.filter((r) => r.s === 200 && r.u.includes('/rest/v1/'));
 cobrar(vazou.length === 0, `nenhuma leitura de tabela respondeu 200 sem login (${rede.length} chamadas ao projeto)`);
 if (rede.length) console.log('    rede:', rede.map((r) => `${r.s} ${r.u.slice(0, 60)}`).join(' | '));
 
+// A prova do rewrite, e a unica que existe: a rota e URL limpa, entao um
+// caminho fundo pedido DIRETO ao servidor (que e o que um F5 faz) precisa
+// voltar o index.html. Navegando por cliques isto nunca falha, porque o
+// servidor nao e consultado — e por isso o erro chega em producao.
+for (const fundo of ['/clientes/00000000-0000-0000-0000-000000000000', '/financeiro', '/a/token-qualquer']) {
+  // O `goto` ESTOURA quando o servidor nao serve nada ali, e estourar e o caso
+  // que mais importa: e exatamente o que acontece sem o rewrite. Sem este
+  // try/catch a checagem morre com stack trace em vez de dizer o que falhou,
+  // e quem le a saida fica sem a unica informacao util.
+  let estado = 0;
+  let corpo = '';
+  let erro = '';
+  try {
+    const r = await pagina.goto(BASE + fundo, { waitUntil: 'domcontentloaded' });
+    estado = r?.status() ?? 0;
+    corpo = (await pagina.locator('body').innerText()).trim();
+  } catch (e) {
+    erro = e instanceof Error ? e.message.split('\n')[0] : String(e);
+  }
+  const ok = estado === 200 && corpo.length > 0;
+  cobrar(ok, erro
+    ? `recarregar ${fundo}: o servidor nao serviu nada (${erro}) — falta o rewrite`
+    : estado !== 200
+      ? `recarregar ${fundo}: http ${estado} em vez de 200 — falta o rewrite`
+      : corpo.length === 0
+        ? `recarregar ${fundo}: http 200 mas a tela veio vazia`
+        : `recarregar ${fundo} nao da tela branca (http 200, ${corpo.length} caracteres)`);
+}
+
+await pagina.goto(BASE, { waitUntil: 'networkidle' });
 await pagina.screenshot({ path: process.env['FOTO'] ?? '/tmp/aovivo.png', fullPage: false });
 await navegador.close();
 
