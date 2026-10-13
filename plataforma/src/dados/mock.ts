@@ -16,8 +16,8 @@ import type {
   EnvioNaFicha, ItemDoLote, ItemNaFila, LancamentoNaLista, LeadNoFunil, LinkDeAprovacao,
   LoteDoLink, MesDeConteudo, NpsDoCliente, PainelCliente,
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
-  PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, ServicoContratado,
-  ServicoEscolhido, ServicoNoProjeto,
+  PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, SaudeDoToken,
+  ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
 } from './tipos';
 
@@ -1004,6 +1004,34 @@ export function descobrirContasExemplo(): ContaDescoberta[] {
     // Pagina sem Instagram vinculado: o caso que a tela precisa saber recusar.
     { pageId: '1012', pageName: 'Pagina sem Instagram', igUserId: null, igUsername: null },
   ];
+}
+
+/**
+ * No exemplo, o token e o SAUDAVEL: tipo SYSTEM_USER, sem expiracao, escopos
+ * completos.
+ *
+ * Mostrar o caso doente aqui seria mais chamativo e seria errado: quem abre o
+ * modo exemplo esta vendo como a plataforma fica quando esta certa.
+ */
+export function conferirTokenExemplo(): SaudeDoToken {
+  return {
+    valido: true,
+    tipo: 'SYSTEM_USER',
+    expiraEm: null,
+    jaExpirou: false,
+    escopos: [
+      'instagram_basic',
+      'instagram_content_publish',
+      'pages_show_list',
+      'pages_read_engagement',
+      'business_management',
+    ],
+    escoposFaltando: [],
+    appId: '000000000000000',
+    conferidoCom: 'app_token',
+    diagnostico: 'Token de usuário do sistema, válido e sem data de expiração. É o que se quer.',
+    oQueFazer: null,
+  };
 }
 
 export function salvarContaSocialExemplo(clienteId: string, conta: ContaDescoberta): void {

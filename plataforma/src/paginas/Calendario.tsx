@@ -4,14 +4,15 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
-  calendarioDoCliente, contasDoCliente, criarPeca, descobrirContas, enviarParaAprovacao,
-  salvarContaSocial,
+  calendarioDoCliente, conferirTokenDaMeta, contasDoCliente, criarPeca, descobrirContas,
+  enviarParaAprovacao, FalhaDaMeta, salvarContaSocial,
 } from '../dados/api';
 import { diaMes, plural } from '../formato';
 import { Compositor } from '../componentes/Compositor';
 import { MidiaDaPecaPainel } from '../componentes/MidiaDaPeca';
+import { PainelSaudeDoToken } from '../componentes/SaudeDoTokenMeta';
 import type {
-  ContaDescoberta, ContaSocial, MesDeConteudo, PecaNoMes, TipoPeca,
+  ContaDescoberta, ContaSocial, MesDeConteudo, PecaNoMes, SaudeDoToken, TipoPeca,
 } from '../dados/tipos';
 
 const MESES = [
@@ -44,6 +45,7 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
   const [contas, setContas] = useState<ContaSocial[] | null>(null);
   const [achadas, setAchadas] = useState<ContaDescoberta[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [saude, setSaude] = useState<SaudeDoToken | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
   const ler = useCallback(async () => {
@@ -60,11 +62,30 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
 
   async function procurar() {
     setErro(null);
+    setSaude(null);
     setOcupado(true);
     try {
       setAchadas(await descobrirContas(clienteId));
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui falar com a Meta.');
+      // A recusa da Meta vem com o diagnóstico do token no mesmo corpo (0048).
+      // Sem ele, a pessoa lê "expirou ou foi revogado" e não sabe qual dos três
+      // casos é o dela — foi exatamente o que aconteceu aqui.
+      if (x instanceof FalhaDaMeta) setSaude(x.saude);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  /** Conferir sem tentar conectar: serve para saber ANTES de precisar. */
+  async function conferir() {
+    setErro(null);
+    setOcupado(true);
+    try {
+      setSaude(await conferirTokenDaMeta());
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui conferir o token.');
+      if (x instanceof FalhaDaMeta) setSaude(x.saude);
     } finally {
       setOcupado(false);
     }
@@ -106,9 +127,16 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
           )}
         </div>
         {equipe && (
-          <Botao tamanho="pequeno" disabled={ocupado} onClick={() => void procurar()}>
-            {ocupado ? 'Procurando…' : contas.length > 0 ? 'Conectar outra' : 'Conectar conta'}
-          </Botao>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Conferir o token é separado de conectar de propósito: dá para
+                saber que o token vai morrer ANTES de a pessoa precisar dele. */}
+            <Botao variante="texto" tamanho="pequeno" disabled={ocupado} onClick={() => void conferir()}>
+              Conferir token
+            </Botao>
+            <Botao tamanho="pequeno" disabled={ocupado} onClick={() => void procurar()}>
+              {ocupado ? 'Procurando…' : contas.length > 0 ? 'Conectar outra' : 'Conectar conta'}
+            </Botao>
+          </div>
         )}
       </div>
 
@@ -141,6 +169,8 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
           {erro}
         </p>
       )}
+
+      {saude && <PainelSaudeDoToken saude={saude} />}
 
       {achadas && (
         <div className="mt-4 border-t border-linha-fraca pt-3">

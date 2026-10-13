@@ -16,6 +16,7 @@ import {
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
   criarGaleriaExemplo, criarLinkAprovacaoExemplo, criarLinkExemplo, criarPecaExemplo,
   conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
+  conferirTokenExemplo,
   criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
   desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
@@ -34,12 +35,28 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
-  RelatorioDeCampanha, ResumoNps, ServicoEscolhido, ServicoNoProjeto, Sessao, TipoPeca,
+  RelatorioDeCampanha, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
+  TipoPeca,
 } from './tipos';
 
 export { ligado };
 
 export class FalhaDados extends Error {}
+
+/**
+ * Falha que veio com diagnóstico do token (0048).
+ *
+ * Separada de `FalhaDados` porque a tela faz algo diferente com ela: além da
+ * mensagem, mostra o que está errado com o token e o que fazer. "Expirou ou foi
+ * revogado" cobre três casos com três consertos diferentes, e mandar a pessoa
+ * adivinhar qual é foi o que aconteceu hoje.
+ */
+export class FalhaDaMeta extends FalhaDados {
+  constructor(mensagem: string, readonly saude: SaudeDoToken | null) {
+    super(mensagem);
+    this.name = 'FalhaDaMeta';
+  }
+}
 
 /**
  * Traduz o erro de uma Edge Function para algo que a tela pode mostrar.
@@ -58,18 +75,22 @@ export class FalhaDados extends Error {}
  * Virou funcao porque tres telas precisam do mesmo cuidado. Estava enterrado
  * dentro do `convidar`, e a segunda chamada teria copiado — ou, pior, esquecido.
  */
-async function mensagemDaFuncao(
+async function corpoDaFuncao(
   error: { message: string; context?: unknown },
   seNaoChegar: string,
-): Promise<string> {
+): Promise<{ mensagem: string; saude: SaudeDoToken | null }> {
   let mensagem = error.message;
+  let saude: SaudeDoToken | null = null;
 
   const contexto = error.context;
   if (contexto instanceof Response) {
     try {
-      const corpo: unknown = await contexto.json();
-      if (corpo && typeof corpo === 'object' && typeof (corpo as { erro?: unknown }).erro === 'string') {
-        return (corpo as { erro: string }).erro;
+      const corpo = (await contexto.json()) as { erro?: unknown; saude?: unknown } | null;
+      if (corpo && typeof corpo === 'object') {
+        // O diagnostico do token (0048) vem no MESMO corpo do erro, e nao numa
+        // segunda chamada: quem precisa dele esta lendo a falha agora.
+        if (corpo.saude && typeof corpo.saude === 'object') saude = corpo.saude as SaudeDoToken;
+        if (typeof corpo.erro === 'string') return { mensagem: corpo.erro, saude };
       }
     } catch {
       /* fica a mensagem bruta, que e melhor que nada */
@@ -82,7 +103,14 @@ async function mensagemDaFuncao(
       'Confira a internet e tente de novo. Se insistir, me avise — pode ser a funcao fora do ar.';
   }
 
-  return mensagem;
+  return { mensagem, saude };
+}
+
+async function mensagemDaFuncao(
+  error: { message: string; context?: unknown },
+  seNaoChegar: string,
+): Promise<string> {
+  return (await corpoDaFuncao(error, seNaoChegar)).mensagem;
 }
 
 /**
@@ -661,8 +689,31 @@ export async function descobrirContas(clienteId: string): Promise<ContaDescobert
   const { data, error } = await sb.functions.invoke('conectar-conta', {
     body: { acao: 'descobrir', clienteId },
   });
-  if (error) throw new FalhaDados(await mensagemDaFuncao(error, 'Nao consegui falar com a Meta.'));
+  if (error) {
+    const { mensagem, saude } = await corpoDaFuncao(error, 'Nao consegui falar com a Meta.');
+    throw new FalhaDaMeta(mensagem, saude);
+  }
   return (data as { contas: ContaDescoberta[] }).contas;
+}
+
+/**
+ * Pergunta a Meta a saude do token da agencia (0048).
+ *
+ * Nao e o mesmo que `conectores()`: aquela diz se a chave esta CADASTRADA, esta
+ * diz se ela FUNCIONA — tipo, validade e escopos. A diferenca entre as duas foi
+ * o que fez a dona clicar em "Conectar conta" e levar um erro sem saber o que
+ * consertar, com a chave cadastrada dez horas antes.
+ */
+export async function conferirTokenDaMeta(): Promise<SaudeDoToken> {
+  if (!sb) return conferirTokenExemplo();
+  const { data, error } = await sb.functions.invoke('conectar-conta', {
+    body: { acao: 'conferir' },
+  });
+  if (error) {
+    const { mensagem, saude } = await corpoDaFuncao(error, 'Nao consegui conferir o token.');
+    throw new FalhaDaMeta(mensagem, saude);
+  }
+  return data as SaudeDoToken;
 }
 
 export async function salvarContaSocial(

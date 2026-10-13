@@ -4,10 +4,14 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou } from '../componentes/Estado';
 import {
-  conectores, convidar, equipeEConvites, mudarAcesso, mudarPapel, revogarConvite,
+  conectores, conferirTokenDaMeta, convidar, equipeEConvites, FalhaDaMeta, mudarAcesso, mudarPapel,
+  revogarConvite,
 } from '../dados/api';
 import { haQuanto } from '../formato';
-import type { ChaveDeConector, Conector, EquipeEConvites, PapelEquipe } from '../dados/tipos';
+import { PainelSaudeDoToken } from '../componentes/SaudeDoTokenMeta';
+import type {
+  ChaveDeConector, Conector, EquipeEConvites, PapelEquipe, SaudeDoToken,
+} from '../dados/tipos';
 
 const PAPEIS: { valor: PapelEquipe; rotulo: string; explica: string }[] = [
   { valor: 'admin', rotulo: 'Direção', explica: 'vê tudo, convida gente, mexe no contrato' },
@@ -35,6 +39,15 @@ function comandoParaCadastrar(chave: ChaveDeConector): string {
   if (chave.onde === 'funcao') {
     return `Settings › Edge Functions › Secrets  →  ${chave.chave}`;
   }
+
+  // Chave que JÁ EXISTE se troca com `update_secret`, não com `create_secret`:
+  // o nome é único no Vault, e um segundo `create_secret` falha. Esta tela
+  // mostrava `create_secret` sempre — e só quando a chave faltava, então quem
+  // precisava TROCAR um token vencido não via comando nenhum. Foi o caso real
+  // do token da Meta que morreu em dez horas.
+  if (chave.presente === true) {
+    return `select vault.update_secret((select id from vault.secrets where name = '${chave.chave}'), '<valor novo>');`;
+  }
   return `select vault.create_secret('<valor>', '${chave.chave}');`;
 }
 
@@ -51,6 +64,25 @@ export function Ajustes() {
   const [enviando, setEnviando] = useState(false);
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [recado, setRecado] = useState<string | null>(null);
+
+  // A saúde do token da Meta (0048). Separada do estado das chaves de
+  // propósito: aquilo é cadastro, isto é funcionamento.
+  const [saude, setSaude] = useState<SaudeDoToken | null>(null);
+  const [erroSaude, setErroSaude] = useState<string | null>(null);
+  const [conferindo, setConferindo] = useState(false);
+
+  async function conferirToken() {
+    setErroSaude(null);
+    setConferindo(true);
+    try {
+      setSaude(await conferirTokenDaMeta());
+    } catch (x) {
+      setErroSaude(x instanceof Error ? x.message : 'Não consegui conferir o token.');
+      if (x instanceof FalhaDaMeta) setSaude(x.saude);
+    } finally {
+      setConferindo(false);
+    }
+  }
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -348,6 +380,32 @@ export function Ajustes() {
                     </p>
                   )}
 
+                  {c.id === 'meta' && (
+                    // "Cadastrada" não quer dizer "funciona". O ● abaixo só
+                    // conta que existe uma chave com aquele nome no Vault;
+                    // quem responde se ela serve é a Meta, e é o que este
+                    // botão pergunta.
+                    <div className="mt-3 border-t border-linha-fraca pt-3">
+                      <Botao
+                        variante="texto"
+                        tamanho="pequeno"
+                        disabled={conferindo}
+                        onClick={() => void conferirToken()}
+                      >
+                        {conferindo ? 'Perguntando à Meta…' : 'Conferir se o token funciona'}
+                      </Botao>
+                      {erroSaude && (
+                        <p
+                          role="alert"
+                          className="mt-2 rounded-[var(--raio-p)] border border-linha bg-alerta-fundo px-3 py-2 text-[12.5px]"
+                        >
+                          {erroSaude}
+                        </p>
+                      )}
+                      {saude && <PainelSaudeDoToken saude={saude} />}
+                    </div>
+                  )}
+
                   <ul className="mt-4 flex flex-col gap-2.5 border-t border-linha-fraca pt-3">
                     {c.chaves.map((k) => (
                       <li key={k.chave} className="text-[13px]">
@@ -359,11 +417,12 @@ export function Ajustes() {
                           {!k.obrigatoria && <span className="rotulo">opcional</span>}
                         </div>
                         <p className="rotulo mt-0.5 ml-5 normal-case">{k.paraQue}</p>
-                        {k.presente !== true && (
-                          <p className="ml-5 mt-1 font-mono text-[11.5px] text-tinta-3 break-all">
-                            {comandoParaCadastrar(k)}
-                          </p>
-                        )}
+                        {/* O comando aparece TAMBÉM com a chave cadastrada: a
+                            operação mais comum depois do primeiro dia não é
+                            cadastrar, é trocar — token vence, segredo roda. */}
+                        <p className="ml-5 mt-1 font-mono text-[11.5px] text-tinta-3 break-all">
+                          {comandoParaCadastrar(k)}
+                        </p>
                       </li>
                     ))}
                   </ul>

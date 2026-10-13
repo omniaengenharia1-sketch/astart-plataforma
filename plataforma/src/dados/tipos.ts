@@ -462,6 +462,29 @@ export interface ContaDescoberta {
   igUsername: string | null;
 }
 
+/**
+ * A saúde do token da Meta, perguntada a ela (migration 0048).
+ *
+ * Existe porque "chave cadastrada" e "chave que funciona" são coisas
+ * diferentes, e a plataforma só sabia a primeira. O token de usuário que o
+ * Graph API Explorer entrega vive uma ou duas horas: funciona no teste e morre
+ * antes do primeiro post agendado.
+ */
+export interface SaudeDoToken {
+  valido: boolean;
+  /** Como a Meta chama: USER, SYSTEM_USER, PAGE… O que se quer é SYSTEM_USER. */
+  tipo: string | null;
+  /** Nulo quando o token não expira — que é o certo. */
+  expiraEm: string | null;
+  jaExpirou: boolean;
+  escopos: string[];
+  escoposFaltando: string[];
+  appId: string | null;
+  conferidoCom: 'app_token' | 'proprio_token';
+  diagnostico: string;
+  oQueFazer: string | null;
+}
+
 // --- conectores (migration 0043) --------------------------------------------
 
 /**

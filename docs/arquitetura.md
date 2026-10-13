@@ -369,6 +369,7 @@ E os módulos:
 | `0045` | a mídia da peça: `registrar_midia_post()`, `remover_midia_post()`, `limites_de_midia()` |
 | `0046` | o compositor: `criar_publicacao()`, `agendar_publicacao()`, hashtags em campo próprio |
 | `0047` | imagem só JPEG — é o que a API da Meta aceita, e a recusa vem no anexo |
+| `0048` | saúde do token da Meta: `credenciais_do_app_meta()`, e o `revoke` que a `0043` esqueceu |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -389,7 +390,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Quatorze armadilhas que já custaram caro aqui
+### Dezessete armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -552,6 +553,62 @@ E a `0047` recusa em vez de converter: conversão silenciosa muda o que a pessoa
 viu. Fundo transparente viraria preto sem aviso, e ela descobriria no feed do
 cliente. A mensagem diz o que fazer — "exporte como JPG" — porque "formato
 inválido" manda a pessoa para o Google.
+
+A décima quinta: **chave cadastrada não é chave que funciona.** A `0043` montou
+`estado_dos_conectores()`, que responde "existe uma chave com esse nome no
+Vault?" e desenha `●`. Ninguém respondia "essa chave **serve**?". A diferença
+apareceu no primeiro "Conectar conta" de verdade: a dona leu "o token expirou ou
+foi revogado", com a chave cadastrada **dez horas antes**. Token de usuário do
+sistema não expira; o que morre em uma ou duas horas é o token curto do Graph
+API Explorer, e era esse.
+
+É a décima terceira um nível acima — `if not exists` é idempotência, não
+verificação; **presença no Vault é cadastro, não validade**. A `0048` e a ação
+`conferir` perguntam à Meta o tipo, a validade e os escopos do próprio token, e
+a tela mostra `SYSTEM_USER · não expira` ou diz exatamente o que está errado.
+Com `meta_app_id`/`meta_app_secret` a pergunta alcança até token já morto — sem
+eles ela só funciona enquanto o token vive, que é quando ninguém pergunta.
+
+Duas coisas pequenas saíram no mesmo dia e valem anotar: a tela mostrava
+`create_secret` **só quando a chave faltava**, então quem precisava *trocar* um
+token vencido não via comando nenhum — e `create_secret` num nome que já existe
+falha. Agora mostra sempre, e `update_secret` quando a chave está lá. E o
+`revoke` do `anon` nas duas tabelas da `0043` nunca existiu: o
+`08_auditoria_rls.sql` acusava isso e estava **vermelho desde então**. Eu rodei
+o teste que esperava que falhasse, não a suíte. Não havia exposição — RLS ligada,
+política só `to authenticated` — mas privilégio sem política é porta trancada
+por fora.
+
+A décima sexta: **a URL de um `GET` vira log.** O `limpar()` do `graph.ts`
+apagava pares sensíveis do **corpo**, e o `access_token` de um `GET` era
+acrescentado depois da linha que monta a URL do registro — então nunca aparecia.
+Isso era **sorte de ordem, não proteção**. O `debug_token?input_token=<token>`
+da `0048` passa o token como parâmetro comum, e `registro.url` é gravado em
+`publicacao_eventos`: o token da Astart iria para uma tabela do banco, em texto,
+por uma porta que ninguém estava olhando. Agora a redação vale nos dois lados, e
+há teste cobrando que a chamada real leva o token e o registro não.
+
+A décima sétima: **a tela não pode oferecer o que o adaptador não faz.** O
+compositor oferecia Post, Carrossel, Reel e Story; o adaptador publicava
+**imagem única** e recusava os outros três com `tipo_fora_da_fase_1` — no minuto
+do post, de madrugada. A mesma falha da décima quarta, um nível acima: ali era o
+formato do arquivo, aqui era o formato da peça.
+
+O conserto tem duas metades. O adaptador passou a publicar os quatro de
+verdade (carrossel com filhos e pai, reel com `REELS`, story sem legenda, que a
+Meta descarta), e `_shared/meta/formatos.ts` virou a **única** declaração do que
+publica — lida pelo adaptador e espelhada no banco. Carrossel aceita só imagem,
+e isso é limitação nossa, não da Meta: filho de vídeo precisa terminar de
+processar antes de o pai ser criado, e esperar por isso exigiria um estado novo
+no worker, porque dormir dentro de uma invocação é proibido aqui.
+
+A lição de método: **o lado TypeScript deste sistema não tinha teste de unidade
+nenhum.** Tinha `deno check`, que prova tipo, e `provar-cors.mjs`, que bate na
+função publicada — e um buraco exatamente do tamanho destes dois erros, que
+passam pelos tipos sem reclamar e não aparecem numa chamada bem-sucedida.
+`instagram.test.ts` troca o `fetch` por um espião e cobra **qual chamada** o
+adaptador faz: a ordem dos filhos do carrossel, a legenda só no pai, o
+`aguardarProcessamento` do vídeo, e a redação do token no log.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um

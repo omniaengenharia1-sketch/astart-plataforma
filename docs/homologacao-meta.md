@@ -39,6 +39,54 @@ Antes de valer como documento legal, advogado tem de ler.
 
 ---
 
+## 1.5. O token: o que deu errado hoje, e como não repetir
+
+O primeiro "Conectar conta" de verdade levou este erro:
+
+> A Meta recusou a consulta: O token de acesso da Meta expirou ou foi revogado.
+
+A chave estava no Vault, cadastrada **às 05:09 do mesmo dia**. Dez horas de
+vida. Token de usuário do sistema **não expira**; o que morre em uma ou duas
+horas é o token curto que o Graph API Explorer entrega por padrão. Era esse.
+
+**O token certo, passo a passo.** Business Manager → *Configurações do negócio*:
+
+1. **Usuários → Usuários do sistema.** Crie um (ou use o que existir) com a
+   função **Administrador**.
+2. **Adicionar ativos**: as Páginas e as contas de Instagram dos clientes, cada
+   uma com **controle total**. Sem isto o token funciona e não alcança conta
+   nenhuma — o erro vira "o token não alcança nenhuma Página", que é outro.
+3. **Gerar novo token**: escolha o app da Astart, marque os cinco escopos da
+   seção 3, e em **Expiração do token** escolha **Nunca**.
+4. Copie e guarde na hora: a Meta mostra uma vez só.
+5. No SQL Editor do Supabase, **troque** a chave (não é `create_secret`, que
+   falha em nome repetido):
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'meta_system_user_token'),
+  '<o token novo>'
+);
+```
+
+6. Na plataforma, em **Ajustes → Integrações → Meta**, clique em **Conferir se o
+   token funciona**. Ele tem de aparecer como `SYSTEM_USER` · `não expira` ·
+   sem escopo faltando. Se aparecer `USER`, ou com data de expiração, é o token
+   errado de novo — e agora a tela diz isso antes de você descobrir num post
+   que não saiu.
+
+**Recomendado, e opcional:** cadastre também `meta_app_id` e `meta_app_secret`
+(*Configurações do app → Básico*). Com os dois, a conferência consegue
+diagnosticar um token **já morto** e dizer por quê; sem eles, ela só funciona
+enquanto o token ainda está vivo — que é justamente quando ninguém pergunta.
+
+```sql
+select vault.create_secret('<app id>',     'meta_app_id');
+select vault.create_secret('<app secret>', 'meta_app_secret');
+```
+
+---
+
 ## 2. O que só a Astart pode produzir
 
 ### Business Verification
@@ -81,7 +129,7 @@ Roteiro, em uma gravação só, sem edição:
    calendário na data.
 6. Voltar e clicar em **Postar agora** numa segunda peça. Esperar e mostrar o
    post **publicado no Instagram**, na conta conectada.
-   *(Este trecho justifica `instagram_business_content_publish`.)*
+   *(Este trecho justifica `instagram_content_publish`.)*
 7. Mostrar a página de **exclusão de dados** e dizer, em voz ou legenda, como o
    cliente revoga o acesso.
 
@@ -95,13 +143,34 @@ a Meta aceita, e inventar inglês ruim atrapalha mais que ajuda.
 A regra que os guias repetem: **peça só o que o screencast mostra.** Permissão
 pedida sem aparecer no vídeo é motivo de reprovação do pedido inteiro.
 
+> **Correção de uma versão anterior desta página.** Eu havia escrito
+> `instagram_business_content_publish`, e está errado para o nosso caso. Existem
+> dois caminhos de login, com nomes de permissão diferentes, e eles não se
+> misturam:
+>
+> - **Instagram API com Facebook Login** — o nosso. A gente descobre as contas
+>   por `me/accounts` (Páginas) e publica em `{ig-user-id}/media`. Usa
+>   `instagram_content_publish`.
+> - **Instagram API com Instagram Login** — o outro. Usa
+>   `instagram_business_content_publish` e `instagram_business_basic`.
+>
+> Pedir o nome do caminho errado queima um ciclo de análise inteiro. Os nomes
+> abaixo são os do caminho que o código realmente usa — estão escritos também em
+> `supabase/functions/conectar-conta/index.ts`, na constante
+> `ESCOPOS_NECESSARIOS`, e a tela de Integrações mostra quais o token tem.
+
 | permissão | para que, no nosso caso |
 |---|---|
-| `instagram_business_content_publish` | publicar a peça agendada na conta do cliente, na hora marcada |
-| `pages_show_list` | listar as Páginas que o cliente autorizou, para a equipe escolher a conta certa na hora de conectar |
-| `pages_manage_posts` | publicar na Página do Facebook vinculada, quando o contrato inclui Facebook |
+| `instagram_content_publish` | publicar a peça agendada na conta do cliente, na hora marcada |
 | `instagram_basic` | ler o nome e o identificador da conta, para a equipe confirmar que conectou a conta certa |
-| `business_management` | ler o vínculo entre a Página e a conta de Instagram dentro do Business Manager da agência |
+| `pages_show_list` | listar as Páginas que o cliente autorizou, para a equipe escolher a conta certa na hora de conectar |
+| `pages_read_engagement` | ler o vínculo da Página com a conta de Instagram — é o que o caminho de Facebook Login exige para alcançar a conta |
+| `business_management` | ler esse vínculo dentro do Business Manager da agência, que é onde os ativos do cliente estão |
+
+O `pages_manage_posts` fica **fora** desta leva, de propósito: ele serve para
+publicar na Página do Facebook, e o adaptador do Facebook ainda não existe.
+Pedir permissão que o screencast não mostra é motivo de reprovação — e esta não
+teria como aparecer no vídeo, porque o botão nem publica lá ainda.
 
 Texto-base para o campo de justificativa (adapte, não copie cego):
 
