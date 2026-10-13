@@ -8,7 +8,7 @@
 // Sem Supabase configurado, devolve os dados de exemplo. A tela diz que esta
 // em modo exemplo; nada finge estar ligado.
 // =============================================================================
-import { ligado, sb } from './supabase';
+import { enderecoDeChegada, ligado, sb } from './supabase';
 import {
   SESSAO_CLIENTE, SESSAO_DONO, SESSAO_EQUIPE,
   abrirChamadoExemplo, agendaExemplo, ambientesExemplo, definirPapelExemplo,
@@ -188,7 +188,9 @@ export async function motivoDoLink(): Promise<MotivoDoLink> {
   // O Supabase devolve o fracasso no hash, nao em erro de rede: um link velho
   // chega como `#error=access_denied&error_code=otp_expired`. Ler isso e o que
   // separa "escolha uma senha" de "este link nao serve mais".
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  // `enderecoDeChegada`, nao `window.location`: o supabase-js ja limpou a barra
+  // de endereco quando este codigo roda. Ver o comentario em supabase.ts.
+  const hash = new URLSearchParams(enderecoDeChegada.hash.replace(/^#/, ''));
   if (hash.get('error')) return 'expirado';
 
   const tipo = hash.get('type');
@@ -205,7 +207,7 @@ export async function motivoDoLink(): Promise<MotivoDoLink> {
   // levar um instante para existir. Sem esta espera a primeira renderizacao
   // diria "este link nao serve" para um link perfeitamente bom.
   let sessao = (await sb.auth.getSession()).data.session;
-  if (!sessao && (tipo === 'invite' || tipo === 'recovery' || window.location.search.includes('code='))) {
+  if (!sessao && (tipo === 'invite' || tipo === 'recovery' || enderecoDeChegada.busca.includes('code='))) {
     await new Promise((r) => setTimeout(r, 600));
     sessao = (await sb.auth.getSession()).data.session;
   }
@@ -256,6 +258,24 @@ export async function definirSenha(senha: string): Promise<void> {
   // A sessao do link morre aqui. A proxima entrada e com a senha digitada, o
   // que faz a pessoa descobrir HOJE que guardou a senha errada, e nao amanha.
   await sb.auth.signOut();
+}
+
+/**
+ * Avisa quando a sessao muda por fora da tela: token que venceu e nao renovou,
+ * `signOut()` disparado pela guarda, ou outra aba que saiu.
+ *
+ * Sem este ouvinte o provedor lia a sessao UMA vez, no carregamento, e nunca
+ * mais — foi assim que a plataforma ficou afirmando que a pessoa estava dentro
+ * enquanto o banco a tratava como visitante.
+ */
+export function aoMudarSessao(quando: (saiu: boolean) => void): () => void {
+  if (!sb) return () => {};
+  const { data } = sb.auth.onAuthStateChange((evento) => {
+    if (evento === 'SIGNED_OUT' || evento === 'TOKEN_REFRESHED' || evento === 'SIGNED_IN') {
+      quando(evento === 'SIGNED_OUT');
+    }
+  });
+  return () => data.subscription.unsubscribe();
 }
 
 export async function entrarComoExemplo(persona: Persona): Promise<void> {

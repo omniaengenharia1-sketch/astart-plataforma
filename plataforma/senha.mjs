@@ -26,6 +26,14 @@ p.on('pageerror', (e) => problemas.push(e.message));
 
 // --- 1. esqueci minha senha, da tela de entrada ------------------------------
 await p.goto(BASE, { waitUntil: 'networkidle' });
+
+// Modo exemplo ou projeto de verdade? A diferenca nao e cosmetica: sem cliente
+// Supabase nada consome o hash do endereco, e foi exatamente isso que escondeu
+// um bug de producao — o roteiro passava no exemplo e a tela errava no ar.
+// Entao o roteiro diz em que mundo esta, e cobra o que cabe em cada um.
+const exemplo = await p.getByText('entrar como direção').isVisible().catch(() => false);
+console.log(`    modo: ${exemplo ? 'exemplo' : 'projeto de verdade'} (${BASE})`);
+
 cobrar(await p.getByText('Esqueci minha senha').isVisible(), 'a entrada oferece "Esqueci minha senha"');
 
 await p.getByText('Esqueci minha senha').click();
@@ -46,6 +54,13 @@ cobrar(
 await p.screenshot({ path: `${SAIDA}/senha-1-esqueci.png` });
 
 // --- 2. link expirado: pedido, nao formulario --------------------------------
+//
+// Esta e a cobranca que vale nos DOIS mundos, e foi a que achou o bug: com
+// `detectSessionInUrl` o supabase-js limpa o hash antes da tela ler, entao no
+// site de verdade a pessoa com link vencido via "precisa de um link" em vez de
+// "este link nao serve mais" — perdia a unica informacao que explicava por que
+// o dela nao funcionou. Em modo exemplo nao ha cliente, ninguem limpa o hash, e
+// a cobranca passava sem tocar no caminho que quebrava.
 await p.goto(`${BASE}/nova-senha#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`, {
   waitUntil: 'networkidle',
 });
@@ -60,22 +75,37 @@ cobrar(
 cobrar(await p.getByRole('button', { name: 'Mandar link' }).isVisible(), 'oferece pedir outro link');
 await p.screenshot({ path: `${SAIDA}/senha-2-expirado.png` });
 
-// --- 3. convite: a primeira senha --------------------------------------------
+// --- 3. /nova-senha sem link nenhum ------------------------------------------
+//
+// No projeto de verdade, quem digita o endereco na mao nao tem sessao de link:
+// tem de ver o pedido, nao um formulario de senha. No exemplo nao existe link
+// possivel, entao a tela mostra o caso do convite — e e o unico jeito de
+// exercitar as validacoes do formulario sem um e-mail real no caminho.
 await p.goto(`${BASE}/nova-senha`, { waitUntil: 'networkidle' });
-cobrar(await p.getByRole('heading', { name: 'Crie sua senha' }).isVisible(), 'o convite pede a primeira senha');
-cobrar((await p.locator('input[type=password]').count()) === 2, 'pede a senha duas vezes');
 
-const senhas = p.locator('input[type=password]');
-await senhas.nth(0).fill('curta');
-await senhas.nth(1).fill('curta');
-await p.getByRole('button', { name: 'Salvar e entrar' }).click();
-cobrar(/pelo menos 8 caracteres/i.test(await p.locator('body').innerText()), 'senha curta e recusada, com o numero na mensagem');
+if (!exemplo) {
+  cobrar(
+    await p.getByRole('heading', { name: 'Este endereço precisa de um link' }).isVisible(),
+    'sem link, a tela pede o link em vez de oferecer campo de senha',
+  );
+  cobrar((await p.locator('input[type=password]').count()) === 0, 'e nao oferece campo de senha');
+  cobrar(await p.getByRole('button', { name: 'Mandar link' }).isVisible(), 'oferece pedir um link');
+} else {
+  cobrar(await p.getByRole('heading', { name: 'Crie sua senha' }).isVisible(), 'o convite pede a primeira senha');
+  cobrar((await p.locator('input[type=password]').count()) === 2, 'pede a senha duas vezes');
 
-await senhas.nth(0).fill('umaSenhaBoa123');
-await senhas.nth(1).fill('outraSenhaBoa123');
-await p.getByRole('button', { name: 'Salvar e entrar' }).click();
-cobrar(/não são iguais/i.test(await p.locator('body').innerText()), 'duas senhas diferentes sao recusadas');
-await p.screenshot({ path: `${SAIDA}/senha-3-convite.png` });
+  const senhas = p.locator('input[type=password]');
+  await senhas.nth(0).fill('curta');
+  await senhas.nth(1).fill('curta');
+  await p.getByRole('button', { name: 'Salvar e entrar' }).click();
+  cobrar(/pelo menos 8 caracteres/i.test(await p.locator('body').innerText()), 'senha curta e recusada, com o numero na mensagem');
+
+  await senhas.nth(0).fill('umaSenhaBoa123');
+  await senhas.nth(1).fill('outraSenhaBoa123');
+  await p.getByRole('button', { name: 'Salvar e entrar' }).click();
+  cobrar(/não são iguais/i.test(await p.locator('body').innerText()), 'duas senhas diferentes sao recusadas');
+}
+await p.screenshot({ path: `${SAIDA}/senha-3-sem-link.png` });
 
 // --- 4. axe nos tres estados, nos dois temas ---------------------------------
 //

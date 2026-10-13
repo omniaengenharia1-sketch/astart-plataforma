@@ -9,7 +9,7 @@ const CAMPO =
   'font-mono text-[14px] text-tinta backdrop-blur-xl focus:outline-none';
 
 export function Entrar() {
-  const { entrar, ligado, recarregar } = useSessao();
+  const { entrar, expirou, ligado, recarregar } = useSessao();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -22,6 +22,12 @@ export function Entrar() {
       ? 'Senha salva. Entre com ela agora.'
       : null,
   );
+
+  // Caiu para fora sem clicar em Sair. Dizer isso e o minimo: sem o recado, a
+  // tela de entrada aparecendo do nada parece defeito, e foi o que aconteceu
+  // em producao no primeiro dia — o painel trouxe `permission denied for
+  // function painel_equipe` e ninguem tinha como saber que era o token.
+  const aviso = expirou && !recado ? 'Sua sessão expirou. Entre de novo.' : recado;
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -112,9 +118,9 @@ export function Entrar() {
             </p>
           )}
 
-          {recado && (
+          {aviso && (
             <p className="rounded-[var(--raio-p)] border border-linha-fraca px-3.5 py-2.5 text-[13px] text-tinta-2">
-              {recado}
+              {aviso}
             </p>
           )}
 
