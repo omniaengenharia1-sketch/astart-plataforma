@@ -34,6 +34,20 @@ for (const esperado of ['making of da campanha', 'bastidores do estúdio', 'pron
 }
 if (!mes.includes('no ar')) problemas.push('peca publicada nao aparece como no ar');
 
+// A saude do token (0048).
+//
+// Cobrado no navegador de proposito: "cadastrada ●" e "funciona" eram a mesma
+// coisa na tela, e a diferenca so apareceu quando a dona clicou em "Conectar
+// conta" e levou um erro que nao dizia o que consertar. Em modo exemplo o token
+// e o saudavel, entao o que se cobra aqui e que o painel APARECE e diz o tipo —
+// nao que o token esta bom.
+await p.getByRole('button', { name: 'Conferir token' }).click();
+await p.getByText('token da meta').waitFor({ timeout: 10000 });
+const diag = await limpo(p);
+for (const esperado of ['system_user', 'não expira', 'aceito pela meta']) {
+  if (!diag.includes(esperado)) problemas.push(`o painel do token nao diz "${esperado}"`);
+}
+
 // Navegar de mes e voltar.
 await p.getByRole('button', { name: 'Próximo mês' }).click();
 await p.waitForTimeout(300);
@@ -43,8 +57,18 @@ if ((await limpo(p)).includes('making of da campanha')) {
 await p.getByRole('button', { name: 'Mês anterior' }).click();
 await p.waitForTimeout(300);
 
-// Nova peca.
-await p.getByRole('button', { name: 'Nova peça' }).click();
+// Nova peca — o form rapido, que abre CLICANDO NUM DIA da grade.
+//
+// Isto procurava um botao "Nova peça" no topo. A 0046 renomeou aquele botao
+// para "Nova publicação" (ele abre o compositor agora), e o form rapido passou
+// a abrir so pelo dia. O roteiro quebrava na PRIMEIRA linha depois disso, e
+// com ele pararam de ser cobradas todas as outras trinta: navegacao de mes,
+// envio ao cliente, o portal do cliente, e a grade no celular.
+//
+// Roteiro que nao roda e pior que roteiro que falha — este ficou "verde por
+// ausencia" por uma semana. Por isso o `rodar-telas.sh` agora roda todos e
+// soma as falhas, em vez de eu escolher qual rodar.
+await p.getByRole('button', { name: /^Criar peça no dia/ }).nth(12).click();
 await p.fill('#peca-titulo', 'Receita do mês em 15 segundos');
 await p.selectOption('#peca-tipo', 'reel');
 await p.fill('#peca-hora', '19:30');
@@ -76,8 +100,12 @@ if (!(await limpo(p)).includes('receita do mês em 15 segundos')) {
 // E o calendario do cliente mostra o mes sem botao de criar.
 await p.getByRole('link', { name: 'Calendário' }).click();
 await p.waitForLoadState('networkidle');
-if (await p.getByRole('button', { name: 'Nova peça' }).count()) {
-  problemas.push('o cliente ve o botao de criar peca');
+// O cliente nao cria peca: nem pelo botao do topo, nem clicando num dia.
+if (await p.getByRole('button', { name: 'Nova publicação' }).count()) {
+  problemas.push('o cliente ve o botao de nova publicacao');
+}
+if (await p.getByRole('button', { name: /^Criar peça no dia/ }).count()) {
+  problemas.push('o cliente consegue clicar num dia para criar peca');
 }
 if ((await limpo(p)).includes('pronto para mandar')) {
   problemas.push('o cliente ve a lista de envio da equipe');
