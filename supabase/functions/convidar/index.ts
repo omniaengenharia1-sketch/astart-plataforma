@@ -14,6 +14,7 @@
 //      usuario. Conta orfa no Auth vira gente que consegue logar e nao existe.
 // =============================================================================
 
+import { cabecalhosCors, origemPermitida, preflight } from '../_shared/cors.ts';
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 type Destino = 'equipe' | 'cliente';
@@ -35,11 +36,12 @@ interface Pedido {
 const PAPEIS_EQUIPE = ['admin', 'operacao', 'financeiro', 'leitura'];
 const PAPEIS_CLIENTE = ['principal', 'financeiro', 'leitura'];
 
-function erro(mensagem: string, status: number): Response {
-  return new Response(JSON.stringify({ erro: mensagem }), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
+function cabecalhos(req: Request): Record<string, string> {
+  return { 'content-type': 'application/json', ...cabecalhosCors(origemPermitida(req)) };
+}
+
+function erro(req: Request, mensagem: string, status: number): Response {
+  return new Response(JSON.stringify({ erro: mensagem }), { status, headers: cabecalhos(req) });
 }
 
 function exigir(nome: string): string {
@@ -130,27 +132,30 @@ function mensagemDoBanco(e: unknown): string {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return erro('Use POST.', 405);
+  const voo = preflight(req);
+  if (voo) return voo;
+
+  if (req.method !== 'POST') return erro(req, 'Use POST.', 405);
 
   const autorizacao = req.headers.get('Authorization');
-  if (!autorizacao) return erro('Faltou o cabecalho de autorizacao.', 401);
+  if (!autorizacao) return erro(req, 'Faltou o cabecalho de autorizacao.', 401);
 
   let pedido: Pedido;
   try {
     pedido = (await req.json()) as Pedido;
   } catch {
-    return erro('Corpo invalido: esperava JSON.', 400);
+    return erro(req, 'Corpo invalido: esperava JSON.', 400);
   }
 
   const problema = validar(pedido);
-  if (problema) return erro(problema, 400);
+  if (problema) return erro(req, problema, 400);
 
   const url = exigir('SUPABASE_URL');
   const anon = exigir('SUPABASE_ANON_KEY');
   const servico = exigir('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!(await chamadoPorAdmin(url, anon, autorizacao))) {
-    return erro('So quem e admin convida.', 403);
+    return erro(req, 'So quem e admin convida.', 403);
   }
 
   const sb = createClient(url, servico, { auth: { persistSession: false } });
@@ -181,9 +186,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (erroConvite || !convite) {
     const m = erroConvite?.message ?? '';
     if (/duplicate key|unique/i.test(m)) {
-      return erro('Ja existe um convite em aberto para este e-mail. Revogue antes de reenviar.', 409);
+      return erro(req, 'Ja existe um convite em aberto para este e-mail. Revogue antes de reenviar.', 409);
     }
-    return erro(`Nao consegui registrar o convite: ${m}`, 400);
+    return erro(req, `Nao consegui registrar o convite: ${m}`, 400);
   }
 
   // 2. Convida pelo Auth.
@@ -196,9 +201,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     await sb.from('convites').update({ revogado_em: new Date().toISOString() }).eq('id', convite.id);
     const m = erroAuth?.message ?? 'motivo nao informado';
     if (/already been registered|already exists/i.test(m)) {
-      return erro('Ja existe uma conta com este e-mail.', 409);
+      return erro(req, 'Ja existe uma conta com este e-mail.', 409);
     }
-    return erro(`O convite nao saiu: ${m}`, 502);
+    return erro(req, `O convite nao saiu: ${m}`, 502);
   }
 
   // 3. Grava o vinculo. Se o banco recusar, desfaz o usuario: conta orfa no
@@ -208,11 +213,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch (e) {
     await sb.auth.admin.deleteUser(criado.user.id);
     await sb.from('convites').update({ revogado_em: new Date().toISOString() }).eq('id', convite.id);
-    return erro(mensagemDoBanco(e), 409);
+    return erro(req, mensagemDoBanco(e), 409);
   }
 
   return new Response(
     JSON.stringify({ conviteId: convite.id, userId: criado.user.id, email: pedido.email }),
-    { status: 201, headers: { 'content-type': 'application/json' } },
+    { status: 201, headers: cabecalhos(req) },
   );
 });

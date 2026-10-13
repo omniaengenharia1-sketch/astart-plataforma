@@ -15,6 +15,7 @@
 // token até lá.
 // =============================================================================
 
+import { cabecalhosCors, origemPermitida, preflight } from '../_shared/cors.ts';
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 const BALDE = 'galerias';
@@ -52,8 +53,14 @@ const CABECALHOS = {
   'cache-control': 'no-store',
 };
 
-function erro(mensagem: string, status: number): Response {
-  return new Response(JSON.stringify({ erro: mensagem }), { status, headers: CABECALHOS });
+// A origem chega por requisicao, entao os cabecalhos tambem. Guardar numa
+// constante de modulo daria a resposta de uma origem para outra.
+function cabecalhos(req: Request): Record<string, string> {
+  return { ...CABECALHOS, ...cabecalhosCors(origemPermitida(req)) };
+}
+
+function erro(req: Request, mensagem: string, status: number): Response {
+  return new Response(JSON.stringify({ erro: mensagem }), { status, headers: cabecalhos(req) });
 }
 
 function exigir(nome: string): string {
@@ -81,17 +88,22 @@ async function assinar(
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return erro('Use POST.', 405);
+  // O preflight vem ANTES de tudo: o navegador pergunta se pode, e sem
+  // resposta ele nem manda o pedido de verdade.
+  const voo = preflight(req);
+  if (voo) return voo;
+
+  if (req.method !== 'POST') return erro(req, 'Use POST.', 405);
 
   let pedido: { token?: string; acao?: string; item?: string; quem?: string; ligado?: boolean };
   try {
     pedido = await req.json();
   } catch {
-    return erro('Corpo invalido: esperava JSON.', 400);
+    return erro(req, 'Corpo invalido: esperava JSON.', 400);
   }
 
   const token = (pedido.token ?? '').trim();
-  if (token.length < 32) return erro('Link invalido.', 404);
+  if (token.length < 32) return erro(req, 'Link invalido.', 404);
 
   const sb = createClient(exigir('SUPABASE_URL'), exigir('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
@@ -101,29 +113,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // mesma para link revogado, token errado e galeria arquivada: 404. Dizer
   // "esta galeria existe, mas foi revogada" já é contar demais.
   const { data, error } = await sb.rpc('galeria_por_token', { p_token: token });
-  if (error) return erro('Nao consegui abrir a galeria.', 500);
+  if (error) return erro(req, 'Nao consegui abrir a galeria.', 500);
   const galeria = data as GaleriaBruta | null;
-  if (!galeria) return erro('Este link nao abre nenhuma galeria.', 404);
+  if (!galeria) return erro(req, 'Este link nao abre nenhuma galeria.', 404);
 
   const acao = pedido.acao ?? 'abrir';
 
   if (acao === 'favorito') {
-    if (!pedido.item) return erro('Faltou dizer qual item.', 400);
+    if (!pedido.item) return erro(req, 'Faltou dizer qual item.', 400);
     const { error: e } = await sb.rpc('favoritar_por_token', {
       p_token: token,
       p_item: pedido.item,
       p_quem: pedido.quem ?? 'cliente',
       p_ligado: pedido.ligado !== false,
     });
-    if (e) return erro(e.message, 400);
-    return new Response(JSON.stringify({ ok: true }), { headers: CABECALHOS });
+    if (e) return erro(req, e.message, 400);
+    return new Response(JSON.stringify({ ok: true }), { headers: cabecalhos(req) });
   }
 
   if (acao === 'baixar') {
-    if (!galeria.permiteDownload) return erro('Esta galeria esta sem download.', 403);
+    if (!galeria.permiteDownload) return erro(req, 'Esta galeria esta sem download.', 403);
 
     const alvos = pedido.item ? galeria.itens.filter((i) => i.id === pedido.item) : galeria.itens;
-    if (alvos.length === 0) return erro('Item nao encontrado.', 404);
+    if (alvos.length === 0) return erro(req, 'Item nao encontrado.', 404);
 
     const urls = await assinar(sb, alvos.map((i) => i.caminho), SEGUNDOS_ORIGINAL);
     await sb.rpc('registrar_download_galeria', {
@@ -141,7 +153,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           url: urls.get(i.caminho) ?? null,
         })),
       }),
-      { headers: CABECALHOS },
+      { headers: cabecalhos(req) },
     );
   }
 
@@ -173,6 +185,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
         poster: i.poster ? (urls.get(i.poster) ?? null) : null,
       })),
     }),
-    { headers: CABECALHOS },
+    { headers: cabecalhos(req) },
   );
 });

@@ -384,7 +384,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Onze armadilhas que já custaram caro aqui
+### Doze armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -484,6 +484,36 @@ ficam o registro de acesso e o limite de tentativas. Duas portas e um vigia é o
 tipo de arranjo que ninguém desenha de propósito; nasce de uma permissão que
 ficou quando o desenho mudou. A `0042` revoga as duas e deixa `service_role`
 explícito.
+
+A décima segunda: **curl não aplica CORS, e navegador que não clica não cobre
+função.** Eu conferi as cinco Edge Functions com `curl`, uma a uma, e cada uma
+respondeu com a própria mensagem em português — relatei que estavam no ar, e
+estavam. Mas curl manda o POST direto: não faz o preflight `OPTIONS` que o
+navegador manda antes de qualquer pedido com cabeçalho de autorização. Nenhuma
+das cinco tratava `OPTIONS`, o preflight voltava `405` sem
+`Access-Control-Allow-Origin`, e o navegador bloqueava a chamada antes de sair.
+
+O primeiro convite de verdade descobriu, com "Failed to send a request to the
+Edge Function" — que não é erro da função: é a chamada não chegar nela.
+
+O que torna isso instrutivo é que eu tinha **os dois** caminhos de verificação e
+os dois estavam cegos no mesmo ponto: o `curl` não aplica a regra do navegador,
+e os doze roteiros de tela abrem navegador de verdade mas nenhum clicava em algo
+que chamasse Edge Function. Cada um via exatamente o que o outro não via. A
+`0042` e o `23` vieram de um linter; este veio de um usuário.
+
+O `scripts/provar-cors.mjs` faz o preflight de propósito, nas cinco, e cobra
+quatro coisas: que a nossa origem passa, que a prévia de branch passa, que
+**site de fora não recebe liberação**, e que `Vary: Origin` existe — sem ele um
+cache intermediário serve a liberação de uma origem para outra. As duas funções
+de fundo seguem sem CORS, e o teste cobra isso também: navegador nenhum fala com
+elas, e superfície sem uso é o que ninguém revisa depois.
+
+E a lista de origens é lista, não `*`. O token vai no cabeçalho
+`Authorization`, que um site de fora não consegue preencher, então o estrago
+direto de `*` seria pequeno — mas "pequeno" não é motivo para abrir, e a
+`galeria` e a `aprovar` são autorizadas por token, onde o raciocínio não se
+repete.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um
