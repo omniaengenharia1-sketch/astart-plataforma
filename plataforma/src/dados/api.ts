@@ -15,7 +15,8 @@ import {
   painelEquipeExemplo,
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
   criarGaleriaExemplo, criarLinkAprovacaoExemplo, criarLinkExemplo, criarPecaExemplo,
-  conectoresExemplo, desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
+  conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
+  desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
@@ -25,7 +26,8 @@ import {
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
-  Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector, Decisao,
+  Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
+  ContaDescoberta, ContaSocial, Decisao,
   EnvioNaFicha, EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente,
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
@@ -36,6 +38,50 @@ import type {
 export { ligado };
 
 export class FalhaDados extends Error {}
+
+/**
+ * Traduz o erro de uma Edge Function para algo que a tela pode mostrar.
+ *
+ * Duas coisas que o supabase-js esconde:
+ *
+ * 1. A funcao responde `{ erro: "mensagem em portugues" }` com status 4xx, e o
+ *    supabase-js embrulha num erro generico. Sem abrir o corpo, a tela mostra
+ *    "Edge Function returned a non-2xx status code" para a pessoa.
+ *
+ * 2. Quando a chamada nem CHEGA na funcao, ele diz "Failed to send a request to
+ *    the Edge Function" — em ingles, sem dizer o que fazer. Foi o que a dona leu
+ *    quando faltava CORS: ela nao tinha como saber que o navegador bloqueou o
+ *    pedido antes de sair.
+ *
+ * Virou funcao porque tres telas precisam do mesmo cuidado. Estava enterrado
+ * dentro do `convidar`, e a segunda chamada teria copiado — ou, pior, esquecido.
+ */
+async function mensagemDaFuncao(
+  error: { message: string; context?: unknown },
+  seNaoChegar: string,
+): Promise<string> {
+  let mensagem = error.message;
+
+  const contexto = error.context;
+  if (contexto instanceof Response) {
+    try {
+      const corpo: unknown = await contexto.json();
+      if (corpo && typeof corpo === 'object' && typeof (corpo as { erro?: unknown }).erro === 'string') {
+        return (corpo as { erro: string }).erro;
+      }
+    } catch {
+      /* fica a mensagem bruta, que e melhor que nada */
+    }
+  }
+
+  if (/failed to send a request/i.test(mensagem) || /fetch/i.test(mensagem)) {
+    mensagem =
+      `${seNaoChegar} O navegador nao conseguiu falar com o servidor. ` +
+      'Confira a internet e tente de novo. Se insistir, me avise — pode ser a funcao fora do ar.';
+  }
+
+  return mensagem;
+}
 
 /**
  * Em modo exemplo, qual persona esta aberta. Comeca nula de proposito: a tela
@@ -529,6 +575,49 @@ export async function equipeEConvites(): Promise<EquipeEConvites> {
  * Nulo quando quem pergunta nao e admin: e mapa de onde os segredos ficam, e
  * isso e leitura de direcao.
  */
+/** As contas de rede social de um cliente. Nulo quando ele nao tem publicacao. */
+export async function contasDoCliente(clienteId: string): Promise<ContaSocial[]> {
+  if (!sb) return contasDoClienteExemplo(clienteId);
+  const { data, error } = await sb.rpc('contas_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Nao consegui ler as contas: ${error.message}`);
+  return (data as ContaSocial[] | null) ?? [];
+}
+
+/**
+ * Pergunta a Meta o que o token da agencia alcanca. Nao grava nada: existe para
+ * a pessoa CONFERIR antes de salvar. Digitar um ig_user_id na mao e publicar no
+ * escuro — o numero esta certo ou o post do cliente vai para a conta de outro.
+ */
+export async function descobrirContas(clienteId: string): Promise<ContaDescoberta[]> {
+  if (!sb) return descobrirContasExemplo();
+  const { data, error } = await sb.functions.invoke('conectar-conta', {
+    body: { acao: 'descobrir', clienteId },
+  });
+  if (error) throw new FalhaDados(await mensagemDaFuncao(error, 'Nao consegui falar com a Meta.'));
+  return (data as { contas: ContaDescoberta[] }).contas;
+}
+
+export async function salvarContaSocial(
+  clienteId: string,
+  conta: ContaDescoberta,
+): Promise<void> {
+  if (!sb) {
+    salvarContaSocialExemplo(clienteId, conta);
+    return;
+  }
+  const { error } = await sb.functions.invoke('conectar-conta', {
+    body: {
+      acao: 'salvar',
+      clienteId,
+      plataforma: 'instagram',
+      nome: conta.igUsername ?? conta.pageName,
+      igUserId: conta.igUserId,
+      pageId: conta.pageId,
+    },
+  });
+  if (error) throw new FalhaDados(await mensagemDaFuncao(error, 'Nao consegui salvar a conta.'));
+}
+
 export async function conectores(): Promise<Conector[] | null> {
   if (!sb) return conectoresExemplo();
   const { data, error } = await sb.rpc('estado_dos_conectores');
@@ -556,37 +645,7 @@ export async function convidar(pedido: PedidoDeConvite): Promise<void> {
   });
   if (!error) return;
 
-  // A funcao responde { erro: "mensagem em portugues" } com status 4xx, e o
-  // supabase-js embrulha isso num erro generico. Sem abrir o corpo, a tela
-  // mostraria "Edge Function returned a non-2xx status code" para a pessoa.
-  let mensagem = error.message;
-  const contexto = (error as { context?: unknown }).context;
-  if (contexto instanceof Response) {
-    try {
-      const corpo: unknown = await contexto.json();
-      if (corpo && typeof corpo === 'object' && typeof (corpo as { erro?: unknown }).erro === 'string') {
-        mensagem = (corpo as { erro: string }).erro;
-      }
-    } catch {
-      /* fica a mensagem bruta, que e melhor que nada */
-    }
-  }
-
-  // Quando a chamada nao CHEGA na funcao, o supabase-js diz "Failed to send a
-  // request to the Edge Function" — em ingles, e sem dizer o que fazer. Foi o
-  // que a dona leu na tela quando faltava CORS: ela nao tinha como saber que o
-  // navegador havia bloqueado o pedido antes de sair.
-  //
-  // A regra do projeto e clara: todo erro vira mensagem legivel em portugues.
-  // Essa traducao existe para o dia em que isso acontecer de novo por outro
-  // motivo — rede caindo, funcao fora do ar, origem nova sem CORS.
-  if (/failed to send a request/i.test(mensagem) || /fetch/i.test(mensagem)) {
-    mensagem =
-      'O convite nao saiu: o navegador nao conseguiu falar com o servidor. ' +
-      'Confira a internet e tente de novo. Se insistir, me avise — pode ser a funcao de convite fora do ar.';
-  }
-
-  throw new FalhaDados(mensagem);
+  throw new FalhaDados(await mensagemDaFuncao(error, 'Nao consegui convidar.'));
 }
 
 export async function revogarConvite(id: string): Promise<void> {

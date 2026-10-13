@@ -395,6 +395,29 @@ export type PedidoDeConvite =
       papelCliente: PapelCliente;
     };
 
+// --- contas sociais (migration 0044) ---------------------------------------
+
+export interface ContaSocial {
+  id: string;
+  plataforma: 'instagram' | 'facebook';
+  nome: string;
+  igUserId: string | null;
+  pageId: string | null;
+  ativo: boolean;
+  acessoParceiro: 'concedido' | 'pendente' | 'expirado';
+  tokenProprio: boolean;
+  /** A única pergunta que importa na tela: dá para publicar nesta conta? */
+  prontaParaPublicar: boolean;
+}
+
+/** O que a Meta devolve quando perguntamos o que o token alcança. */
+export interface ContaDescoberta {
+  pageId: string;
+  pageName: string;
+  igUserId: string | null;
+  igUsername: string | null;
+}
+
 // --- conectores (migration 0043) --------------------------------------------
 
 /**

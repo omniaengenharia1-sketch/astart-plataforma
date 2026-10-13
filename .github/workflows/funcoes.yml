@@ -48,7 +48,7 @@ jobs:
       # do deploy, custa uma funcao quebrada em producao esperando o cron.
       - name: Conferir os tipos antes de publicar
         working-directory: supabase/functions
-        run: deno check aprovar/index.ts convidar/index.ts galeria/index.ts publicar-tick/index.ts renovar-tokens/index.ts
+        run: deno check aprovar/index.ts conectar-conta/index.ts convidar/index.ts galeria/index.ts publicar-tick/index.ts renovar-tokens/index.ts
 
       - uses: supabase/setup-cli@v1
         with:
@@ -67,11 +67,17 @@ jobs:
             echo "::endgroup::"
           done
 
-      # Esta e a excecao, e e de proposito: a convidar DESCOBRE quem esta
-      # convidando pelo JWT, e e por ele que confere se e admin. Sem JWT ela
-      # viraria uma porta aberta para criar convite.
-      - name: Publicar a convidar, que exige JWT
-        run: supabase functions deploy convidar --project-ref "$REF"
+      # Estas duas sao a excecao, e e de proposito: elas DESCOBREM quem pediu
+      # pelo JWT, e e por ele que conferem se e admin. Sem JWT, a convidar
+      # viraria porta aberta para criar convite, e a conectar-conta deixaria
+      # qualquer um ligar a conta de rede social de um cliente.
+      - name: Publicar as que exigem JWT
+        run: |
+          for f in convidar conectar-conta; do
+            echo "::group::$f"
+            supabase functions deploy "$f" --project-ref "$REF"
+            echo "::endgroup::"
+          done
 
       - name: Listar o que ficou publicado
         run: supabase functions list --project-ref "$REF"

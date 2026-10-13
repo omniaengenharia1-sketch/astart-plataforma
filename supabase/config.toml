@@ -25,3 +25,8 @@ verify_jwt = false
 # Mesmo caso da galeria: o cliente recebe o endereco no WhatsApp e responde sem
 # conta. Quem autoriza e o token, conferido no banco contra o hash.
 verify_jwt = false
+
+[functions.conectar-conta]
+# Como a convidar: o JWT e quem diz se quem pediu e direcao. Conectar a conta de
+# um cliente mexe no Business Manager da agencia e no token compartilhado.
+verify_jwt = true

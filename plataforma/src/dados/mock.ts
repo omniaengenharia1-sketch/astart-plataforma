@@ -8,7 +8,8 @@
 // tem a sua propria verdade engana quem esta avaliando o fluxo.
 // =============================================================================
 import type {
-  Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector, Decisao,
+  Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
+  ContaDescoberta, ContaSocial, Decisao,
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
   EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria,
@@ -920,6 +921,45 @@ let seqConvite = 0;
  * "falta codigo, nao chave"), que e justamente o que a tela precisa saber
  * desenhar.
  */
+/**
+ * No exemplo o cliente comeca SEM conta conectada, de proposito: e o estado em
+ * que a tela tem mais a dizer, e o que alguem avaliando precisa ver primeiro.
+ * `salvarContaSocialExemplo` enche esta lista, entao a demonstracao percorre o
+ * caminho inteiro sem banco.
+ */
+const CONTAS_EXEMPLO = new Map<string, ContaSocial[]>();
+
+export function contasDoClienteExemplo(clienteId: string): ContaSocial[] {
+  return CONTAS_EXEMPLO.get(clienteId) ?? [];
+}
+
+export function descobrirContasExemplo(): ContaDescoberta[] {
+  return [
+    { pageId: '1010', pageName: 'Mor Marcas', igUserId: '17841400000001', igUsername: 'mormarcas' },
+    { pageId: '1011', pageName: 'Publika.ai', igUserId: '17841400000002', igUsername: 'publika.ai' },
+    // Pagina sem Instagram vinculado: o caso que a tela precisa saber recusar.
+    { pageId: '1012', pageName: 'Pagina sem Instagram', igUserId: null, igUsername: null },
+  ];
+}
+
+export function salvarContaSocialExemplo(clienteId: string, conta: ContaDescoberta): void {
+  if (!conta.igUserId) throw new Error('Esta pagina nao tem conta de Instagram vinculada.');
+  const lista = CONTAS_EXEMPLO.get(clienteId) ?? [];
+  if (lista.some((c) => c.igUserId === conta.igUserId)) return;
+  lista.push({
+    id: `conta-${conta.igUserId}`,
+    plataforma: 'instagram',
+    nome: conta.igUsername ?? conta.pageName,
+    igUserId: conta.igUserId,
+    pageId: conta.pageId,
+    ativo: true,
+    acessoParceiro: 'concedido',
+    tokenProprio: false,
+    prontaParaPublicar: true,
+  });
+  CONTAS_EXEMPLO.set(clienteId, lista);
+}
+
 export function conectoresExemplo(): Conector[] {
   return [
     {

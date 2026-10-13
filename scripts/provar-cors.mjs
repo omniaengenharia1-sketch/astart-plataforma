@@ -22,7 +22,7 @@ const DE_FORA = 'https://site-que-nao-e-nosso.example.com';
 // com o cabeçalho x-tick-secret. Navegador nenhum fala com elas, então abrir
 // CORS ali seria superfície sem uso — e superfície sem uso é o que ninguém
 // revisa depois.
-const DO_NAVEGADOR = ['convidar', 'aprovar', 'galeria'];
+const DO_NAVEGADOR = ['convidar', 'conectar-conta', 'aprovar', 'galeria'];
 const DO_CRON = ['publicar-tick', 'renovar-tokens'];
 
 const falhas = [];
@@ -96,8 +96,8 @@ for (const fn of ['aprovar', 'galeria']) {
 // Então a cobrança aqui é outra, e vale mais: que o portão do JWT continue
 // ligado. Se alguém publicar a `convidar` com `--no-verify-jwt` por descuido,
 // este teste cai — e a `convidar` sem JWT é porta aberta para criar convite.
-{
-  const r = await fetch(`${BASE}/convidar`, {
+for (const fn of ['convidar', 'conectar-conta']) {
+  const r = await fetch(`${BASE}/${fn}`, {
     method: 'POST',
     headers: { Origin: NOSSA, 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
@@ -105,7 +105,7 @@ for (const fn of ['aprovar', 'galeria']) {
   const corpo = await r.text();
   cobrar(
     r.status === 401 && corpo.includes('UNAUTHORIZED_NO_AUTH_HEADER'),
-    `convidar: o portao do JWT barra antes da funcao (http ${r.status})`,
+    `${fn}: o portao do JWT barra antes da funcao (http ${r.status})`,
   );
 }
 

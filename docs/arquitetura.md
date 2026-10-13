@@ -365,6 +365,7 @@ E os módulos:
 | `0041` | aprovar **sem conta**: `envio_por_token()`, `responder_por_token()`, revogar e os lotes na ficha |
 | `0042` | `search_path` fixo nas cinco que faltavam; as funções de token saem do alcance do navegador |
 | `0043` | `conectores` — o mapa das chaves das três integrações, com estado honesto |
+| `0044` | conectar a conta de Instagram do cliente: `token_do_sistema()`, `salvar_conta_social()`, `contas_do_cliente()` |
 
 Decisões que viraram regra no banco, não só na tela:
 

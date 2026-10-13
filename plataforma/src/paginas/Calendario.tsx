@@ -3,9 +3,14 @@ import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
-import { calendarioDoCliente, criarPeca, enviarParaAprovacao } from '../dados/api';
+import {
+  calendarioDoCliente, contasDoCliente, criarPeca, descobrirContas, enviarParaAprovacao,
+  salvarContaSocial,
+} from '../dados/api';
 import { diaMes, plural } from '../formato';
-import type { MesDeConteudo, PecaNoMes, TipoPeca } from '../dados/tipos';
+import type {
+  ContaDescoberta, ContaSocial, MesDeConteudo, PecaNoMes, TipoPeca,
+} from '../dados/tipos';
 
 const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -19,6 +24,155 @@ const TIPOS: { valor: TipoPeca; rotulo: string }[] = [
   { valor: 'reel', rotulo: 'Reel' },
   { valor: 'story', rotulo: 'Story' },
 ];
+
+/**
+ * Conectar a conta — o elo que faltava entre "peça agendada" e "post no ar".
+ *
+ * Fica no calendário, e não em Ajustes, porque é aqui que a pergunta aparece:
+ * a pessoa agenda a semana e quer saber por que nada publicou. Um aviso em
+ * outra tela seria um aviso que ninguém lê.
+ *
+ * O fluxo tem duas etapas de propósito. A primeira pergunta à Meta o que o
+ * token alcança e MOSTRA os nomes; a segunda grava a conta escolhida. Um campo
+ * para digitar o `ig_user_id` seria mais curto e publicaria o post do cliente
+ * na conta de outra pessoa no dia em que alguém errasse um dígito — e isso não
+ * se desfaz.
+ */
+function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boolean }) {
+  const [contas, setContas] = useState<ContaSocial[] | null>(null);
+  const [achadas, setAchadas] = useState<ContaDescoberta[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  const ler = useCallback(async () => {
+    try {
+      setContas(await contasDoCliente(clienteId));
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui ler as contas.');
+    }
+  }, [clienteId]);
+
+  useEffect(() => {
+    void ler();
+  }, [ler]);
+
+  async function procurar() {
+    setErro(null);
+    setOcupado(true);
+    try {
+      setAchadas(await descobrirContas(clienteId));
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui falar com a Meta.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function ligar(conta: ContaDescoberta) {
+    setErro(null);
+    setOcupado(true);
+    try {
+      await salvarContaSocial(clienteId, conta);
+      setAchadas(null);
+      await ler();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui salvar a conta.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  if (contas === null) return null;
+
+  const prontas = contas.filter((c) => c.prontaParaPublicar);
+
+  return (
+    <section className="bloco mt-5 p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="rotulo-forte">onde publica</div>
+          {prontas.length > 0 ? (
+            <p className="mt-1.5 text-[13.5px]">
+              {prontas.map((c) => `@${c.nome}`).join(' · ')}
+            </p>
+          ) : (
+            // O texto que evita a investigação: diz a consequência, não o estado.
+            <p className="mt-1.5 text-[13.5px] text-tinta-2">
+              Nenhuma conta conectada. As peças ficam agendadas e{' '}
+              <strong>nada é publicado</strong> até ligar uma conta aqui.
+            </p>
+          )}
+        </div>
+        {equipe && (
+          <Botao tamanho="pequeno" disabled={ocupado} onClick={() => void procurar()}>
+            {ocupado ? 'Procurando…' : contas.length > 0 ? 'Conectar outra' : 'Conectar conta'}
+          </Botao>
+        )}
+      </div>
+
+      {contas.some((c) => !c.prontaParaPublicar) && (
+        <ul className="mt-3 flex flex-col gap-1.5 border-t border-linha-fraca pt-3">
+          {contas
+            .filter((c) => !c.prontaParaPublicar)
+            .map((c) => (
+              <li key={c.id} className="text-[13px]">
+                <span className="font-bold">@{c.nome}</span>{' '}
+                <Marca>
+                  {!c.ativo
+                    ? 'desligada'
+                    : c.acessoParceiro === 'pendente'
+                      ? 'o cliente ainda não aceitou o parceiro'
+                      : c.acessoParceiro === 'expirado'
+                        ? 'acesso de parceiro removido'
+                        : 'falta o id do Instagram'}
+                </Marca>
+              </li>
+            ))}
+        </ul>
+      )}
+
+      {erro && (
+        <p
+          role="alert"
+          className="mt-3 rounded-[var(--raio-p)] border border-linha bg-alerta-fundo px-3.5 py-2.5 text-[13px]"
+        >
+          {erro}
+        </p>
+      )}
+
+      {achadas && (
+        <div className="mt-4 border-t border-linha-fraca pt-3">
+          <div className="rotulo">o que o token da agência alcança</div>
+          <ul className="mt-2 flex flex-col gap-2">
+            {achadas.map((a) => {
+              const jaLigada = contas.some((c) => c.igUserId === a.igUserId);
+              return (
+                <li key={a.pageId} className="flex flex-wrap items-center gap-2.5 text-[13.5px]">
+                  <span className="font-bold">{a.igUsername ? `@${a.igUsername}` : a.pageName}</span>
+                  <span className="rotulo">{a.pageName}</span>
+                  {!a.igUserId ? (
+                    // Página sem Instagram vinculado não publica. Dizer o motivo
+                    // aqui poupa uma viagem ao Business Manager às cegas.
+                    <Marca>sem Instagram vinculado</Marca>
+                  ) : jaLigada ? (
+                    <Marca forte>já conectada</Marca>
+                  ) : (
+                    <Botao tamanho="pequeno" disabled={ocupado} onClick={() => void ligar(a)}>
+                      Ligar a este cliente
+                    </Botao>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="rotulo mt-2.5 normal-case">
+            confira o @ antes de ligar. conta errada publica o post deste cliente no perfil de outro.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
 
 const hojeISO = () => new Date().toISOString().slice(0, 10);
 const primeiroDoMes = (iso: string) => `${iso.slice(0, 7)}-01`;
@@ -191,6 +345,8 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
           </Botao>
         )}
       </div>
+
+      <ConectarConta clienteId={clienteId} equipe={equipe} />
 
       <div className="escada mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco
