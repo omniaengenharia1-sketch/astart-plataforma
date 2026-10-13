@@ -366,6 +366,7 @@ E os módulos:
 | `0042` | `search_path` fixo nas cinco que faltavam; as funções de token saem do alcance do navegador |
 | `0043` | `conectores` — o mapa das chaves das três integrações, com estado honesto |
 | `0044` | conectar a conta de Instagram do cliente: `token_do_sistema()`, `salvar_conta_social()`, `contas_do_cliente()` |
+| `0045` | a mídia da peça: `registrar_midia_post()`, `remover_midia_post()`, `limites_de_midia()` |
 
 Decisões que viraram regra no banco, não só na tela:
 

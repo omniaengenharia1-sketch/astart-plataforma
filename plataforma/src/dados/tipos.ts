@@ -310,9 +310,18 @@ export interface ServicoNoProjeto {
 
 // --- o calendario (migration 0030) ------------------------------------------
 
+/**
+ * Os mesmos valores do enum `status_post` do banco — TODOS eles.
+ *
+ * `publicado_parcial` faltava aqui, e o banco manda o status cru. Uma peça que
+ * saiu numa conta e falhou na outra chegava com um valor que o tipo dizia não
+ * existir, caía em todos os `if` e aparecia como **rascunho** — o pior rótulo
+ * possível para algo que já está no ar pela metade. Lista de valores que não
+ * espelha o enum é mentira que o TypeScript não pega.
+ */
 export type StatusPublicacao =
   | 'rascunho' | 'aguardando_aprovacao' | 'aprovado' | 'agendado'
-  | 'publicando' | 'publicado' | 'falhou' | 'cancelado';
+  | 'publicando' | 'publicado' | 'publicado_parcial' | 'falhou' | 'cancelado';
 
 export type TipoPeca = 'imagem' | 'carrossel' | 'reel' | 'story';
 
@@ -394,6 +403,19 @@ export type PedidoDeConvite =
       clienteId: string;
       papelCliente: PapelCliente;
     };
+
+// --- mídia da peça (migration 0045) ----------------------------------------
+
+export interface MidiaDaPeca {
+  id: string;
+  ordem: number;
+  /** O caminho no bucket privado. Endereço assinado vem em `url`. */
+  caminho: string;
+  mime: string;
+  bytes: number | null;
+  /** Nulo quando a assinatura falhou: a tela mostra o lugar, não um ícone roto. */
+  url?: string | null;
+}
 
 // --- contas sociais (migration 0044) ---------------------------------------
 

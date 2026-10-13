@@ -18,11 +18,12 @@
     "calendario": "node calendario.mjs",
     "acessos": "node acessos.mjs",
     "galeria": "node galeria.mjs",
-    "roteiros": "npm run build:exemplo && node telas.mjs && node olhar.mjs && node tema.mjs && node link.mjs && node senha.mjs && node projeto.mjs && node cadastro.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node acessibilidade.mjs && node contraste.mjs",
+    "roteiros": "npm run build:exemplo && node telas.mjs && node olhar.mjs && node tema.mjs && node link.mjs && node senha.mjs && node midia.mjs && node projeto.mjs && node cadastro.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node acessibilidade.mjs && node contraste.mjs",
     "tema": "node tema.mjs",
     "build:exemplo": "VITE_SUPABASE_URL= VITE_SUPABASE_PUBLISHABLE_KEY= VITE_SUPABASE_ANON_KEY= vite build",
     "link": "node link.mjs",
-    "senha": "node senha.mjs"
+    "senha": "node senha.mjs",
+    "midia": "node midia.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

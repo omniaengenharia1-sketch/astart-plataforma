@@ -84,6 +84,9 @@ export const STATUS_PUBLICACAO: Record<StatusPublicacao, string> = {
   agendado: 'agendada',
   publicando: 'saindo agora',
   publicado: 'no ar',
+  // "parcial" sozinho nao diz nada; "no ar em parte" diz o que aconteceu e
+  // que falta alguma coisa. A peca saiu numa conta e falhou na outra.
+  publicado_parcial: 'no ar em parte',
   falhou: 'falhou',
   cancelado: 'cancelada',
 };
