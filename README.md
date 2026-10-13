@@ -111,14 +111,19 @@ segredo precisa sair do painel:
   `--single-transaction`, que é como o SQL Editor aplica.
 - *funções* — os dois workflows em `.github/workflows/` fazem o deploy a cada
   merge na `main`: `migrations.yml` para o banco, `funcoes.yml` para as seis
-  funções. Precisam de `SUPABASE_ACCESS_TOKEN` e `SUPABASE_PROJECT_REF` nos
-  segredos do repositório (a `migrations.yml` também pede
-  `SUPABASE_DB_PASSWORD`), e de nada mais — o token fica no GitHub, não aqui.
-  Onde pegar cada um está em `supabase/PRIMEIRO-DEPLOY.md`, com o aviso de que
-  a senha do banco não dá para consultar: só trocar.
+  funções. Os dois precisam de **exatamente dois** segredos no repositório —
+  `SUPABASE_ACCESS_TOKEN` e `SUPABASE_PROJECT_REF` — e de nada mais. Onde pegar
+  cada um está em `supabase/PRIMEIRO-DEPLOY.md`.
+
+  A senha do banco **não** entra nessa lista, e isso é decisão, não esquecimento:
+  a `migrations.yml` usava `supabase db push`, que conecta direto no Postgres e
+  a exige. Essa senha não dá para consultar — o Supabase a define na criação do
+  projeto e nunca mostra de novo. Então a esteira passou a aplicar pela API de
+  gerenciamento, com `scripts/aplicar-migrations.mjs`, autenticando com o access
+  token que já existia. Um segredo a menos para guardar e um a menos para vazar.
 
   **Confira que os dois estão verdes em _Actions_.** A `migrations.yml` ficou
-  vermelha por dias por falta de um segredo e ninguém notou, porque as
+  vermelha por dias por falta daquele segredo e ninguém notou, porque as
   migrations vinham sendo aplicadas à mão pelo conector — produção ficou duas
   migrations atrás do repositório. Esteira que nunca rodou não é esteira.
 

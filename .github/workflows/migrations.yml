@@ -1,13 +1,33 @@
 # Aplica as migrations no projeto Supabase a cada merge na main.
 #
-# Depois que isto estiver ligado, ninguem roda SQL na mao de novo: o banco de
-# producao e sempre o que esta em supabase/migrations, e nada mais.
+# Producao e sempre o que esta em supabase/migrations, e nada mais. Ninguem
+# roda SQL na mao.
+#
+# POR QUE NAO USA `supabase db push`:
+#
+# O `db push` conecta direto no Postgres e exige a SENHA DO BANCO, que nao da
+# para consultar — o Supabase a define na criacao do projeto e nunca mostra de
+# novo, so deixa trocar. Esta esteira ficou VERMELHA POR DIAS por causa desse
+# segredo faltando, e ninguem notou, porque as migrations vinham sendo
+# aplicadas a mao pelo conector. Quando a dona foi cadastra-lo, nao tinha a
+# senha, e a saida que ela propos foi me mandar a senha para eu fazer — o que
+# contraria a regra que organiza este projeto: segredo nenhum atravessa o
+# navegador nem a conversa.
+#
+# Entao o segredo saiu do caminho em vez de a regra ser contornada. O
+# `scripts/aplicar-migrations.mjs` aplica pela API de gerenciamento, que
+# autentica com o SUPABASE_ACCESS_TOKEN — o mesmo que ja publica as Edge
+# Functions e que ja estava configurado e funcionando. Um segredo a menos para
+# guardar, um a menos para vazar, e nenhuma pergunta de "onde eu pego isso".
 name: migrations
 
 on:
   push:
     branches: [main]
-    paths: ['supabase/migrations/**']
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/aplicar-migrations.mjs'
+      - '.github/workflows/migrations.yml'
   workflow_dispatch:
 
 concurrency:
@@ -19,31 +39,23 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
+      - uses: actions/setup-node@v4
         with:
-          version: latest
+          node-version: '22'
 
-      - name: Conferir que os segredos estao configurados
-        run: |
-          faltam=""
-          [ -n "$SUPABASE_ACCESS_TOKEN" ] || faltam="$faltam SUPABASE_ACCESS_TOKEN"
-          [ -n "$SUPABASE_DB_PASSWORD" ]  || faltam="$faltam SUPABASE_DB_PASSWORD"
-          [ -n "${{ secrets.SUPABASE_PROJECT_REF }}" ] || faltam="$faltam SUPABASE_PROJECT_REF"
-          if [ -n "$faltam" ]; then
-            echo "Faltam estes segredos no repositorio:$faltam"
-            echo "Settings > Secrets and variables > Actions"
-            exit 1
-          fi
-
-      - name: Ligar ao projeto
-        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
-
-      - name: Mostrar o que vai mudar
-        run: supabase db diff --linked --schema public || true
+      # READ-ONLY, e vem antes de propósito. Se o token estiver errado, se o
+      # endpoint tiver mudado ou se algum arquivo estiver fora do padrao de
+      # nome, a rodada morre aqui — sem ter encostado no schema de producao.
+      #
+      # Isto e a licao do dia em forma de passo: todo caminho de verificacao
+      # que e menos exigente que a realidade esconde um erro. Este passo faz
+      # exatamente as mesmas chamadas que o de baixo, menos as que escrevem.
+      - name: Conferir o acesso e o que esta pendente
+        run: node scripts/aplicar-migrations.mjs --conferir
 
       - name: Aplicar
-        run: supabase db push
+        run: node scripts/aplicar-migrations.mjs
