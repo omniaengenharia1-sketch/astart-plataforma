@@ -9,7 +9,7 @@
 // =============================================================================
 import type {
   Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
-  ContaDescoberta, ContaSocial, Decisao,
+  ContaDescoberta, ContaSocial, Decisao, Publicacao, PublicacaoNova,
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
   EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria,
@@ -928,6 +928,70 @@ let seqConvite = 0;
  * caminho inteiro sem banco.
  */
 const CONTAS_EXEMPLO = new Map<string, ContaSocial[]>();
+
+/**
+ * O compositor em modo exemplo.
+ *
+ * Guarda de verdade, num mapa, porque o roteiro precisa percorrer o caminho
+ * inteiro: criar, anexar, agendar. Demonstracao que para no primeiro passo nao
+ * prova nada — foi a licao do stub generoso, duas vezes nesta semana.
+ */
+const PUBLICACOES = new Map<string, Publicacao>();
+
+export function criarPublicacaoExemplo(p: PublicacaoNova): string {
+  if (!p.titulo.trim()) throw new Error('De um nome interno para a publicacao.');
+  const id = `pub-${crypto.randomUUID()}`;
+  PUBLICACOES.set(id, {
+    ...p,
+    id,
+    quando: null,
+    status: 'rascunho',
+    erro: null,
+    midias: [],
+  });
+  return id;
+}
+
+export function atualizarPublicacaoExemplo(id: string, p: Partial<PublicacaoNova>): void {
+  const atual = PUBLICACOES.get(id);
+  if (!atual) throw new Error('Publicacao nao encontrada.');
+  if (atual.status === 'publicado') throw new Error('Esta publicacao esta no ar — nao muda mais.');
+  PUBLICACOES.set(id, { ...atual, ...p });
+}
+
+export function publicacaoExemplo(id: string): Publicacao | null {
+  return PUBLICACOES.get(id) ?? null;
+}
+
+/**
+ * As mesmas travas do banco, repetidas aqui de proposito: se as duas
+ * discordarem, o roteiro acusa. Sem elas, a demonstracao deixaria agendar post
+ * sem imagem — ensinando o contrario do que a plataforma faz.
+ */
+export function agendarPublicacaoExemplo(
+  id: string,
+  quando: string | null,
+): { quando: string; agora: boolean } {
+  const pub = PUBLICACOES.get(id);
+  if (!pub) throw new Error('Publicacao nao encontrada.');
+
+  const minimo = pub.tipo === 'carrossel' ? 2 : 1;
+  if (pub.midias.length < minimo) {
+    throw new Error(
+      `Falta arquivo: ${pub.tipo} pede ${minimo} e tem ${pub.midias.length}. Anexe antes de agendar.`,
+    );
+  }
+
+  const q = quando ?? new Date().toISOString();
+  PUBLICACOES.set(id, { ...pub, quando: q, status: 'agendado' });
+  return { quando: q, agora: new Date(q).getTime() <= Date.now() + 70_000 };
+}
+
+/** O compositor em exemplo anota a midia aqui, para `agendar` poder cobrar. */
+export function anotarMidiaExemplo(id: string, midias: unknown[]): void {
+  const pub = PUBLICACOES.get(id);
+  if (pub) PUBLICACOES.set(id, { ...pub, midias: midias as Publicacao['midias'] });
+}
 
 export function contasDoClienteExemplo(clienteId: string): ContaSocial[] {
   return CONTAS_EXEMPLO.get(clienteId) ?? [];

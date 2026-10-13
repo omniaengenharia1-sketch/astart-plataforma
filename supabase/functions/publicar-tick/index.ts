@@ -122,7 +122,9 @@ async function carregarContexto(
 ): Promise<{ post: Post; midias: PostMidia[]; ctx: ContextoConta; adaptador: AdaptadorPlataforma }> {
   const { data: post, error: erroPost } = await sb
     .from('posts')
-    .select('id, cliente_id, titulo_interno, tipo, legenda, primeiro_comentario, agendado_para, status')
+    // Uma linha so: o supabase-js LE este literal para inferir o tipo da
+    // resposta, e a string montada com `+` vira `GenericStringError`.
+    .select('id, cliente_id, titulo_interno, tipo, legenda, hashtags, hashtags_no_comentario, primeiro_comentario, agendado_para, status')
     .eq('id', alvo.post_id)
     .single();
 
@@ -340,7 +342,7 @@ async function passoCriarContainer(
 
   const resultado = await adaptador.criarContainer(ctx, {
     tipo: post.tipo,
-    legenda: post.legenda,
+    legenda: legendaFinal(post),
     midias: entradas,
   });
 
@@ -558,7 +560,7 @@ async function passoPublicar(
   });
   await registrarEvento(sb, alvo.id, 'publicacao_confirmada', { media_id: mediaId });
 
-  await publicarPrimeiroComentario(sb, alvo, ctx, adaptador, post.primeiro_comentario, mediaId);
+  await publicarPrimeiroComentario(sb, alvo, ctx, adaptador, comentarioFinal(post), mediaId);
 
   return { alvo_id: alvo.id, post_id: alvo.post_id, de: alvo.estado, para: 'publicado' };
 }
@@ -790,6 +792,39 @@ async function processarLote(
 }
 
 // --- Handler ----------------------------------------------------------------
+
+/**
+ * A legenda que vai para a Meta: a legenda mais as hashtags, quando elas nao
+ * vao no primeiro comentario.
+ *
+ * O banco guarda as duas separadas de proposito (0046): reabrir a publicacao
+ * para editar com tudo concatenado obrigaria a pessoa a separar as hashtags do
+ * texto com a mao. Entao quem junta e aqui, no unico lugar que publica.
+ */
+function legendaFinal(post: {
+  legenda: string;
+  hashtags?: string | null;
+  hashtags_no_comentario?: boolean | null;
+}): string {
+  const tags = (post.hashtags ?? '').trim();
+  if (!tags || post.hashtags_no_comentario) return post.legenda;
+  return post.legenda.trim() ? `${post.legenda.trim()}\n\n${tags}` : tags;
+}
+
+/**
+ * O primeiro comentario: o que foi escrito nele, ou as hashtags quando a
+ * escolha foi deixar a legenda limpa.
+ */
+function comentarioFinal(post: {
+  primeiro_comentario?: string | null;
+  hashtags?: string | null;
+  hashtags_no_comentario?: boolean | null;
+}): string | null {
+  const escrito = (post.primeiro_comentario ?? '').trim();
+  if (escrito) return escrito;
+  const tags = (post.hashtags ?? '').trim();
+  return post.hashtags_no_comentario && tags ? tags : null;
+}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   const inicio = Date.now();

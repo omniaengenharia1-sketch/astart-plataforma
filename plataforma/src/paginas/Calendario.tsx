@@ -8,11 +8,10 @@ import {
   salvarContaSocial,
 } from '../dados/api';
 import { diaMes, plural } from '../formato';
-import {
-  midiasDaPeca, removerMidiaDaPeca, subirMidiaDaPeca,
-} from '../dados/pecaMidia';
+import { Compositor } from '../componentes/Compositor';
+import { MidiaDaPecaPainel } from '../componentes/MidiaDaPeca';
 import type {
-  ContaDescoberta, ContaSocial, MesDeConteudo, MidiaDaPeca, PecaNoMes, TipoPeca,
+  ContaDescoberta, ContaSocial, MesDeConteudo, PecaNoMes, TipoPeca,
 } from '../dados/tipos';
 
 const MESES = [
@@ -211,196 +210,6 @@ function selo(p: PecaNoMes, equipe: boolean): { texto: string; forte: boolean } 
   return { texto: equipe ? 'rascunho' : 'em produção', forte: false };
 }
 
-/** Quantos arquivos cada tipo de peça pede. O banco cobra; a tela avisa antes. */
-const PEDE: Record<TipoPeca, string> = {
-  imagem: '1 foto',
-  carrossel: 'de 2 a 10 fotos ou vídeos',
-  reel: '1 vídeo',
-  story: '1 foto ou vídeo',
-};
-
-/**
- * O arquivo da peça, arrastado na própria peça.
- *
- * Sem isto a peça vai para a Meta sem imagem e volta com erro de madrugada,
- * quando ninguém está olhando. Então o estado "falta arquivo" aparece aqui, na
- * peça, enquanto a pessoa ainda tem o arquivo na mão.
- */
-function MidiaDaPecaPainel({
-  peca,
-  clienteId,
-  equipe,
-  aoMudar,
-}: {
-  peca: PecaNoMes;
-  clienteId: string;
-  equipe: boolean;
-  aoMudar: () => void;
-}) {
-  const [midias, setMidias] = useState<MidiaDaPeca[] | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [subindo, setSubindo] = useState<number | null>(null);
-  const [sobre, setSobre] = useState(false);
-
-  const ler = useCallback(async () => {
-    try {
-      setMidias(await midiasDaPeca(peca.id));
-    } catch (x) {
-      setErro(x instanceof Error ? x.message : 'Não consegui ler os arquivos.');
-    }
-  }, [peca.id]);
-
-  useEffect(() => {
-    void ler();
-  }, [ler]);
-
-  async function receber(arquivos: FileList | null) {
-    if (!arquivos || arquivos.length === 0) return;
-    setErro(null);
-    // Um por vez, em ordem: o banco decide a `ordem` e recusa quando enche.
-    // Mandar em paralelo daria duas linhas disputando a mesma posição.
-    for (const arquivo of Array.from(arquivos)) {
-      try {
-        setSubindo(0);
-        await subirMidiaDaPeca(peca.id, clienteId, arquivo, setSubindo, peca.tipo);
-      } catch (x) {
-        setErro(x instanceof Error ? x.message : `Não consegui subir ${arquivo.name}.`);
-        break;
-      } finally {
-        setSubindo(null);
-      }
-    }
-    await ler();
-    aoMudar();
-  }
-
-  async function tirar(id: string) {
-    setErro(null);
-    try {
-      await removerMidiaDaPeca(id);
-      await ler();
-      aoMudar();
-    } catch (x) {
-      setErro(x instanceof Error ? x.message : 'Não consegui tirar o arquivo.');
-    }
-  }
-
-  if (midias === null) return <p className="rotulo mt-3 normal-case">lendo os arquivos…</p>;
-
-  // Peça no ar é histórico: o banco recusa trocar a mídia, e a tela não pode
-  // oferecer o que vai ser recusado. Formulário que não pode funcionar não
-  // deve aparecer — a mesma regra do link de senha vencido.
-  const congelada =
-    peca.statusPublicacao === 'publicado' ||
-    peca.statusPublicacao === 'publicando' ||
-    peca.statusPublicacao === 'publicado_parcial';
-
-  return (
-    <div className="mt-3 border-t border-linha-fraca pt-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="rotulo-forte">arquivo</span>
-        <span className="rotulo">{peca.tipo} pede {PEDE[peca.tipo]}</span>
-      </div>
-
-      {congelada ? (
-        <p className="mt-1.5 text-[13px] text-tinta-2">
-          Esta peça já foi publicada. O arquivo do que foi publicado não muda — duplique a peça
-          se quiser outra imagem.
-        </p>
-      ) : (
-        midias.length === 0 && (
-          // A consequência, não o estado: "vazio" não diz o que acontece depois.
-          <p className="mt-1.5 text-[13px] text-tinta-2">
-            Sem arquivo, esta peça <strong>não publica</strong> — a Meta recusa legenda sozinha.
-          </p>
-        )
-      )}
-
-      {midias.length > 0 && (
-        <ul className="mt-2.5 flex flex-wrap gap-2">
-          {midias.map((m) => (
-            <li key={m.id} className="relative">
-              {m.url && m.mime.startsWith('image/') ? (
-                <img
-                  src={m.url}
-                  alt={`Arquivo ${m.ordem + 1} da peça`}
-                  className="size-20 rounded-[10px] border border-linha object-cover"
-                />
-              ) : (
-                <div className="grid size-20 place-items-center rounded-[10px] border border-linha bg-superficie text-[11px] text-tinta-3">
-                  {m.mime.startsWith('video/') ? 'vídeo' : 'arquivo'}
-                </div>
-              )}
-              {equipe && !congelada && (
-                <button
-                  type="button"
-                  onClick={() => void tirar(m.id)}
-                  aria-label={`Tirar arquivo ${m.ordem + 1}`}
-                  className="absolute -top-1.5 -right-1.5 grid size-6 place-items-center rounded-full border border-linha bg-fundo text-[13px] hover:text-pink-texto"
-                >
-                  ×
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {equipe && !congelada && (
-        <label
-          onDragOver={(e) => {
-            e.preventDefault();
-            setSobre(true);
-          }}
-          onDragLeave={() => setSobre(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setSobre(false);
-            void receber(e.dataTransfer.files);
-          }}
-          className={
-            'mt-2.5 flex min-h-14 cursor-pointer items-center justify-center rounded-[10px] ' +
-            'border border-dashed px-3 py-2 text-center text-[12.5px] ' +
-            (sobre ? 'border-pink text-pink-texto' : 'border-linha text-tinta-3')
-          }
-        >
-          {subindo === null ? (
-            <span>arraste o arquivo aqui, ou clique para escolher</span>
-          ) : (
-            <span className="numeros">subindo… {Math.round(subindo * 100)}%</span>
-          )}
-          <input
-            type="file"
-            multiple
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={(e) => void receber(e.target.files)}
-          />
-        </label>
-      )}
-
-      {erro && (
-        <p
-          role="alert"
-          className="mt-2.5 rounded-[var(--raio-p)] border border-linha bg-alerta-fundo px-3 py-2 text-[12.5px]"
-        >
-          {erro}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * A peça no calendário. Com `abrir`, ela abre o painel do arquivo; sem, fica
- * seca.
- *
- * A versão seca não é preguiça: no grid do mês, o DIA inteiro já é um
- * `<button>` — é assim que se cria peça clicando num dia vazio. Botão dentro de
- * botão é HTML inválido e quebra teclado e leitor de tela. Então no grid a peça
- * só informa, e quem trabalha a peça é a lista por dia, que é onde a pessoa
- * está quando quer anexar o arquivo.
- */
 function Chip({
   p,
   equipe,
@@ -472,6 +281,12 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
 
   const [marcados, setMarcados] = useState<string[]>([]);
   const [abertaId, setAbertaId] = useState<string | null>(null);
+  // O compositor e o caminho completo: arquivo, rede, formato, legenda,
+  // hashtags e o botao de agendar. O formulario pequeno continua existindo
+  // para marcar o mes rapido, clicando num dia vazio do grid — planejar e uma
+  // tarefa, publicar e outra, e obrigar a abrir o compositor para rabiscar uma
+  // ideia seria trocar uma tela certa por uma tela completa.
+  const [compondo, setCompondo] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
@@ -577,14 +392,28 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
           <Botao
             variante="primario"
             tamanho="pequeno"
-            onClick={() => setNovoDia(novoDia ? null : hojeISO())}
+            onClick={() => {
+              setCompondo(!compondo);
+              setNovoDia(null);
+            }}
           >
-            Nova peça
+            Nova publicação
           </Botao>
         )}
       </div>
 
       <ConectarConta clienteId={clienteId} equipe={equipe} />
+
+      {equipe && compondo && (
+        <Compositor
+          clienteId={clienteId}
+          diaSugerido={novoDia}
+          aoFechar={() => setCompondo(false)}
+          // Atualiza o mes atras do compositor, sem fecha-lo: quem fecha e a
+          // pessoa, depois de ler a confirmacao.
+          aoSalvar={() => void carregar()}
+        />
+      )}
 
       <div className="escada mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco

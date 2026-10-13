@@ -14,6 +14,7 @@
  */
 import { derivadasDe, ehVideo } from './derivadas';
 import { FalhaDados } from './api';
+import { anotarMidiaExemplo } from './mock';
 import { sb } from './supabase';
 import type { MidiaDaPeca } from './tipos';
 
@@ -71,6 +72,11 @@ function subirExemplo(postId: string, tipo: string, arquivo: File): void {
     url: URL.createObjectURL(arquivo),
   });
   EXEMPLO.set(postId, lista);
+  // Os dois armazens do modo exemplo tem de concordar: a midia vive AQUI e
+  // `agendar_publicacao` do exemplo precisa saber quantas sao para recusar
+  // agendamento sem arquivo. Avisar e mais seguro que duplicar a contagem — o
+  // roteiro pegou justamente essa divergencia.
+  anotarMidiaExemplo(postId, lista);
 }
 
 function extensaoDe(nome: string): string {
@@ -170,6 +176,7 @@ export async function removerMidiaDaPeca(midiaId: string): Promise<void> {
         // reclamaria de posicao ocupada.
         lista.forEach((m, n) => { m.ordem = n; });
         EXEMPLO.set(post, lista);
+        anotarMidiaExemplo(post, lista);
         return;
       }
     }

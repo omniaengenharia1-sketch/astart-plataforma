@@ -367,6 +367,7 @@ E os módulos:
 | `0043` | `conectores` — o mapa das chaves das três integrações, com estado honesto |
 | `0044` | conectar a conta de Instagram do cliente: `token_do_sistema()`, `salvar_conta_social()`, `contas_do_cliente()` |
 | `0045` | a mídia da peça: `registrar_midia_post()`, `remover_midia_post()`, `limites_de_midia()` |
+| `0046` | o compositor: `criar_publicacao()`, `agendar_publicacao()`, hashtags em campo próprio |
 
 Decisões que viraram regra no banco, não só na tela:
 

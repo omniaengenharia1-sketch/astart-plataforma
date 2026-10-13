@@ -404,6 +404,28 @@ export type PedidoDeConvite =
       papelCliente: PapelCliente;
     };
 
+// --- compositor (migration 0046) -------------------------------------------
+
+export interface PublicacaoNova {
+  clienteId: string;
+  titulo: string;
+  tipo: TipoPeca;
+  legenda: string;
+  hashtags: string;
+  /** Hashtags no primeiro comentário, para a legenda ficar limpa no feed. */
+  noComentario: boolean;
+  /** Vazio = todas as contas ativas do cliente, que é o caso da maioria. */
+  contas: string[];
+}
+
+export interface Publicacao extends PublicacaoNova {
+  id: string;
+  quando: string | null;
+  status: StatusPublicacao;
+  erro: string | null;
+  midias: MidiaDaPeca[];
+}
+
 // --- mídia da peça (migration 0045) ----------------------------------------
 
 export interface MidiaDaPeca {

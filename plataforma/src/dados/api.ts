@@ -16,6 +16,7 @@ import {
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
   criarGaleriaExemplo, criarLinkAprovacaoExemplo, criarLinkExemplo, criarPecaExemplo,
   conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
+  criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
   desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
@@ -28,6 +29,7 @@ import {
 import type {
   Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao,
+  Publicacao, PublicacaoNova,
   EnvioNaFicha, EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente,
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
@@ -576,6 +578,72 @@ export async function equipeEConvites(): Promise<EquipeEConvites> {
  * isso e leitura de direcao.
  */
 /** As contas de rede social de um cliente. Nulo quando ele nao tem publicacao. */
+/**
+ * Cria a publicacao como RASCUNHO, sem hora.
+ *
+ * A ordem e essa de proposito: o caminho do arquivo no bucket precisa do id do
+ * post (0045), entao o post nasce primeiro, o arquivo entra depois, e agendar e
+ * o ultimo passo — o unico que cobra se a midia esta completa.
+ */
+export async function criarPublicacao(p: PublicacaoNova): Promise<string> {
+  if (!sb) return criarPublicacaoExemplo(p);
+  const { data, error } = await sb.rpc('criar_publicacao', {
+    p_cliente: p.clienteId,
+    p_titulo: p.titulo,
+    p_tipo: p.tipo,
+    p_legenda: p.legenda,
+    p_hashtags: p.hashtags,
+    p_no_comentario: p.noComentario,
+    p_contas: p.contas.length > 0 ? p.contas : null,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return (data as { id: string }).id;
+}
+
+export async function atualizarPublicacao(
+  id: string,
+  p: Partial<PublicacaoNova>,
+): Promise<void> {
+  if (!sb) {
+    atualizarPublicacaoExemplo(id, p);
+    return;
+  }
+  const { error } = await sb.rpc('atualizar_publicacao', {
+    p_post: id,
+    p_titulo: p.titulo ?? null,
+    p_legenda: p.legenda ?? null,
+    p_hashtags: p.hashtags ?? null,
+    p_no_comentario: p.noComentario ?? null,
+    p_tipo: p.tipo ?? null,
+    p_contas: p.contas ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * Agenda, ou posta agora — que e agendar para agora.
+ *
+ * `quando` nulo significa agora: o worker varre `agendado and agendado_para <=
+ * now()` a cada minuto e pega na proxima rodada. Um caminho paralelo que
+ * publicasse na hora teria outra retentativa e outro registro de erro.
+ */
+export async function agendarPublicacao(
+  id: string,
+  quando: string | null,
+): Promise<{ quando: string; agora: boolean }> {
+  if (!sb) return agendarPublicacaoExemplo(id, quando);
+  const { data, error } = await sb.rpc('agendar_publicacao', { p_post: id, p_quando: quando });
+  if (error) throw new FalhaDados(error.message);
+  return data as { quando: string; agora: boolean };
+}
+
+export async function publicacao(id: string): Promise<Publicacao | null> {
+  if (!sb) return publicacaoExemplo(id);
+  const { data, error } = await sb.rpc('publicacao', { p_post: id });
+  if (error) throw new FalhaDados(`Nao consegui abrir a publicacao: ${error.message}`);
+  return (data as Publicacao | null) ?? null;
+}
+
 export async function contasDoCliente(clienteId: string): Promise<ContaSocial[]> {
   if (!sb) return contasDoClienteExemplo(clienteId);
   const { data, error } = await sb.rpc('contas_do_cliente', { p_cliente: clienteId });

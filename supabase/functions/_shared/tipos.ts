@@ -54,6 +54,10 @@ export interface Post {
   titulo_interno: string;
   tipo: TipoPost;
   legenda: string;
+  /** So as hashtags, sem a legenda. Quem junta e o worker (0046). */
+  hashtags: string;
+  /** Hashtags no primeiro comentario, para a legenda ficar limpa no feed. */
+  hashtags_no_comentario: boolean;
   primeiro_comentario: string | null;
   agendado_para: string | null;
   status: StatusPost;
