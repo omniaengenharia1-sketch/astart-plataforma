@@ -390,7 +390,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Dezessete armadilhas que já custaram caro aqui
+### Dezoito armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -609,6 +609,35 @@ passam pelos tipos sem reclamar e não aparecem numa chamada bem-sucedida.
 `instagram.test.ts` troca o `fetch` por um espião e cobra **qual chamada** o
 adaptador faz: a ordem dos filhos do carrossel, a legenda só no pai, o
 `aguardarProcessamento` do vídeo, e a redação do token no log.
+
+A décima oitava: **atalho para aplicar migration mente para o livro-caixa.** A
+esteira `migrations.yml` existe desde o começo para que produção seja sempre o
+que está em `supabase/migrations`. Ela nunca rodou — faltava o segredo
+`SUPABASE_DB_PASSWORD` — e eu não notei por dias, porque vinha aplicando cada
+migration pelo conector do Supabase. O sintoma só apareceu quando fui olhar:
+**produção duas migrations atrás do repositório.**
+
+E o atalho deixou um rastro pior que o atraso. Aplicar pelo conector grava no
+`supabase_migrations.schema_migrations` a **hora da aplicação** como `version`,
+não a versão do nome do arquivo. Quatro linhas ficaram assim:
+
+| arquivo | gravado |
+|---|---|
+| `20261013121000_modulo_0048` | `20261013153508` |
+| `20261013121500_modulo_0049` | `20261013162111` |
+
+A CLI compara `version` com o nome do arquivo. Para ela, aquelas quatro nunca
+aconteceram, e o próximo `db push` as aplicaria de novo. Aqui não faria estrago
+— as quatro são `create or replace`, `if not exists` e `on conflict`, todas
+idempotentes — mas foi **sorte**, não desenho: bastava uma delas ter um `insert`
+sem `on conflict` ou um `alter type add value` para o push quebrar ou duplicar
+dado. O livro-caixa foi corrigido para as versões do arquivo.
+
+A lição não é "não use o conector" — ele resolveu o dia. É que **duas vias de
+aplicar schema produzem duas verdades**, e a que ninguém olha é a que
+envelhece. Esteira que nunca rodou não é esteira, e o jeito de descobrir isso
+não pode ser alguém tropeçar nela por acaso: o README passa a mandar conferir
+que os dois workflows estão verdes, com este parágrafo como motivo.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um
