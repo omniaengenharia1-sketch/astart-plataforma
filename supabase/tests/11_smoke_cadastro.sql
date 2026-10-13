@@ -167,7 +167,17 @@ begin
       jsonb_build_array(jsonb_build_object('servico','audiovisual','valorCentavos',240000)));
     raise exception 'FALHOU: audiovisual passou sem dizer o formato';
   exception when others then
-    if position('recorrente ou pontual' in sqlerrm) = 0 then raise; end if;
+    -- A mensagem tem de NOMEAR as opcoes, e sao TRES.
+    --
+    -- Isto cobrava 'recorrente ou pontual', e estava cobrando um erro: o enum
+    -- `formato_contrato` tem recorrente, projeto E pontual, e a mensagem antiga
+    -- escondia o do meio. Apareceu quando a 0052 juntou num lugar so a
+    -- validacao do cadastro e a da alteracao de contrato — duas copias da mesma
+    -- regra divergindo, que e a armadilha que esta suite existe para pegar. A
+    -- copia que divergiu era a mensagem, e quem pagava era quem lia a tela.
+    if position('recorrente' in sqlerrm) = 0
+       or position('projeto'  in sqlerrm) = 0
+       or position('pontual'  in sqlerrm) = 0 then raise; end if;
   end;
 
   -- Recorrente sem dia.
