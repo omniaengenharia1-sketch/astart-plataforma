@@ -40,13 +40,19 @@ if ! out=$("${PSQL[@]}" -f "$REPO/supabase/tests/00_stubs_supabase.sql" 2>&1); t
   echo "FALHOU nos stubs:"; echo "$out" | tail -5; exit 1
 fi
 
+# `--single-transaction` nao e detalhe: e o que o SQL Editor do Supabase faz com
+# um arquivo colado. Sem ele o psql abre uma transacao por statement, e o
+# verificador fica MAIS PERMISSIVO que o editor de verdade — foi assim que o
+# erro `unsafe use of new value "operacao" of enum type` chegou na mao da dona
+# com os blocos "provados". O Postgres nao deixa usar um valor de enum novo na
+# mesma transacao que o criou, e so dentro de uma transacao isso aparece.
 aplica() {
   local f="$1"
   local tmp
   tmp=$(mktemp "${TMPDIR:-/tmp}/bloco-XXXXXX.sql")
   # As extensoes reais nao existem no Postgres cru; no Supabase existem.
   sed -E 's/^create extension if not exists (pg_net|pg_cron|supabase_vault).*/-- &/' "$f" > "$tmp"
-  "${PSQL[@]}" -d astart -f "$tmp" 2>&1
+  "${PSQL[@]}" --single-transaction -d astart -f "$tmp" 2>&1
   local rc=$?
   rm -f "$tmp"
   return $rc

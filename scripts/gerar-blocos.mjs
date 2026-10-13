@@ -23,6 +23,20 @@ const LIMITE = 95_000;
 
 mkdirSync(DESTINO, { recursive: true });
 
+/**
+ * Migration que adiciona valor a um enum FECHA o bloco.
+ *
+ * O Postgres nao deixa USAR um valor de enum novo na mesma transacao que o
+ * criou ("unsafe use of new value ... New enum values must be committed before
+ * they can be used"). O `supabase db push` nao sofre disso porque aplica uma
+ * migration por transacao; o SQL Editor roda o arquivo colado inteiro numa
+ * transacao so. A 0010 adiciona 'operacao' ao `papel_perfil` e a 0011 usa o
+ * valor na linha seguinte — juntas no mesmo paste, morre.
+ *
+ * Entao o corte nao e so por tamanho: e por commit.
+ */
+const MUDA_ENUM = /alter\s+type\s+[\w."]+\s+add\s+value/i;
+
 const arquivos = readdirSync(ORIGEM).filter((f) => f.endsWith('.sql')).sort();
 const blocos = [];
 let atual = [];
@@ -36,6 +50,12 @@ for (const f of arquivos) {
   }
   atual.push({ f, txt });
   tam += txt.length;
+  if (MUDA_ENUM.test(txt)) {
+    // Fecha aqui: o valor novo precisa estar commitado antes de alguem usar.
+    blocos.push(atual);
+    atual = [];
+    tam = 0;
+  }
 }
 if (atual.length) blocos.push(atual);
 
@@ -46,11 +66,13 @@ blocos.forEach((bloco, i0) => {
   const lista = bloco.map(({ f }) => `--   ${basename(f)}`).join('\n');
   const valores = versoes.map((v) => `('${v}')`).join(',\n    ');
 
+  // Com N=5 o atalho `1, 2, 3, ${N}` dizia "1, 2, 3, 5" e mandava pular o 4.
+  const ordem = Array.from({ length: N }, (_, k) => k + 1).join(', ');
   const cabeca = `-- =============================================================================
 -- Astart — banco, bloco ${i} de ${N}
 --
 -- COMO USAR: cole este arquivo inteiro no SQL Editor do Supabase e clique Run.
--- Rode os blocos EM ORDEM — 1, 2, 3, ${N} — porque cada um depende do anterior.
+-- Rode os blocos EM ORDEM — ${ordem} — porque cada um depende do anterior.
 --
 -- RODE UMA VEZ SO. Nao e seguro repetir: a migration 0017 troca uma coluna que
 -- a 0005 criou, e nenhum \`if not exists\` conserta isso — e a natureza de uma
