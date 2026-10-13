@@ -58,6 +58,22 @@ jobs:
         working-directory: supabase/functions
         run: deno test --allow-env
 
+      # A regra de formato existe em DUAS linguagens: `formatos.ts`, que o
+      # adaptador le, e `public.formatos_suportados`, que a tela le. Duas
+      # copias da mesma regra e a armadilha que este projeto pagou quatro
+      # vezes — e na primeira vez que este prover rodou ele achou a quinta
+      # (carrossel aceitava video no banco e nao no adaptador, vivo em
+      # producao). Divergir passa a ser erro de build.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Provar que a regra de formato concorda nos dois lados
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/provar-canais.mjs --producao
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
