@@ -110,10 +110,17 @@ segredo precisa sair do painel:
   `supabase/tests/provar-blocos.sh` prova a sequência num Postgres vazio, com
   `--single-transaction`, que é como o SQL Editor aplica.
 - *funções* — os dois workflows em `.github/workflows/` fazem o deploy a cada
-  merge na `main`: `migrations.yml` para o banco, `funcoes.yml` para as cinco
+  merge na `main`: `migrations.yml` para o banco, `funcoes.yml` para as seis
   funções. Precisam de `SUPABASE_ACCESS_TOKEN` e `SUPABASE_PROJECT_REF` nos
   segredos do repositório (a `migrations.yml` também pede
   `SUPABASE_DB_PASSWORD`), e de nada mais — o token fica no GitHub, não aqui.
+  Onde pegar cada um está em `supabase/PRIMEIRO-DEPLOY.md`, com o aviso de que
+  a senha do banco não dá para consultar: só trocar.
+
+  **Confira que os dois estão verdes em _Actions_.** A `migrations.yml` ficou
+  vermelha por dias por falta de um segredo e ninguém notou, porque as
+  migrations vinham sendo aplicadas à mão pelo conector — produção ficou duas
+  migrations atrás do repositório. Esteira que nunca rodou não é esteira.
 
 4. **O Auth, antes de convidar alguém.** Quatro ajustes em *Authentication*, e
    os dois primeiros não são opcionais: sem eles o link de convite e o de

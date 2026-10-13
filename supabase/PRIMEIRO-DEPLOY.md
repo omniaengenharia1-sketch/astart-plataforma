@@ -59,14 +59,34 @@ mensagem inteira: o erro diz o que falta.
 No GitHub: **Settings > Secrets and variables > Actions > New repository
 secret**, tres vezes:
 
-| Nome | Valor |
-|---|---|
-| `SUPABASE_PROJECT_REF` | o Reference ID |
-| `SUPABASE_DB_PASSWORD` | a senha do banco |
-| `SUPABASE_ACCESS_TOKEN` | gere em <https://supabase.com/dashboard/account/tokens> |
+| Nome | Valor | Onde pegar |
+|---|---|---|
+| `SUPABASE_PROJECT_REF` | o Reference ID | Painel do projeto > **Settings > General** |
+| `SUPABASE_DB_PASSWORD` | a senha do banco | Painel do projeto > **Database > Settings**. Veja o aviso abaixo. |
+| `SUPABASE_ACCESS_TOKEN` | um token da sua conta | <https://supabase.com/dashboard/account/tokens> |
+
+> **A senha do banco nao da para "ver".** Ela e definida quando o projeto e
+> criado, e o Supabase nao mostra de novo — so deixa TROCAR, em
+> *Database > Settings > Reset database password*. Se voce nao anotou na
+> criacao, trocar e o caminho, e e seguro neste projeto: nada mais aqui usa a
+> senha do banco. As Edge Functions usam a `service_role`, o front usa a chave
+> publicavel, e o conector tem autenticacao propria. O unico lugar que precisa
+> dela e este CI.
+>
+> Um detalhe que a documentacao do Supabase avisa: logo depois de trocar, a
+> primeira conexao pelo pooler pode falhar com `password authentication failed`
+> (erro `28P01`). Tentar de novo com a senha nova resolve.
+>
+> Nunca mande essa senha no chat, nem para mim. Ela vai do painel do Supabase
+> direto para o campo do GitHub.
 
 Feito isso, todo merge na `main` que toque `supabase/migrations/` aplica
 sozinho. Ninguem roda SQL na mao de novo.
+
+**Como saber se ficou funcionando:** o workflow `migrations` tem de aparecer
+verde em *Actions*. Ele falha no primeiro passo enquanto faltar qualquer um dos
+tres segredos, e a mensagem diz qual — de proposito, para nao gastar uma
+tentativa de conexao descobrindo isso.
 
 ## 5. Segredos das Edge Functions
 
