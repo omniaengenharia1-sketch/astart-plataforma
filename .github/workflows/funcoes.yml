@@ -1,0 +1,77 @@
+# Publica as cinco Edge Functions no projeto Supabase a cada merge na main.
+#
+# Irma da migrations.yml, e pelo mesmo motivo: ninguem sobe funcao na mao. O
+# que esta em supabase/functions e o que roda em producao, e nada mais.
+#
+# Precisa de dois segredos no repositorio (Settings > Secrets and variables >
+# Actions). Note que NAO precisa da senha do banco, ao contrario da
+# migrations.yml: publicar funcao nao toca no schema.
+#   SUPABASE_ACCESS_TOKEN  — gerado em supabase.com/dashboard/account/tokens
+#   SUPABASE_PROJECT_REF   — o Reference ID do projeto, que e publico
+name: funcoes
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/functions/**', '.github/workflows/funcoes.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: funcoes-producao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir que os segredos estao configurados
+        run: |
+          faltam=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || faltam="$faltam SUPABASE_ACCESS_TOKEN"
+          [ -n "$REF" ]                   || faltam="$faltam SUPABASE_PROJECT_REF"
+          if [ -n "$faltam" ]; then
+            echo "Faltam estes segredos no repositorio:$faltam"
+            echo "Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Erro de tipo descoberto aqui custa um minuto de CI. Descoberto depois
+      # do deploy, custa uma funcao quebrada em producao esperando o cron.
+      - name: Conferir os tipos antes de publicar
+        working-directory: supabase/functions
+        run: deno check aprovar/index.ts convidar/index.ts galeria/index.ts publicar-tick/index.ts renovar-tokens/index.ts
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Cada funcao e publicada pelo nome, com a flag do JWT explicita, em vez
+      # de um `deploy` sem nome que deixaria a decisao para a leitura do
+      # config.toml. Quem autoriza estas quatro nao e o JWT:
+      #   publicar-tick e renovar-tokens  — o header x-tick-secret, que o cron manda
+      #   galeria e aprovar               — o token do link, conferido no banco
+      - name: Publicar as quatro que nao usam JWT
+        run: |
+          for f in publicar-tick renovar-tokens galeria aprovar; do
+            echo "::group::$f"
+            supabase functions deploy "$f" --project-ref "$REF" --no-verify-jwt
+            echo "::endgroup::"
+          done
+
+      # Esta e a excecao, e e de proposito: a convidar DESCOBRE quem esta
+      # convidando pelo JWT, e e por ele que confere se e admin. Sem JWT ela
+      # viraria uma porta aberta para criar convite.
+      - name: Publicar a convidar, que exige JWT
+        run: supabase functions deploy convidar --project-ref "$REF"
+
+      - name: Listar o que ficou publicado
+        run: supabase functions list --project-ref "$REF"

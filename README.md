@@ -78,18 +78,42 @@ inclusive a dona. A `0040` existe para isso, e se fecha sozinha depois.
 ```bash
 # 1. banco
 supabase link --project-ref <ref>
-supabase db push                      # 40 migrations
+supabase db push                      # 41 migrations
 
 # 2. as funções
 supabase functions deploy publicar-tick --no-verify-jwt
-supabase functions deploy convidar
-supabase functions deploy galeria --no-verify-jwt
 supabase functions deploy renovar-tokens --no-verify-jwt
+supabase functions deploy galeria --no-verify-jwt
+supabase functions deploy aprovar --no-verify-jwt
+supabase functions deploy convidar                      # esta EXIGE o JWT
 
 # 3. os segredos, direto no painel (nunca no repositório, nunca no chat):
 #    Vault: token da Meta, chave do Asaas, chave da Anthropic
 #    Settings > Edge Functions: as variáveis que cada função lê
 ```
+
+O `--no-verify-jwt` das quatro primeiras não é descuido: quem autoriza nelas não
+é o login. O cron manda `x-tick-secret` nas duas de fundo; a `galeria` e a
+`aprovar` são abertas por link, e quem autoriza é o token conferido contra o
+hash no banco. A `convidar` é a única que precisa do JWT, porque é por ele que
+ela descobre quem está convidando e confere se é admin.
+
+**Sem rodar a CLI.** Os passos 1 e 2 também existem sem terminal, e nenhum
+segredo precisa sair do painel:
+
+- *banco* — `node scripts/gerar-blocos.mjs` gera `supabase/blocos/banco-N-de-M.sql`
+  para colar no SQL Editor, em ordem, um Run por arquivo. Cada bloco grava no
+  mesmo livro-caixa que a CLI lê (`supabase_migrations.schema_migrations`), então
+  no dia em que alguém rodar `supabase db push` ele sabe o que já foi aplicado e
+  não repete nada. Os arquivos são separados por **fronteira de transação**, não
+  por tamanho: juntar dois num paste só reintroduz o `55P04` do enum.
+  `supabase/tests/provar-blocos.sh` prova a sequência num Postgres vazio, com
+  `--single-transaction`, que é como o SQL Editor aplica.
+- *funções* — os dois workflows em `.github/workflows/` fazem o deploy a cada
+  merge na `main`: `migrations.yml` para o banco, `funcoes.yml` para as cinco
+  funções. Precisam de `SUPABASE_ACCESS_TOKEN` e `SUPABASE_PROJECT_REF` nos
+  segredos do repositório (a `migrations.yml` também pede
+  `SUPABASE_DB_PASSWORD`), e de nada mais — o token fica no GitHub, não aqui.
 
 4. **A conta que administra.** Em *Authentication > Users*, crie a conta com o
    seu e-mail. Depois, no editor SQL:
