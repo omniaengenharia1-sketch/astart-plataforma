@@ -36,14 +36,39 @@ export function versaoApi(): string {
   return v.startsWith('v') ? v : `v${v}`;
 }
 
+const SENSIVEL = /token|secret|authorization/i;
+
 /** Remove qualquer par sensivel antes de virar log. */
 function limpar(obj: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!obj) return undefined;
   const saida: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
-    saida[k] = /token|secret|authorization/i.test(k) ? '[redigido]' : v;
+    saida[k] = SENSIVEL.test(k) ? '[redigido]' : v;
   }
   return saida;
+}
+
+/**
+ * A URL que vai para o log, com todo parametro sensivel apagado.
+ *
+ * O `access_token` de um GET e acrescentado DEPOIS desta linha, e por isso
+ * nunca aparecia. Mas isso era sorte de ordem, nao protecao: no dia em que uma
+ * chamada levasse um token como parametro COMUM, ele entraria no log inteiro.
+ *
+ * Esse dia chegou com `debug_token?input_token=<token>` (0048) — a chamada que
+ * pergunta a saude do token da agencia. Como `registro.url` e gravado em
+ * `publicacao_eventos`, o token da Astart iria para uma tabela do banco, em
+ * texto, por uma porta que ninguem estava olhando. Ja que `limpar()` cuidava
+ * so do corpo, a URL passava livre.
+ *
+ * Entao a regra passa a valer nos dois lugares, e vale para quem vier depois.
+ */
+function urlParaLog(url: URL): string {
+  const copia = new URL(url.toString());
+  for (const [k] of [...copia.searchParams]) {
+    if (SENSIVEL.test(k)) copia.searchParams.set(k, '[redigido]');
+  }
+  return copia.toString();
 }
 
 export interface OpcoesChamada {
@@ -66,7 +91,7 @@ export async function chamarGraph<T>(
     if (v !== undefined) url.searchParams.set(k, v);
   }
 
-  const urlSemToken = url.toString();
+  const urlSemToken = urlParaLog(url);
 
   const init: RequestInit = {
     method: opts.metodo,

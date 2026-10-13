@@ -50,6 +50,14 @@ jobs:
         working-directory: supabase/functions
         run: deno check aprovar/index.ts conectar-conta/index.ts convidar/index.ts galeria/index.ts publicar-tick/index.ts renovar-tokens/index.ts
 
+      # `deno check` prova tipo; isto prova COMPORTAMENTO. Entrou porque os dois
+      # piores erros deste modulo passariam pelos tipos sem reclamar: o
+      # adaptador publicando so um dos quatro formatos oferecidos na tela, e o
+      # token da agencia indo para o log numa URL de GET.
+      - name: Rodar os testes de unidade
+        working-directory: supabase/functions
+        run: deno test --allow-env
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
