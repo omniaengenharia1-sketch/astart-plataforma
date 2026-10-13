@@ -15,7 +15,7 @@ import {
   painelEquipeExemplo,
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
   criarGaleriaExemplo, criarLinkAprovacaoExemplo, criarLinkExemplo, criarPecaExemplo,
-  desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
+  conectoresExemplo, desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
@@ -25,7 +25,7 @@ import {
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
-  Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Decisao,
+  Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector, Decisao,
   EnvioNaFicha, EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente,
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
@@ -521,6 +521,21 @@ export async function equipeEConvites(): Promise<EquipeEConvites> {
  * service role, e service role nunca chega ao navegador. A funcao confere pelo
  * JWT que quem pediu e admin — nao por um parametro que o front mandaria.
  */
+/**
+ * O mapa das chaves. NUNCA traz valor de segredo — a funcao do banco le o nome
+ * no `vault.secrets` e a descriptografia nem acontece. O teste 24 cobra isso
+ * procurando o valor na resposta.
+ *
+ * Nulo quando quem pergunta nao e admin: e mapa de onde os segredos ficam, e
+ * isso e leitura de direcao.
+ */
+export async function conectores(): Promise<Conector[] | null> {
+  if (!sb) return conectoresExemplo();
+  const { data, error } = await sb.rpc('estado_dos_conectores');
+  if (error) throw new FalhaDados(`Nao consegui ler as integracoes: ${error.message}`);
+  return (data as Conector[] | null) ?? null;
+}
+
 export async function convidar(pedido: PedidoDeConvite): Promise<void> {
   if (!sb) {
     try {

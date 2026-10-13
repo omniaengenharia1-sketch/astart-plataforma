@@ -8,7 +8,7 @@
 // tem a sua propria verdade engana quem esta avaliando o fluxo.
 // =============================================================================
 import type {
-  Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Decisao,
+  Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector, Decisao,
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
   EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria,
@@ -912,6 +912,61 @@ const CONVITES: ConviteAberto[] = [
 ];
 
 let seqConvite = 0;
+
+/**
+ * No exemplo, a Meta aparece com DUAS chaves faltando e a Asaas como ainda nao
+ * construida. Nao e preguica: e o estado mais informativo para quem esta
+ * avaliando a tela — mostra os tres casos de uma vez (pronta, incompleta, e
+ * "falta codigo, nao chave"), que e justamente o que a tela precisa saber
+ * desenhar.
+ */
+export function conectoresExemplo(): Conector[] {
+  return [
+    {
+      id: 'meta',
+      nome: 'Meta',
+      paraQue: 'publicar no Instagram e Facebook na hora marcada',
+      construida: true,
+      ordem: 1,
+      faltando: ['meta_system_user_token', 'tick_secret'],
+      agendador: { publicar: false, renovar: false },
+      chaves: [
+        { chave: 'meta_system_user_token', onde: 'vault', obrigatoria: true, paraQue: 'token do System User do Business Manager da Astart', presente: false },
+        { chave: 'tick_secret', onde: 'vault', obrigatoria: true, paraQue: 'segredo entre o agendador e as funcoes', presente: false },
+        { chave: 'publicar_tick_url', onde: 'vault', obrigatoria: true, paraQue: 'endereco da funcao que publica', presente: true },
+        { chave: 'renovar_tokens_url', onde: 'vault', obrigatoria: true, paraQue: 'endereco da funcao que renova token', presente: true },
+        { chave: 'META_API_VERSION', onde: 'funcao', obrigatoria: true, paraQue: 'versao da API da Meta, sem default no codigo', presente: null },
+        { chave: 'TICK_SECRET', onde: 'funcao', obrigatoria: true, paraQue: 'o mesmo valor do tick_secret', presente: null },
+      ],
+    },
+    {
+      id: 'asaas',
+      nome: 'Asaas',
+      paraQue: 'emitir cobranca e saber quem pagou',
+      construida: false,
+      ordem: 2,
+      faltando: ['asaas_api_key', 'asaas_base_url', 'asaas_webhook_token'],
+      agendador: null,
+      chaves: [
+        { chave: 'asaas_api_key', onde: 'vault', obrigatoria: true, paraQue: 'chave da API da Asaas', presente: false },
+        { chave: 'asaas_base_url', onde: 'vault', obrigatoria: true, paraQue: 'endereco da API: sandbox ou producao, escrito e nao adivinhado', presente: false },
+        { chave: 'asaas_webhook_token', onde: 'vault', obrigatoria: true, paraQue: 'segredo que confere se o aviso de pagamento e da Asaas', presente: false },
+      ],
+    },
+    {
+      id: 'anthropic',
+      nome: 'Anthropic',
+      paraQue: 'ler proposta em PDF e preencher o cadastro',
+      construida: false,
+      ordem: 3,
+      faltando: ['anthropic_api_key'],
+      agendador: null,
+      chaves: [
+        { chave: 'anthropic_api_key', onde: 'vault', obrigatoria: true, paraQue: 'chave da API da Anthropic', presente: false },
+      ],
+    },
+  ];
+}
 
 export function equipeEConvitesExemplo(): EquipeEConvites {
   return {

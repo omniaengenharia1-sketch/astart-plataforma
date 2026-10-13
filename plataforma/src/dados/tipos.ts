@@ -395,6 +395,36 @@ export type PedidoDeConvite =
       papelCliente: PapelCliente;
     };
 
+// --- conectores (migration 0043) --------------------------------------------
+
+/**
+ * Onde a chave mora. `vault` dá para conferir a presença pelo banco; `funcao`
+ * vive nos secrets da Edge Function, fora do alcance de qualquer consulta —
+ * e por isso `presente` vem nulo, não falso.
+ */
+export type OndeMoraChave = 'vault' | 'funcao';
+
+export interface ChaveDeConector {
+  chave: string;
+  onde: OndeMoraChave;
+  obrigatoria: boolean;
+  paraQue: string;
+  /** Nulo quando não dá para conferir daqui. Nunca traz o valor. */
+  presente: boolean | null;
+}
+
+export interface Conector {
+  id: string;
+  nome: string;
+  paraQue: string;
+  /** Falso enquanto só existe o schema: o que falta é código, não chave. */
+  construida: boolean;
+  ordem: number;
+  chaves: ChaveDeConector[];
+  faltando: string[];
+  agendador: { publicar: boolean; renovar: boolean } | null;
+}
+
 // --- galeria própria (migrations 0034/0035) ---------------------------------
 
 export type TipoMidia = 'foto' | 'video';

@@ -364,6 +364,7 @@ E os módulos:
 | `0040` | `primeiro_admin()` — a porta do primeiro dia, que se fecha sozinha |
 | `0041` | aprovar **sem conta**: `envio_por_token()`, `responder_por_token()`, revogar e os lotes na ficha |
 | `0042` | `search_path` fixo nas cinco que faltavam; as funções de token saem do alcance do navegador |
+| `0043` | `conectores` — o mapa das chaves das três integrações, com estado honesto |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -384,7 +385,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Doze armadilhas que já custaram caro aqui
+### Treze armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -514,6 +515,20 @@ E a lista de origens é lista, não `*`. O token vai no cabeçalho
 direto de `*` seria pequeno — mas "pequeno" não é motivo para abrir, e a
 `galeria` e a `aprovar` são autorizadas por token, onde o raciocínio não se
 repete.
+
+A décima terceira: **`create table if not exists` numa tabela já existente não
+avisa nada.** A `0043` criava `public.integracoes` para o mapa das chaves da
+agência — e a `0023` já havia criado `public.integracoes` para outra coisa: as
+integrações instaladas no site do cliente, amarradas a `cliente_servicos`. O
+`if not exists` não criou, não avisou, seguiu. Quem denunciou foi a chave
+estrangeira, **por sorte**: `id text` contra `id uuid`. Se as duas usassem
+`uuid`, a migration teria se pendurado silenciosamente na tabela errada, a RLS
+da agência teria sido aplicada à tabela do cliente, e o estrago apareceria
+meses depois sem pista de origem.
+
+A lição não é "escolha nomes melhores" — é que **`if not exists` é idempotência,
+não verificação**. Onde o nome importa, o jeito de checar é olhar o catálogo
+antes. O registro da agência virou `conectores`/`conector_chaves`.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um

@@ -4,10 +4,10 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou } from '../componentes/Estado';
 import {
-  convidar, equipeEConvites, mudarAcesso, mudarPapel, revogarConvite,
+  conectores, convidar, equipeEConvites, mudarAcesso, mudarPapel, revogarConvite,
 } from '../dados/api';
 import { haQuanto } from '../formato';
-import type { EquipeEConvites, PapelEquipe } from '../dados/tipos';
+import type { ChaveDeConector, Conector, EquipeEConvites, PapelEquipe } from '../dados/tipos';
 
 const PAPEIS: { valor: PapelEquipe; rotulo: string; explica: string }[] = [
   { valor: 'admin', rotulo: 'Direção', explica: 'vê tudo, convida gente, mexe no contrato' },
@@ -23,9 +23,25 @@ const NOME_PAPEL: Record<PapelEquipe, string> = {
   leitura: 'só leitura',
 };
 
+/**
+ * Chave nenhuma passa pelo navegador — nem para cadastrar.
+ *
+ * A tela mostra o ESTADO e o comando que a pessoa cola no SQL Editor. Um campo
+ * aqui que aceitasse o token faria o segredo atravessar o navegador, o bundle e
+ * a rede para chegar ao mesmo lugar onde ele já podia ser escrito direto. Seria
+ * conveniência paga com a única regra que não se negocia neste projeto.
+ */
+function comandoParaCadastrar(chave: ChaveDeConector): string {
+  if (chave.onde === 'funcao') {
+    return `Settings › Edge Functions › Secrets  →  ${chave.chave}`;
+  }
+  return `select vault.create_secret('<valor>', '${chave.chave}');`;
+}
+
 export function Ajustes() {
   const [dados, setDados] = useState<EquipeEConvites | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [ligacoes, setLigacoes] = useState<Conector[] | null>(null);
 
   const [abrindo, setAbrindo] = useState(false);
   const [nome, setNome] = useState('');
@@ -42,6 +58,13 @@ export function Ajustes() {
       setDados(await equipeEConvites());
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui carregar a equipe.');
+    }
+    // As integrações vêm numa tentativa própria: se o mapa das chaves falhar,
+    // a tela de equipe continua funcionando. Uma falha não derruba a outra.
+    try {
+      setLigacoes(await conectores());
+    } catch {
+      setLigacoes(null);
     }
   }, []);
 
@@ -273,6 +296,87 @@ export function Ajustes() {
           {dados.souAdmin && ' direção e financeiro veem o dinheiro da agência.'}
         </p>
       </section>
+
+      {ligacoes && ligacoes.length > 0 && (
+        <section className="mt-10">
+          <div className="rotulo">integrações</div>
+          <h2 className="titulao mt-1 text-[clamp(1.3rem,3.6vw,1.7rem)]">O que está ligado</h2>
+          <p className="rotulo mt-1.5 normal-case">
+            chave nenhuma passa por esta tela. aqui você vê o estado e o comando para cadastrar.
+          </p>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
+            {ligacoes.map((c) => {
+              const faltam = c.faltando.length;
+              const pronta = c.construida && faltam === 0;
+              return (
+                <article key={c.id} className="bloco p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-bold uppercase">{c.nome}</div>
+                      <p className="rotulo mt-1 normal-case">{c.paraQue}</p>
+                    </div>
+                    {!c.construida ? (
+                      <Marca>em construção</Marca>
+                    ) : pronta ? (
+                      <Marca forte>pronta</Marca>
+                    ) : (
+                      <Marca forte>faltam {faltam}</Marca>
+                    )}
+                  </div>
+
+                  {!c.construida && (
+                    // A distinção que evita uma tarde perdida: aqui o que falta
+                    // é código, não chave. Sem dizer isso, a pessoa vai buscar
+                    // uma chave que não tem onde entrar.
+                    <p className="mt-3 text-[13px] text-tinta-2">
+                      O código desta integração ainda não existe — só o lugar dela no banco.
+                      Cadastrar a chave agora deixaria segredo parado, sem nada usando.
+                    </p>
+                  )}
+
+                  {c.agendador && (
+                    <p className="mt-3 text-[13px] text-tinta-2">
+                      Agendador:{' '}
+                      {c.agendador.publicar ? 'publicando' : 'desligado'} ·{' '}
+                      {c.agendador.renovar ? 'renovando token' : 'renovação desligada'}
+                      {!c.agendador.publicar && faltam === 0 && (
+                        <>
+                          {' '}— falta rodar <code className="font-mono">select public.agendar_tick();</code>
+                        </>
+                      )}
+                    </p>
+                  )}
+
+                  <ul className="mt-4 flex flex-col gap-2.5 border-t border-linha-fraca pt-3">
+                    {c.chaves.map((k) => (
+                      <li key={k.chave} className="text-[13px]">
+                        <div className="flex items-center gap-2">
+                          <span aria-hidden="true" className="shrink-0">
+                            {k.presente === true ? '●' : k.presente === false ? '○' : '—'}
+                          </span>
+                          <span className="font-mono break-all">{k.chave}</span>
+                          {!k.obrigatoria && <span className="rotulo">opcional</span>}
+                        </div>
+                        <p className="rotulo mt-0.5 ml-5 normal-case">{k.paraQue}</p>
+                        {k.presente !== true && (
+                          <p className="ml-5 mt-1 font-mono text-[11.5px] text-tinta-3 break-all">
+                            {comandoParaCadastrar(k)}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="rotulo mt-3 normal-case">
+                    ● cadastrada · ○ falta · — vive na função, não dá para conferir daqui
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
