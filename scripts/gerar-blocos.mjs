@@ -64,7 +64,14 @@ blocos.forEach((bloco, i0) => {
   const i = i0 + 1;
   const versoes = bloco.map(({ f }) => /^(\d+)_/.exec(basename(f))[1]);
   const lista = bloco.map(({ f }) => `--   ${basename(f)}`).join('\n');
-  const valores = versoes.map((v) => `('${v}')`).join(',\n    ');
+  // `name` e o que a ferramenta oficial mostra na listagem: o nome do arquivo
+  // sem o carimbo de hora e sem o `.sql`, igual ao que o CLI gravaria.
+  const valores = bloco
+    .map(({ f }) => {
+      const [, v, nome] = /^(\d+)_(.+)\.sql$/.exec(basename(f));
+      return `('${v}', '${nome}')`;
+    })
+    .join(',\n    ');
 
   // Com N=5 o atalho `1, 2, 3, ${N}` dizia "1, 2, 3, 5" e mandava pular o 4.
   const ordem = Array.from({ length: N }, (_, k) => k + 1).join(', ');
@@ -94,9 +101,22 @@ ${lista}
 -- quebraria exatamente como quebraria colar este bloco duas vezes.
 -- ---------------------------------------------------------------------------
 create schema if not exists supabase_migrations;
+
+-- As TRES colunas do CLI, nao uma. Eu criei esta tabela so com a version, e ela
+-- aceitou os registros sem reclamar — mas a ferramenta oficial consulta
+-- "select version, name from ..." e morre com "column name does not exist".
+-- Livro-caixa que so o autor consegue ler nao e livro-caixa, e o erro so
+-- aparece no dia em que alguem usa o CLI, ou seja no pior dia possivel.
 create table if not exists supabase_migrations.schema_migrations (
-  version text primary key
+  version    text primary key,
+  statements text[],
+  name       text
 );
+
+-- Para o banco que nasceu com a versao errada deste gerador.
+alter table supabase_migrations.schema_migrations
+  add column if not exists statements text[],
+  add column if not exists name text;
 
 do $ja$
 begin
@@ -124,9 +144,9 @@ $ja$;
 -- ---------------------------------------------------------------------------
 do $reg$
 begin
-  insert into supabase_migrations.schema_migrations (version) values
+  insert into supabase_migrations.schema_migrations (version, name) values
     ${valores}
-  on conflict (version) do nothing;
+  on conflict (version) do update set name = excluded.name;
 exception when others then
   raise warning 'Nao consegui registrar o bloco no livro-caixa (%). As migrations foram aplicadas.', sqlerrm;
 end

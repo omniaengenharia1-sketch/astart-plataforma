@@ -16,6 +16,7 @@ import { FichaCliente } from './paginas/FichaCliente';
 import { Fila } from './paginas/Fila';
 import { Financeiro } from './paginas/Financeiro';
 import { InicioEquipe } from './paginas/InicioEquipe';
+import { NovaSenha } from './paginas/NovaSenha';
 import { NovoCliente } from './paginas/NovoCliente';
 import { PortalCliente } from './paginas/PortalCliente';
 
@@ -41,6 +42,18 @@ export default function App() {
       <Routes>
         <Route path="/g/:token" element={<AlbumPublico />} />
         <Route path="/a/:token" element={<Aprovar />} />
+      </Routes>
+    );
+  }
+
+  // A tela de senha tambem vem antes da sessao, e por um motivo que nao e
+  // obvio: o link de convite e o de recuperacao CRIAM uma sessao ao abrir. Se a
+  // checagem de sessao decidisse primeiro, a pessoa cairia dentro da plataforma
+  // sem nunca definir senha — entrava hoje e ficava trancada fora amanha.
+  if (/^\/nova-senha/.test(window.location.pathname)) {
+    return (
+      <Routes>
+        <Route path="/nova-senha" element={<NovaSenha />} />
       </Routes>
     );
   }

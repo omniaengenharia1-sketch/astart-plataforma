@@ -363,6 +363,7 @@ E os módulos:
 | `0039` | o dinheiro é só de quem cuida dele, o comercial fecha junto, e o admin ganha mudar papel e tirar cliente do ar |
 | `0040` | `primeiro_admin()` — a porta do primeiro dia, que se fecha sozinha |
 | `0041` | aprovar **sem conta**: `envio_por_token()`, `responder_por_token()`, revogar e os lotes na ficha |
+| `0042` | `search_path` fixo nas cinco que faltavam; as funções de token saem do alcance do navegador |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -383,7 +384,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Três armadilhas de RLS que já custaram caro aqui
+### Onze armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -463,6 +464,33 @@ e as duas funções rodam dentro do `using` da política do bucket. Um nome de
 arquivo fora da convenção fazendo `::uuid` estourar não derrubaria só aquele
 arquivo: derrubaria toda leitura de storage, para todo mundo. Por isso o regex
 vem antes do cast, e os testes `16` e `18` passam um caminho torto de propósito.
+
+A décima primeira: **comportamento certo com declaração frouxa passa em teste de
+comportamento.** Os 22 primeiros testes cobram o que a plataforma *faz* — o
+cliente errado não lê, o operador não vê valor, o token revogado não abre — e
+todos passavam enquanto cinco funções estavam sem `search_path` fixo (a terceira
+armadilha, violada no próprio código que a documenta) e três funções de token
+continuavam chamáveis direto do navegador. Quem achou foi o linter do Supabase,
+num banco de produção, com tudo já aplicado. O `23_smoke_declaracoes.sql` cobra
+a **propriedade** em vez do caso: nenhuma função de `public` sem `search_path`,
+nenhuma `_por_token` alcançável por `anon` ou `authenticated`, e a lista curta
+das que são só de `service_role`. Cobrar pelo sufixo, e não pela lista de nomes,
+faz a próxima função de token nascer coberta.
+
+As três do token eram **porta a mais, não cofre aberto**: o token continuava
+conferido contra o hash, mas o mesmo link podia ser gasto em
+`/rest/v1/rpc/galeria_por_token`, sem passar pela Edge Function — que é onde
+ficam o registro de acesso e o limite de tentativas. Duas portas e um vigia é o
+tipo de arranjo que ninguém desenha de propósito; nasce de uma permissão que
+ficou quando o desenho mudou. A `0042` revoga as duas e deixa `service_role`
+explícito.
+
+**O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
+`SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um
+descuido — o portão é dentro da função (`usuario_admin()`, `ve_valor_do_contrato()`,
+`cliente_tem_modulo()`), e `mudar_papel` ou `remover_cliente` recusam quem não
+pode. Trocar para `SECURITY INVOKER` quebraria a primeira armadilha desta mesma
+lista. Antes de "resolver" esse aviso, leia a 0032 e a 0039.
 
 E duas de teste:
 

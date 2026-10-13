@@ -94,4 +94,23 @@ esperadas=$(ls "$REPO"/supabase/migrations/*.sql | wc -l | tr -d ' ')
 echo "    livro-caixa: $registradas de $esperadas migrations registradas"
 [ "$registradas" = "$esperadas" ] || { echo "FALHOU: livro-caixa incompleto"; exit 1; }
 
+# Contar linha nao basta, e essa lacuna CUSTOU: a tabela nasceu so com
+# `version`, aceitou as 41 sem reclamar, e a ferramenta oficial quebrou com
+# "column name does not exist" — porque ela le `select version, name`. Contar
+# provava que o registro existia, nao que alguem conseguia ler.
+#
+# Entao a cobranca e a consulta DE VERDADE, a mesma que o CLI faz.
+if ! le "select version, name from supabase_migrations.schema_migrations order by version" > /dev/null 2>&1; then
+  echo "FALHOU: a ferramenta oficial nao consegue ler o livro-caixa."
+  echo "        colunas que existem:"
+  le "select string_agg(column_name, ', ' order by ordinal_position)
+        from information_schema.columns
+       where table_schema='supabase_migrations' and table_name='schema_migrations'"
+  echo "        o CLI espera: version, statements, name"
+  exit 1
+fi
+sem_nome=$(le "select count(*) from supabase_migrations.schema_migrations where name is null")
+[ "$sem_nome" = "0" ] || { echo "FALHOU: $sem_nome migrations registradas sem nome"; exit 1; }
+echo "OK  o livro-caixa responde a consulta do CLI, com nome em todas"
+
 echo "OK  $total blocos provados"

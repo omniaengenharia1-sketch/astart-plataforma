@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Botao } from '../componentes/Botao';
 import { Logo } from '../componentes/Marca';
-import { entrarComoExemplo } from '../dados/api';
+import { entrarComoExemplo, pedirLinkDeSenha } from '../dados/api';
 import { useSessao } from '../sessao';
 
 const CAMPO =
@@ -14,6 +14,14 @@ export function Entrar() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [esqueci, setEsqueci] = useState(false);
+  const [recado, setRecado] = useState<string | null>(
+    // Quem acabou de salvar a senha volta para ca. Sem este recado a tela de
+    // entrada parece a mesma de antes, e a pessoa nao sabe se salvou.
+    new URLSearchParams(window.location.search).get('senha') === 'trocada'
+      ? 'Senha salva. Entre com ela agora.'
+      : null,
+  );
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +36,24 @@ export function Entrar() {
     }
   }
 
+  async function mandarLink(e: React.FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    setRecado(null);
+    setEnviando(true);
+    try {
+      await pedirLinkDeSenha(email);
+      // Mesma frase para e-mail cadastrado e nao cadastrado, no condicional. A
+      // tela nao pode responder "essa pessoa trabalha aqui" para quem so ficou
+      // chutando enderecos.
+      setRecado('Se existe conta com esse e-mail, o link já está a caminho. Confira a caixa de entrada e o spam.');
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui enviar o link.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   async function comoExemplo(persona: 'dono' | 'equipe' | 'cliente') {
     await entrarComoExemplo(persona);
     await recarregar();
@@ -37,10 +63,20 @@ export function Entrar() {
     <div className="grid min-h-dvh place-items-center px-5 py-10 text-tinta">
       <main className="bloco entra w-full max-w-[26rem] p-7 sm:p-9">
         <Logo altura={38} />
-        <h1 className="titulao mt-7 text-[clamp(1.8rem,6vw,2.4rem)]">Entrar</h1>
-        <p className="mt-2 text-tinta-2">Use o e-mail do seu convite.</p>
+        <h1 className="titulao mt-7 text-[clamp(1.8rem,6vw,2.4rem)]">
+          {esqueci ? 'Recuperar acesso' : 'Entrar'}
+        </h1>
+        <p className="mt-2 text-tinta-2">
+          {esqueci
+            ? 'Diga o seu e-mail e eu mando um link para você criar uma senha nova.'
+            : 'Use o e-mail do seu convite.'}
+        </p>
 
-        <form onSubmit={(e) => void enviar(e)} className="mt-7 flex flex-col gap-4" noValidate>
+        <form
+          onSubmit={(e) => void (esqueci ? mandarLink(e) : enviar(e))}
+          className="mt-7 flex flex-col gap-4"
+          noValidate
+        >
           <label className="flex flex-col gap-2">
             <span className="rotulo-forte">E-mail</span>
             <input
@@ -53,17 +89,19 @@ export function Entrar() {
             />
           </label>
 
-          <label className="flex flex-col gap-2">
-            <span className="rotulo-forte">Senha</span>
-            <input
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              autoComplete="current-password"
-              required
-              className={CAMPO}
-            />
-          </label>
+          {!esqueci && (
+            <label className="flex flex-col gap-2">
+              <span className="rotulo-forte">Senha</span>
+              <input
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                autoComplete="current-password"
+                required
+                className={CAMPO}
+              />
+            </label>
+          )}
 
           {erro && (
             <p
@@ -74,9 +112,33 @@ export function Entrar() {
             </p>
           )}
 
+          {recado && (
+            <p className="rounded-[var(--raio-p)] border border-linha-fraca px-3.5 py-2.5 text-[13px] text-tinta-2">
+              {recado}
+            </p>
+          )}
+
           <Botao type="submit" variante="primario" disabled={enviando} className="mt-2 w-full">
-            {enviando ? 'Entrando…' : 'Entrar'}
+            {enviando
+              ? esqueci
+                ? 'Enviando…'
+                : 'Entrando…'
+              : esqueci
+                ? 'Mandar link'
+                : 'Entrar'}
           </Botao>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEsqueci(!esqueci);
+              setErro(null);
+              setRecado(null);
+            }}
+            className="self-start text-[12.5px] text-tinta-3 risca hover:text-pink-texto"
+          >
+            {esqueci ? 'Voltar para entrar com senha' : 'Esqueci minha senha'}
+          </button>
         </form>
 
         <div className="mt-8 border-t border-linha-fraca pt-5">

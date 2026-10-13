@@ -225,6 +225,49 @@ reaproveitar a aba logada provaria o caminho do portal, que já tem teste. Ele
 cobra também o que **não** pode aparecer ali: nada de "plataforma interna",
 "ajustes", "sair" nem campo de senha vazando da casca da equipe.
 
+## 4c. A senha: uma tela, três entradas
+
+Este caminho não existia, e o buraco era maior do que "falta um esqueci minha
+senha". A tela de entrada *dizia* "Primeiro acesso? Abra o link do convite para
+criar sua senha" — e a tela de criar senha nunca tinha sido feita. O convite
+chegava, a pessoa clicava, o link criava uma sessão e ela caía dentro da
+plataforma **sem nunca definir senha**: usava naquele dia e no dia seguinte não
+entrava mais. A primeira pessoa convidada descobriria isso, não a gente.
+
+Uma tela, `/nova-senha`, com três entradas e **textos diferentes para cada uma**,
+porque a pergunta na cabeça de quem chega é diferente:
+
+| como chegou | título | o que a pessoa precisa saber |
+|---|---|---|
+| convite | Crie sua senha | é o primeiro acesso, e depois entra com ela |
+| recuperação | Escolha uma senha nova | a antiga deixa de valer agora |
+| logada, trocando | Trocar senha | idem, sem drama |
+| link vencido | Este link não serve mais | **não** vê campo de senha: vê o pedido de outro link |
+
+A última linha é a decisão que importa. O Supabase devolve o fracasso no próprio
+endereço (`#error=access_denied&error_code=otp_expired`), não em erro de rede —
+então sem ler isso a tela mostraria um formulário bonito que falha ao salvar, e
+a pessoa tentaria três senhas antes de desconfiar do link. Formulário que não
+pode funcionar não deve aparecer.
+
+**A tela de senha vem antes da checagem de sessão**, junto com os dois links sem
+conta, e por um motivo que não é óbvio: o link de convite e o de recuperação
+*criam* sessão ao abrir. Se a sessão decidisse primeiro, a pessoa entraria na
+plataforma e a tela de senha nunca apareceria — que é exatamente o bug de
+origem.
+
+**O que a tela não conta:** se o e-mail existe. "Se existe conta com esse
+e-mail, o link já está a caminho" é a mesma frase para e-mail cadastrado e não
+cadastrado. A alternativa — "não achei essa conta" — transforma a tela de
+recuperação num conferidor de quem trabalha na agência, de graça, para qualquer
+pessoa da internet. O roteiro `senha` cobra as duas metades: que a frase
+condicional aparece, e que nenhuma variação de "não existe" aparece.
+
+Depois de salvar, a sessão do link **morre** e a pessoa volta para a entrada com
+um recado curto: *"Senha salva. Entre com ela agora."* Dava para mandar ela
+direto para dentro — e aí ela descobriria amanhã que guardou a senha errada.
+Melhor hoje, com o teclado ainda na mão.
+
 ## 5a. O tema segue o aparelho
 
 Sem botão, como no iPhone: `prefers-color-scheme` decide, e a plataforma vira

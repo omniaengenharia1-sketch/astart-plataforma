@@ -175,6 +175,89 @@ export async function entrar(email: string, senha: string): Promise<void> {
   }
 }
 
+/**
+ * Por que a pessoa chegou na tela de senha.
+ *
+ * Nao e enfeite de interface: cada caso precisa de um texto diferente e de um
+ * formulario diferente. Quem veio de um link que expirou nao pode ver um campo
+ * de senha que vai falhar ao salvar — precisa ver o pedido de um link novo.
+ */
+export type MotivoDoLink = 'convite' | 'recuperacao' | 'trocar' | 'expirado' | 'semLink';
+
+export async function motivoDoLink(): Promise<MotivoDoLink> {
+  // O Supabase devolve o fracasso no hash, nao em erro de rede: um link velho
+  // chega como `#error=access_denied&error_code=otp_expired`. Ler isso e o que
+  // separa "escolha uma senha" de "este link nao serve mais".
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  if (hash.get('error')) return 'expirado';
+
+  const tipo = hash.get('type');
+
+  if (!sb) {
+    // Em exemplo nao existe link de verdade. Sem pista no endereco, mostra o
+    // caso do convite: e o que precisa ser visto numa demonstracao.
+    if (tipo === 'recovery') return 'recuperacao';
+    if (personaExemplo !== null) return 'trocar';
+    return 'convite';
+  }
+
+  // `detectSessionInUrl` consome o endereco ao carregar, entao a sessao pode
+  // levar um instante para existir. Sem esta espera a primeira renderizacao
+  // diria "este link nao serve" para um link perfeitamente bom.
+  let sessao = (await sb.auth.getSession()).data.session;
+  if (!sessao && (tipo === 'invite' || tipo === 'recovery' || window.location.search.includes('code='))) {
+    await new Promise((r) => setTimeout(r, 600));
+    sessao = (await sb.auth.getSession()).data.session;
+  }
+
+  if (!sessao) return 'semLink';
+  if (tipo === 'invite') return 'convite';
+  if (tipo === 'recovery') return 'recuperacao';
+  return 'trocar';
+}
+
+export async function pedirLinkDeSenha(email: string): Promise<void> {
+  if (!email.includes('@')) throw new FalhaDados('Escreva um e-mail valido.');
+  if (!sb) return;
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/nova-senha`,
+  });
+
+  // Conta que nao existe NAO vira erro aqui, e e de proposito: a resposta tem
+  // de ser a mesma para e-mail cadastrado e nao cadastrado, senao esta tela
+  // vira um conferidor de quem trabalha na agencia para qualquer pessoa da
+  // internet. Quem decide isso e a mensagem na tela, que fala no condicional.
+  if (error) {
+    throw new FalhaDados(
+      /rate limit|too many/i.test(error.message)
+        ? 'Voce pediu varios links seguidos. Espere alguns minutos e tente de novo.'
+        : `Nao consegui enviar o link: ${error.message}`,
+    );
+  }
+}
+
+export async function definirSenha(senha: string): Promise<void> {
+  if (!sb) return;
+
+  const { error } = await sb.auth.updateUser({ password: senha });
+  if (error) {
+    throw new FalhaDados(
+      /should be at least|password.*short/i.test(error.message)
+        ? 'A senha e curta demais para o que o projeto exige.'
+        : /same.*password|different from the old/i.test(error.message)
+          ? 'Essa e a senha que voce ja usava. Escolha outra.'
+          : /session|jwt|expired/i.test(error.message)
+            ? 'O link que te trouxe aqui expirou antes de voce salvar. Peca outro e tente de novo.'
+            : `Nao consegui salvar a senha: ${error.message}`,
+    );
+  }
+
+  // A sessao do link morre aqui. A proxima entrada e com a senha digitada, o
+  // que faz a pessoa descobrir HOJE que guardou a senha errada, e nao amanha.
+  await sb.auth.signOut();
+}
+
 export async function entrarComoExemplo(persona: Persona): Promise<void> {
   usarPersona(persona);
 }
@@ -428,7 +511,14 @@ export async function convidar(pedido: PedidoDeConvite): Promise<void> {
     }
   }
 
-  const { error } = await sb.functions.invoke('convidar', { body: pedido });
+  // Para onde o convidado volta. A Edge Function sempre aceitou este campo — a
+  // tela e que nunca mandava, e sem ele o Supabase devolvia a pessoa para a
+  // raiz, onde ela caia dentro da plataforma SEM definir senha: entrava hoje e
+  // ficava trancada fora amanha. Quem monta o endereco e a plataforma, nao a
+  // tela, porque quem convida nao tem de saber disso.
+  const { error } = await sb.functions.invoke('convidar', {
+    body: { ...pedido, redirecionarPara: `${window.location.origin}/nova-senha` },
+  });
   if (!error) return;
 
   // A funcao responde { erro: "mensagem em portugues" } com status 4xx, e o

@@ -71,7 +71,7 @@ README-agendamento-meta.md      configuração do app Meta, System User e Vault
 
 ## O primeiro dia — ligar no Supabase
 
-Nesta ordem. O passo 4 é o que destranca a plataforma: num banco novo `perfis`
+Nesta ordem. O passo 5 é o que destranca a plataforma: num banco novo `perfis`
 está vazia, ninguém é admin, e a Edge Function de convite recusa todo mundo —
 inclusive a dona. A `0040` existe para isso, e se fecha sozinha depois.
 
@@ -115,7 +115,32 @@ segredo precisa sair do painel:
   segredos do repositório (a `migrations.yml` também pede
   `SUPABASE_DB_PASSWORD`), e de nada mais — o token fica no GitHub, não aqui.
 
-4. **A conta que administra.** Em *Authentication > Users*, crie a conta com o
+4. **O Auth, antes de convidar alguém.** Quatro ajustes em *Authentication*, e
+   os dois primeiros não são opcionais: sem eles o link de convite e o de
+   recuperação de senha voltam para o lugar errado, ou nem saem.
+
+   - *URL Configuration* → **Site URL** = o endereço do site no ar, e em
+     **Redirect URLs** acrescente `<site>/nova-senha` (e
+     `http://localhost:5173/nova-senha` para desenvolver). O Supabase recusa
+     redirecionar para endereço fora dessa lista, e a pessoa cai numa tela de
+     erro dele, em inglês.
+   - *Emails* → cole `supabase/emails/convite.html` em **Invite user** e
+     `supabase/emails/recuperar-senha.html` em **Reset password**. Os modelos de
+     fábrica estão em inglês e sem assinatura, e quem recebe é cliente da
+     agência.
+   - *Providers > Email* → ligue **Prevent use of leaked passwords**: confere a
+     senha contra a base do HaveIBeenPwned ao salvar. É de graça, e é o único
+     jeito de impedir que alguém da equipe use uma senha já vazada.
+   - *Providers > Email* → **Minimum password length = 8**, para o servidor
+     concordar com a tela (`MINIMO`, em `NovaSenha.tsx`). Com o padrão 6, o
+     navegador cobra 8 e o banco aceitaria 6 — e aí a regra depende de quem
+     pede, não de quem guarda.
+
+   O **SMTP de fábrica do Supabase é para teste**: poucas mensagens por hora e
+   sem garantia de entrega. Com a equipe inteira na plataforma, configure SMTP
+   próprio em *Settings > Authentication > SMTP*.
+
+5. **A conta que administra.** Em *Authentication > Users*, crie a conta com o
    seu e-mail. Depois, no editor SQL:
 
    ```sql
@@ -125,7 +150,7 @@ segredo precisa sair do painel:
    Ela promove essa conta a admin e, a partir daí, recusa: com um admin ativo a
    porta é o convite. Dali você convida o resto da equipe pela tela de Ajustes.
 
-5. **O front aponta para o banco.** Em `plataforma/.env.local`:
+6. **O front aponta para o banco.** Em `plataforma/.env.local`:
 
    ```
    VITE_SUPABASE_URL=https://<ref>.supabase.co
@@ -138,10 +163,10 @@ segredo precisa sair do painel:
 Sem o `.env.local` a plataforma abre em **modo exemplo**, com dados fictícios e
 um aviso no topo. Nada finge estar ligado.
 
-6. **O front no ar.** Projeto novo no Vercel, importando este repositório, com
+7. **O front no ar.** Projeto novo no Vercel, importando este repositório, com
    **Root Directory = `plataforma`**. O resto ele detecta (Vite, `npm run
    build`, saída em `dist`). Duas variáveis de ambiente, as mesmas públicas do
-   passo 5:
+   passo 6:
 
    ```
    VITE_SUPABASE_URL=https://<ref>.supabase.co
