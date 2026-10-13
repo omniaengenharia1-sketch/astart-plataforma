@@ -75,11 +75,7 @@ for (const fn of DO_CRON) {
 
 // E a prova de que as funções continuam RESPONDENDO, não só liberando: cada uma
 // recusa um pedido inválido com a própria mensagem, em vez do 404 do gateway.
-for (const [fn, espera] of [
-  ['aprovar', 404],
-  ['galeria', 404],
-  ['convidar', 401],
-]) {
+for (const fn of ['aprovar', 'galeria']) {
   const r = await fetch(`${BASE}/${fn}`, {
     method: 'POST',
     headers: { Origin: NOSSA, 'Content-Type': 'application/json' },
@@ -87,8 +83,29 @@ for (const [fn, espera] of [
   });
   const corpo = await r.text();
   cobrar(
-    r.status === espera && corpo.includes('erro') && r.headers.get('access-control-allow-origin') === NOSSA,
+    r.status === 404 && corpo.includes('erro') && r.headers.get('access-control-allow-origin') === NOSSA,
     `${fn}: recusa com a propria mensagem E com CORS (http ${r.status})`,
+  );
+}
+
+// A `convidar` é o caso oposto, e cobrar a mesma coisa dela era erro meu: com
+// `verify_jwt` ligado, um POST sem token NÃO chega na função — o gateway barra
+// antes, com mensagem dele e `allow-origin: *`. Eu exigia a mensagem da função
+// num caso em que ela não roda.
+//
+// Então a cobrança aqui é outra, e vale mais: que o portão do JWT continue
+// ligado. Se alguém publicar a `convidar` com `--no-verify-jwt` por descuido,
+// este teste cai — e a `convidar` sem JWT é porta aberta para criar convite.
+{
+  const r = await fetch(`${BASE}/convidar`, {
+    method: 'POST',
+    headers: { Origin: NOSSA, 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  const corpo = await r.text();
+  cobrar(
+    r.status === 401 && corpo.includes('UNAUTHORIZED_NO_AUTH_HEADER'),
+    `convidar: o portao do JWT barra antes da funcao (http ${r.status})`,
   );
 }
 

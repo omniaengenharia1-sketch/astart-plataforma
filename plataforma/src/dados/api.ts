@@ -556,6 +556,21 @@ export async function convidar(pedido: PedidoDeConvite): Promise<void> {
       /* fica a mensagem bruta, que e melhor que nada */
     }
   }
+
+  // Quando a chamada nao CHEGA na funcao, o supabase-js diz "Failed to send a
+  // request to the Edge Function" — em ingles, e sem dizer o que fazer. Foi o
+  // que a dona leu na tela quando faltava CORS: ela nao tinha como saber que o
+  // navegador havia bloqueado o pedido antes de sair.
+  //
+  // A regra do projeto e clara: todo erro vira mensagem legivel em portugues.
+  // Essa traducao existe para o dia em que isso acontecer de novo por outro
+  // motivo — rede caindo, funcao fora do ar, origem nova sem CORS.
+  if (/failed to send a request/i.test(mensagem) || /fetch/i.test(mensagem)) {
+    mensagem =
+      'O convite nao saiu: o navegador nao conseguiu falar com o servidor. ' +
+      'Confira a internet e tente de novo. Se insistir, me avise — pode ser a funcao de convite fora do ar.';
+  }
+
   throw new FalhaDados(mensagem);
 }
 
