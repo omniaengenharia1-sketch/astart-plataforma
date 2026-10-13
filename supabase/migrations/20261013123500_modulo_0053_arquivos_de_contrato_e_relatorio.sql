@@ -30,11 +30,21 @@
 --    responder isso. Efeito colateral bom: arquivo órfão (subiu, e o registro
 --    falhou) não é legível por ninguém além da equipe.
 --
--- 2. UPLOAD NÃO PUBLICA. `visivel_ao_cliente` nasce FALSO.
---    Proposta tem preço de custo, contrato em rascunho tem cláusula em
---    negociação. Nada neste sistema chega ao cliente sem um ato explícito —
---    envio, link, aprovação — e documento não vai ser a exceção. Quem anexa
---    decide depois se mostra.
+-- 2. O PADRÃO DEPENDE DO TIPO, e isso veio da dona.
+--    Eu havia escrito "upload não publica": tudo nasce invisível, e quem anexa
+--    decide depois. Perguntei, e a resposta foi outra: **o cliente vê sempre o
+--    contrato dele**. Faz sentido e eu não tinha pensado assim — o contrato
+--    assinado é dos dois, e esconder o documento que a pessoa assinou é
+--    burocracia, não cuidado.
+--
+--    Então: `contrato` nasce VISÍVEL; `proposta` e `outro` nascem invisíveis.
+--    A proposta é o caso que justifica o padrão — ela tem preço de custo e
+--    margem. E `outro` é onde cai relatório interno e resultado de NPS bruto,
+--    que também não é material de portal.
+--
+--    O default da COLUNA segue falso. Quem decide é a função, que sabe o tipo;
+--    uma linha inserida por outro caminho qualquer nasce fechada, que é o lado
+--    seguro de errar.
 --
 -- 3. O RELATÓRIO DE CAMPANHA É DO CLIENTE por natureza: é o que a agência
 --    entrega. Então ele não tem chave de visibilidade; vale o módulo
@@ -47,7 +57,9 @@ alter table public.cliente_documentos
   add column if not exists visivel_ao_cliente boolean not null default false;
 
 comment on column public.cliente_documentos.visivel_ao_cliente is
-  'Falso por padrao: anexar nao e publicar. Proposta tem preco de custo.';
+  'Quem decide o padrao e a funcao, que sabe o tipo: contrato nasce visivel, '
+  'proposta e outro nascem fechados. O default da coluna e falso porque linha '
+  'inserida por outro caminho tem de nascer fechada.';
 
 -- ---------------------------------------------------------------------------
 -- 2. O bucket
@@ -155,14 +167,18 @@ create or replace function public.registrar_documento_do_cliente(
   p_tipo     text,
   p_nome     text,
   p_caminho  text,
-  p_visivel  boolean default false
+  -- Nulo quer dizer "use o padrao do tipo", e nao "esconda". A tela manda nulo
+  -- no upload comum e manda explicito quando a pessoa marca a caixa.
+  p_visivel  boolean default null
 )
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
-declare v_id uuid;
+declare
+  v_id      uuid;
+  v_visivel boolean;
 begin
   if not public.usuario_edita() then
     raise exception 'Voce nao tem permissao para anexar documento.';
@@ -183,14 +199,18 @@ begin
       'consegue le-lo.', p_cliente;
   end if;
 
+  -- O padrao do TIPO. Contrato assinado e dos dois lados: esconder o documento
+  -- que a pessoa assinou e burocracia, nao cuidado.
+  v_visivel := coalesce(p_visivel, p_tipo = 'contrato');
+
   insert into public.cliente_documentos
     (cliente_id, tipo, nome, caminho, enviado_por, visivel_ao_cliente)
   values
     (p_cliente, p_tipo::public.tipo_documento, btrim(p_nome), p_caminho, auth.uid(),
-     coalesce(p_visivel, false))
+     v_visivel)
   returning id into v_id;
 
-  return jsonb_build_object('id', v_id, 'visivelAoCliente', coalesce(p_visivel, false));
+  return jsonb_build_object('id', v_id, 'visivelAoCliente', v_visivel);
 end;
 $$;
 

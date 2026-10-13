@@ -20,7 +20,14 @@ incompleto e perder o ciclo.
 
 ## 1. O que já está pronto
 
-| item | onde |
+> **O domínio foi decidido, e isto tem de ser feito ANTES de submeter.** A
+> plataforma vai para um subdomínio de `astartstudio.com.br`, que a Astart já
+> tem. Os três endereços abaixo entram no formulário do App Review, e trocar o
+> domínio depois de aprovado obriga a atualizar o app na Meta — em alguns casos,
+> a passar por análise de novo. Então o domínio primeiro, as URLs depois, a
+> submissão por último.
+
+| item | onde (hoje, no endereço provisório) |
 |---|---|
 | Política de privacidade | `https://astart-plataforma.pages.dev/privacidade` |
 | Termos de uso | `https://astart-plataforma.pages.dev/termos` |
@@ -56,7 +63,7 @@ horas é o token curto que o Graph API Explorer entrega por padrão. Era esse.
 2. **Adicionar ativos**: as Páginas e as contas de Instagram dos clientes, cada
    uma com **controle total**. Sem isto o token funciona e não alcança conta
    nenhuma — o erro vira "o token não alcança nenhuma Página", que é outro.
-3. **Gerar novo token**: escolha o app da Astart, marque os cinco escopos da
+3. **Gerar novo token**: escolha o app da Astart, marque os escopos da
    seção 3, e em **Expiração do token** escolha **Nunca**.
 4. Copie e guarde na hora: a Meta mostra uma vez só.
 5. No SQL Editor do Supabase, **troque** a chave (não é `create_secret`, que
@@ -130,6 +137,9 @@ Roteiro, em uma gravação só, sem edição:
 6. Voltar e clicar em **Postar agora** numa segunda peça. Esperar e mostrar o
    post **publicado no Instagram**, na conta conectada.
    *(Este trecho justifica `instagram_content_publish`.)*
+6b. Repetir numa peça com destino **Facebook**, e mostrar o post publicado na
+   Página. *(Este trecho justifica `pages_manage_posts`. Só gravável depois de
+   o adaptador da Página existir.)*
 7. Mostrar a página de **exclusão de dados** e dizer, em voz ou legenda, como o
    cliente revoga o acesso.
 
@@ -165,12 +175,16 @@ pedida sem aparecer no vídeo é motivo de reprovação do pedido inteiro.
 | `instagram_basic` | ler o nome e o identificador da conta, para a equipe confirmar que conectou a conta certa |
 | `pages_show_list` | listar as Páginas que o cliente autorizou, para a equipe escolher a conta certa na hora de conectar |
 | `pages_read_engagement` | ler o vínculo da Página com a conta de Instagram — é o que o caminho de Facebook Login exige para alcançar a conta |
+| `pages_manage_posts` | publicar na Página do Facebook do cliente, quando o contrato inclui Facebook |
 | `business_management` | ler esse vínculo dentro do Business Manager da agência, que é onde os ativos do cliente estão |
 
-O `pages_manage_posts` fica **fora** desta leva, de propósito: ele serve para
-publicar na Página do Facebook, e o adaptador do Facebook ainda não existe.
-Pedir permissão que o screencast não mostra é motivo de reprovação — e esta não
-teria como aparecer no vídeo, porque o botão nem publica lá ainda.
+> **O `pages_manage_posts` entrou depois.** Eu o havia tirado desta lista
+> escrevendo que o adaptador do Facebook não existe e que pedir permissão que o
+> screencast não mostra reprova o pedido. As duas frases continuam verdadeiras —
+> mas a dona respondeu que **precisa do Facebook**, não só do Instagram. Então a
+> ordem muda, não a regra: **o adaptador da Página tem de existir e aparecer no
+> vídeo antes da submissão.** Submeter as seis com o Facebook só no papel é
+> queimar o ciclo.
 
 Texto-base para o campo de justificativa (adapte, não copie cego):
 
@@ -211,10 +225,16 @@ Em *Facebook Login for Business → Configurações*:
    de mais nada.
 2. **Hoje:** conferir as três páginas públicas e me dizer se o texto está certo
    — o e-mail de contato nelas é um palpite meu (`contato@astartstudio.com.br`).
-3. **Depois do primeiro post de teste funcionar:** gravar o screencast. Gravar
+3. **Antes de qualquer submissão:** apontar o subdomínio de `astartstudio.com.br`
+   para a plataforma, e trocar as três URLs. Fazer isso depois custa uma
+   atualização no app da Meta e, no pior caso, outra análise.
+4. **Antes de gravar o vídeo:** escrever o adaptador do Facebook. A dona
+   confirmou que precisa dele, e o `pages_manage_posts` só se justifica se o
+   screencast mostrar um post na Página.
+5. **Depois do primeiro post de teste funcionar:** gravar o screencast. Gravar
    antes é perder o trabalho, porque o fluxo ainda vai mudar.
-4. **Com a verificação aprovada e o vídeo pronto:** submeter as cinco
-   permissões de uma vez.
+6. **Com a verificação aprovada e o vídeo pronto:** submeter as seis permissões
+   de uma vez.
 
 ---
 

@@ -90,16 +90,33 @@ begin
     '20000000-0000-0000-0000-000000000001/doc/contrato.pdf');
 
   perform public.afirma(v->>'id' is not null, 'anexou o contrato');
-  -- O ponto: anexar nao publica.
+  -- O padrao vem do TIPO, e foi a dona que decidiu: o cliente ve sempre o
+  -- contrato dele. Eu havia escrito o contrario — tudo nasce fechado — e a
+  -- pergunta me corrigiu.
   perform public.afirma(
-    not (v->>'visivelAoCliente')::boolean,
-    'o documento nasce INVISIVEL ao cliente — anexar nao e publicar'
+    (v->>'visivelAoCliente')::boolean,
+    'contrato nasce VISIVEL: o documento assinado e dos dois lados'
   );
 
-  -- E uma proposta, que e o caso que justifica o padrao: tem preco de custo.
-  perform public.registrar_documento_do_cliente(
+  -- E uma proposta, que e o caso que justifica o padrao fechado: tem preco de
+  -- custo e margem.
+  v := public.registrar_documento_do_cliente(
     '20000000-0000-0000-0000-000000000001', 'proposta', 'Proposta com margem',
     '20000000-0000-0000-0000-000000000001/doc/proposta.pdf');
+  perform public.afirma(
+    not (v->>'visivelAoCliente')::boolean,
+    'proposta nasce FECHADA'
+  );
+
+  -- E o explicito ganha do padrao, nos dois sentidos.
+  v := public.registrar_documento_do_cliente(
+    '20000000-0000-0000-0000-000000000001', 'contrato', 'Contrato em negociacao',
+    '20000000-0000-0000-0000-000000000001/doc/rascunho.pdf', false);
+  perform public.afirma(
+    not (v->>'visivelAoCliente')::boolean,
+    'contrato marcado como fechado continua fechado — rascunho em negociacao'
+  );
+  perform public.remover_documento_do_cliente((v->>'id')::uuid);
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -112,9 +129,10 @@ declare
 begin
   perform set_config('teste.uid', '20000000-0000-0000-0000-00000000000a', false);
   v := public.documentos_do_cliente('20000000-0000-0000-0000-000000000001');
+  perform public.afirma(jsonb_array_length(v) = 1, 'o cliente ve um documento');
   perform public.afirma(
-    jsonb_array_length(v) = 0,
-    'o cliente nao ve nenhum dos dois ainda — nem a proposta com margem'
+    v->0->>'tipo' = 'contrato',
+    'e e o contrato, NAO a proposta com margem'
   );
 
   -- A equipe ve os dois.
@@ -122,18 +140,22 @@ begin
   v := public.documentos_do_cliente('20000000-0000-0000-0000-000000000001');
   perform public.afirma(jsonb_array_length(v) = 2, 'a equipe ve os dois');
 
-  -- Mostra SO o contrato.
+  -- Esconder o contrato tambem tem de funcionar: contrato substituido por uma
+  -- versao nova nao fica dos dois jeitos no portal.
   select id into v_doc from public.cliente_documentos
    where cliente_id = '20000000-0000-0000-0000-000000000001' and tipo = 'contrato';
-  perform public.mudar_visibilidade_do_documento(v_doc, true);
+  perform public.mudar_visibilidade_do_documento(v_doc, false);
 
   perform set_config('teste.uid', '20000000-0000-0000-0000-00000000000a', false);
-  v := public.documentos_do_cliente('20000000-0000-0000-0000-000000000001');
-  perform public.afirma(jsonb_array_length(v) = 1, 'o cliente passa a ver um');
   perform public.afirma(
-    v->0->>'tipo' = 'contrato',
-    'e e o contrato, nao a proposta'
+    jsonb_array_length(public.documentos_do_cliente('20000000-0000-0000-0000-000000000001')) = 0,
+    'escondido, o cliente nao ve mais'
   );
+
+  -- E de volta, que e o estado que o resto do teste espera.
+  perform set_config('teste.uid', '10000000-0000-0000-0000-000000000001', false);
+  perform public.mudar_visibilidade_do_documento(v_doc, true);
+  perform set_config('teste.uid', '20000000-0000-0000-0000-00000000000a', false);
 
   -- A politica do bucket concorda com a funcao: a autoridade e a LINHA.
   perform public.afirma(
