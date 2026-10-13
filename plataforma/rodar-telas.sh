@@ -63,7 +63,10 @@ done
 echo
 # Um roteiro novo que ninguem poe na lista acima tambem e roteiro que nao roda.
 # Entao a lista e conferida contra o disco, nos dois sentidos.
-no_disco=$(ls *.mjs 2>/dev/null | sed 's/\.mjs$//' | grep -vx -e navegador -e aovivo | sort)
+# Fora da lista de proposito: `navegador` e biblioteca, `aovivo` bate no site
+# publicado, e `onde-fica` so tira foto de onde um botao esta — nao verifica
+# nada, entao passar ou falhar nao diz nada sobre a plataforma.
+no_disco=$(ls *.mjs 2>/dev/null | sed 's/\.mjs$//' | grep -vx -e navegador -e aovivo -e onde-fica | sort)
 na_lista=$(printf '%s\n' "${ROTEIROS[@]}" | sort)
 esquecidos=$(comm -23 <(echo "$no_disco") <(echo "$na_lista"))
 if [ -n "$esquecidos" ]; then
