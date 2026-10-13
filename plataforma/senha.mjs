@@ -18,6 +18,34 @@ const SAIDA = process.env.SAIDA ?? './tiros';
 const falhas = [];
 const cobrar = (ok, o) => { if (!ok) falhas.push(o); console.log(`${ok ? 'OK  ' : 'FALHOU  '}${o}`); };
 
+// `networkidle` nao serve contra o projeto de verdade: o cliente Supabase
+// mantem conexao e renova token, entao a rede nunca fica parada e o `goto`
+// estoura em 30s. Mesma licao do tema.mjs — espere a CONDICAO, nao o relogio
+// nem o silencio da rede.
+//
+// E tenta de novo, porque a rede do ambiente de teste oscila: medi o mesmo
+// arquivo de 627 KB baixando a 512 KB/s e a 13 KB/s em tentativas seguidas,
+// com DNS e conexao instantaneos — e o proxy, nao a hospedagem.
+//
+// A nova tentativa e CONTADA e aparece no fim. Repeticao silenciosa esconderia
+// lentidao de verdade: um site que precisa de tres tentativas para abrir e um
+// problema, e um teste que conserta isso sozinho mente sobre a experiencia de
+// quem usa.
+let tentativasExtras = 0;
+
+async function abrir(p, endereco) {
+  for (let tentativa = 1; tentativa <= 3; tentativa += 1) {
+    try {
+      await p.goto(endereco, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await p.getByRole('heading').first().waitFor({ state: 'visible', timeout: 20000 });
+      if (tentativa > 1) tentativasExtras += tentativa - 1;
+      return;
+    } catch (e) {
+      if (tentativa === 3) throw e;
+    }
+  }
+}
+
 const navegador = await abrirNavegador();
 const ctx = await navegador.newContext({ viewport: { width: 1280, height: 980 } });
 const p = await ctx.newPage();
@@ -25,7 +53,7 @@ const problemas = [];
 p.on('pageerror', (e) => problemas.push(e.message));
 
 // --- 1. esqueci minha senha, da tela de entrada ------------------------------
-await p.goto(BASE, { waitUntil: 'networkidle' });
+await abrir(p, BASE);
 
 // Modo exemplo ou projeto de verdade? A diferenca nao e cosmetica: sem cliente
 // Supabase nada consome o hash do endereco, e foi exatamente isso que escondeu
@@ -43,8 +71,18 @@ cobrar(
   'o campo de senha sai de cena quando so o e-mail importa',
 );
 
-await p.locator('input[type=email]').fill('ninguem@exemplo.com');
+await p.locator('input[type=email]').fill('ninguem@exemplo.com.br');
 await p.getByRole('button', { name: 'Mandar link' }).click();
+
+// ESPERA a resposta aparecer. Ler `innerText` logo depois do clique passava em
+// modo exemplo, onde nao ha rede, e reprovava contra o site real — onde existe
+// uma chamada HTTP no meio. O teste estava medindo a velocidade da rede e
+// chamando aquilo de bug da tela.
+await p
+  .locator('p', { hasText: /Se existe conta com esse e-mail|Não consegui enviar/ })
+  .first()
+  .waitFor({ state: 'visible', timeout: 40000 })
+  .catch(() => {});
 const resposta = await p.locator('body').innerText();
 cobrar(/Se existe conta com esse e-mail/.test(resposta), 'a resposta fala no condicional');
 cobrar(
@@ -61,9 +99,7 @@ await p.screenshot({ path: `${SAIDA}/senha-1-esqueci.png` });
 // "este link nao serve mais" — perdia a unica informacao que explicava por que
 // o dela nao funcionou. Em modo exemplo nao ha cliente, ninguem limpa o hash, e
 // a cobranca passava sem tocar no caminho que quebrava.
-await p.goto(`${BASE}/nova-senha#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`, {
-  waitUntil: 'networkidle',
-});
+await abrir(p, `${BASE}/nova-senha#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`);
 cobrar(
   await p.getByRole('heading', { name: 'Este link não serve mais' }).isVisible(),
   'link expirado e reconhecido pelo que o Supabase devolve no endereco',
@@ -81,7 +117,7 @@ await p.screenshot({ path: `${SAIDA}/senha-2-expirado.png` });
 // tem de ver o pedido, nao um formulario de senha. No exemplo nao existe link
 // possivel, entao a tela mostra o caso do convite — e e o unico jeito de
 // exercitar as validacoes do formulario sem um e-mail real no caminho.
-await p.goto(`${BASE}/nova-senha`, { waitUntil: 'networkidle' });
+await abrir(p, `${BASE}/nova-senha`);
 
 if (!exemplo) {
   cobrar(
@@ -125,7 +161,7 @@ for (const claro of [false, true]) {
     ['convite', `${BASE}/nova-senha`],
     ['expirado', `${BASE}/nova-senha#error=access_denied&error_code=otp_expired`],
   ]) {
-    await p2.goto(endereco, { waitUntil: 'networkidle' });
+    await abrir(p2, endereco);
     await p2.evaluate(AXE);
     const r = await p2.evaluate((cfg) => window.axe.run(document, cfg), CONFIG);
     const graves = r.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
@@ -138,6 +174,9 @@ for (const claro of [false, true]) {
 }
 
 cobrar(problemas.length === 0, `nenhum erro de pagina (${problemas.length})`);
+if (tentativasExtras > 0) {
+  console.log(`    ATENCAO: ${tentativasExtras} nova(s) tentativa(s) de abrir a pagina. Se nao for a rede do teste, e lentidao do site.`);
+}
 if (problemas.length) console.log(problemas.map((x) => `    ${x}`).join('\n'));
 
 await navegador.close();
