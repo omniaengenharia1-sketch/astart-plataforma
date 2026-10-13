@@ -14,9 +14,10 @@
  */
 import { derivadasDe, ehVideo } from './derivadas';
 import { FalhaDados } from './api';
+import { FORMATOS, recusaDoArquivo } from './formatos';
 import { anotarMidiaExemplo } from './mock';
 import { sb } from './supabase';
-import type { MidiaDaPeca } from './tipos';
+import type { MidiaDaPeca, TipoPeca } from './tipos';
 
 const BALDE = 'midias-posts';
 
@@ -31,44 +32,30 @@ export class FalhaDeMidia extends Error {}
  * essa licao duas vezes nesta semana: ambiente de teste que nao chega onde a
  * realidade chega testa so o caminho facil.
  *
- * As regras da Meta sao repetidas aqui de proposito, e ficam proximas das do
- * banco: se as duas discordarem, o roteiro acusa.
+ * As regras vem de `./formatos`, nao reescritas aqui. Reescritas, era onde
+ * elas apodreciam: este arquivo tinha a sua propria tabela de limites, e nela
+ * carrossel aceitava `os_dois` — ou seja, o modo exemplo APROVAVA video em
+ * carrossel, que o banco recusa desde a 0056. Como os roteiros de navegador
+ * rodam justamente no modo exemplo, nenhum deles podia pegar a divergencia.
+ * Ambiente de teste mais generoso que a producao testa so o caminho facil.
  */
-const LIMITES: Record<string, { max: number; aceita: 'imagem' | 'video' | 'os_dois' }> = {
-  imagem: { max: 1, aceita: 'imagem' },
-  carrossel: { max: 10, aceita: 'os_dois' },
-  reel: { max: 1, aceita: 'video' },
-  story: { max: 1, aceita: 'os_dois' },
-};
-
 const EXEMPLO = new Map<string, MidiaDaPeca[]>();
 
 function exemploDaPeca(postId: string): MidiaDaPeca[] {
   return EXEMPLO.get(postId) ?? [];
 }
 
-function subirExemplo(postId: string, tipo: string, arquivo: File): void {
-  const regra = LIMITES[tipo] ?? { max: 1, aceita: 'os_dois' as const };
+function subirExemplo(postId: string, tipo: TipoPeca, arquivo: File): void {
+  const regra = FORMATOS[tipo];
   const lista = exemploDaPeca(postId);
-  const ehImagem = arquivo.type.startsWith('image/');
-  const video = arquivo.type.startsWith('video/');
 
-  if (lista.length >= regra.max) {
-    throw new FalhaDeMidia(`Esta peca (${tipo}) aceita no maximo ${regra.max} arquivo(s), e ja tem ${lista.length}.`);
+  if (lista.length >= regra.maximo) {
+    throw new FalhaDeMidia(`Esta peca (${tipo}) aceita no maximo ${regra.maximo} arquivo(s), e ja tem ${lista.length}.`);
   }
-  if (regra.aceita === 'imagem' && !ehImagem) {
-    throw new FalhaDeMidia(`Peca de imagem aceita foto, nao ${arquivo.type}.`);
-  }
-  // A mesma regra da 0047: a Meta publica imagem so em JPEG. Repetida aqui de
-  // proposito — se as duas discordarem, o roteiro acusa.
-  if (ehImagem && !['image/jpeg', 'image/jpg'].includes(arquivo.type)) {
-    throw new FalhaDeMidia(
-      `A Meta publica imagem so em JPEG, e este arquivo e ${arquivo.type}. Exporte como JPG.`,
-    );
-  }
-  if (regra.aceita === 'video' && !video) {
-    throw new FalhaDeMidia(`Reel aceita video, nao ${arquivo.type}.`);
-  }
+
+  // A mesma recusa que a `registrar_midia_post` daria, com a mesma frase.
+  const recusa = recusaDoArquivo(tipo, arquivo.type);
+  if (recusa) throw new FalhaDeMidia(recusa);
 
   lista.push({
     id: crypto.randomUUID(),
@@ -123,7 +110,7 @@ export async function subirMidiaDaPeca(
   clienteId: string,
   arquivo: File,
   aoProgredir: (fracao: number) => void,
-  tipo = 'imagem',
+  tipo: TipoPeca = 'imagem',
 ): Promise<void> {
   if (!sb) {
     aoProgredir(0.4);

@@ -390,7 +390,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Dezoito armadilhas que já custaram caro aqui
+### Dezenove armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -638,6 +638,37 @@ aplicar schema produzem duas verdades**, e a que ninguém olha é a que
 envelhece. Esteira que nunca rodou não é esteira, e o jeito de descobrir isso
 não pode ser alguém tropeçar nela por acaso: o README passa a mandar conferir
 que os dois workflows estão verdes, com este parágrafo como motivo.
+
+A décima nona: **o modo exemplo era mais generoso que a produção, e é nele que
+os roteiros de navegador rodam.** A `0056` estreitou o carrossel para só imagem
+(ver a décima sétima). A tela ficou com **duas** cópias da regra antiga, as duas
+erradas: `PEDE.carrossel` dizia "de 2 a 10 fotos JPG **ou vídeos**", e o
+`LIMITES` do `pecaMidia.ts` — o do modo exemplo — tinha `aceita: 'os_dois'`.
+
+A segunda é a que importa. Os quinze roteiros de tela entram pelas personas de
+exemplo, sem banco: arrastar um vídeo num carrossel **passava** em todos eles. A
+regra certa estava no Postgres, onde roteiro de navegador não chega. Nenhum
+teste podia pegar — não porque faltasse um teste, mas porque **o ambiente de
+teste aceitava o que a produção recusa**. É a mesma falha da décima quarta e da
+décima sétima vista de um terceiro ângulo: ali a verificação era menos exigente
+que a realidade por usar `curl` em vez do adaptador; aqui, por usar um dublê
+mais permissivo que o original.
+
+O conserto tem três partes. As duas cópias foram apagadas e derivam de
+`plataforma/src/dados/formatos.ts`, única declaração do lado da tela; o modo
+exemplo recusa com a **mesma frase** que a `registrar_midia_post` usaria; e o
+`provar-canais.mjs` passou a comparar **três** listas em vez de duas —
+adaptador, tela e banco, com o banco como eixo. O `compositor.mjs` arrasta um
+`video/mp4` num carrossel e cobra a recusa; quebrar a regra de propósito fez o
+roteiro falhar, que é a única prova de que ele morde.
+
+Duas notas de método que saíram daqui. Uma: `cobrar(/Reel/.test(texto), …)`
+passava mesmo sem a recusa, porque "Reel" é também o nome de um chip na mesma
+tela — a verificação virou a frase inteira (`ou um Reel para o video`).
+Verificação que não morde é pior que nenhuma: ela dá confiança. Outra: o
+`accept` do seletor de arquivo passou a sair da regra do formato, então num
+carrossel o seletor **não mostra vídeo**. Deixar escolher para recusar depois é
+fazer a pessoa descobrir batendo.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um

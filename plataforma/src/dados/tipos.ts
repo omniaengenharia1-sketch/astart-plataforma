@@ -454,6 +454,27 @@ export interface ContaSocial {
   prontaParaPublicar: boolean;
 }
 
+/**
+ * Um canal: UMA conta em UM formato (migration 0055).
+ *
+ * É a unidade da escolha no compositor, e existe porque perguntar "formato?" e
+ * "onde publica?" separado deixava montar combinação impossível — Reel numa
+ * Página do Facebook, que não tem adaptador. O banco responde a pergunta
+ * inteira, com o motivo quando o canal não publica.
+ */
+export interface Canal {
+  contaId: string;
+  conta: string;
+  plataforma: 'instagram' | 'facebook';
+  tipo: TipoPeca;
+  publicavel: boolean;
+  /** Preenchido sempre que `publicavel` é falso: chip apagado sem motivo é o pior. */
+  motivo: string | null;
+  minimo: number;
+  maximo: number;
+  natureza: 'imagem' | 'video' | 'imagem_ou_video';
+}
+
 /** O que a Meta devolve quando perguntamos o que o token alcança. */
 export interface ContaDescoberta {
   pageId: string;

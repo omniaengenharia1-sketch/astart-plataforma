@@ -15,6 +15,7 @@ import {
   painelEquipeExemplo,
   calendarioExemplo, campanhasExemplo, catalogoExemplo, convidarExemplo, criarClienteExemplo,
   criarGaleriaExemplo, criarLinkAprovacaoExemplo, criarLinkExemplo, criarPecaExemplo,
+  canaisDoClienteExemplo,
   conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
   conferirTokenExemplo,
   criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
@@ -28,7 +29,7 @@ import {
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
-  Album, AmbientesDoCliente, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
+  Album, AmbientesDoCliente, Canal, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao,
   Publicacao, PublicacaoNova,
   EnvioNaFicha, EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente,
@@ -677,6 +678,22 @@ export async function contasDoCliente(clienteId: string): Promise<ContaSocial[]>
   const { data, error } = await sb.rpc('contas_do_cliente', { p_cliente: clienteId });
   if (error) throw new FalhaDados(`Nao consegui ler as contas: ${error.message}`);
   return (data as ContaSocial[] | null) ?? [];
+}
+
+/**
+ * Os canais do cliente: uma linha por (conta × formato), com o motivo quando
+ * aquele canal nao publica (0055).
+ *
+ * E UMA pergunta, nao duas. O compositor perguntava "formato?" e "onde
+ * publica?" separado, e isso deixava montar Reel numa Pagina do Facebook, que
+ * nao tem adaptador. A tela aceitava, o banco aceitava, e a recusa vinha na
+ * hora de publicar — de madrugada, com o cliente sem receber nada.
+ */
+export async function canaisDoCliente(clienteId: string): Promise<Canal[]> {
+  if (!sb) return canaisDoClienteExemplo(clienteId);
+  const { data, error } = await sb.rpc('canais_do_cliente', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Nao consegui ler os canais: ${error.message}`);
+  return (data as Canal[] | null) ?? [];
 }
 
 /**

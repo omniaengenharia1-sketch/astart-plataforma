@@ -5,6 +5,7 @@
  * divergissem, e a que divergisse seria a menos usada, descoberta por último.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { FORMATOS, PEDE } from '../dados/formatos';
 import { midiasDaPeca, removerMidiaDaPeca, subirMidiaDaPeca } from '../dados/pecaMidia';
 import type { MidiaDaPeca, StatusPublicacao, TipoPeca } from '../dados/tipos';
 
@@ -15,13 +16,12 @@ export interface PecaParaMidia {
   statusPublicacao: StatusPublicacao;
 }
 
-/** Quantos arquivos cada tipo de peça pede. O banco cobra; a tela avisa antes. */
-export const PEDE: Record<TipoPeca, string> = {
-  imagem: '1 foto JPG',
-  carrossel: 'de 2 a 10 fotos JPG ou vídeos',
-  reel: '1 vídeo',
-  story: '1 foto JPG ou vídeo',
-};
+/** O `accept` do seletor de arquivos, por natureza. JPEG só, porque a Meta só. */
+const ACEITA = {
+  imagem: 'image/jpeg',
+  video: 'video/*',
+  imagem_ou_video: 'image/jpeg,video/*',
+} as const;
 
 /**
  * O arquivo da peça, arrastado na própria peça.
@@ -169,14 +169,18 @@ export function MidiaDaPecaPainel({
           }
         >
           {subindo === null ? (
-            <span>arraste o arquivo aqui, ou clique para escolher — foto em JPG</span>
+            <span>arraste o arquivo aqui, ou clique para escolher — {PEDE[peca.tipo]}</span>
           ) : (
             <span className="numeros">subindo… {Math.round(subindo * 100)}%</span>
           )}
+          {/* O `accept` segue o formato da peça em vez de aceitar tudo: num
+              carrossel o seletor de arquivos nem mostra vídeo, porque o banco
+              recusaria (0056). Deixar escolher para recusar depois é fazer a
+              pessoa descobrir batendo. */}
           <input
             type="file"
-            multiple
-            accept="image/jpeg,video/*"
+            multiple={FORMATOS[peca.tipo].maximo > 1}
+            accept={ACEITA[FORMATOS[peca.tipo].natureza]}
             className="hidden"
             onChange={(e) => void receber(e.target.files)}
           />

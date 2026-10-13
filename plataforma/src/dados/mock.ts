@@ -8,7 +8,7 @@
 // tem a sua propria verdade engana quem esta avaliando o fluxo.
 // =============================================================================
 import type {
-  Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
+  Canal, Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao, Publicacao, PublicacaoNova,
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
   EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
@@ -22,6 +22,7 @@ import type {
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
 } from './tipos';
 
+import { CANAIS, FORMATOS, ORDEM_FORMATOS } from './formatos';
 import { sluguificar } from '../formato';
 import { publico } from '../publico';
 
@@ -996,6 +997,58 @@ export function anotarMidiaExemplo(id: string, midias: unknown[]): void {
 
 export function contasDoClienteExemplo(clienteId: string): ContaSocial[] {
   return CONTAS_EXEMPLO.get(clienteId) ?? [];
+}
+
+/**
+ * Os canais do cliente no modo exemplo — a mesma resposta da
+ * `canais_do_cliente` (0055), montada das mesmas listas que a tela usa.
+ *
+ * Montada, nao escrita a mao: lista escrita a mao aqui seria a QUINTA copia da
+ * regra de formato, e seria a que divergisse — e divergir no modo exemplo e o
+ * pior lugar, porque e onde os roteiros de navegador rodam.
+ *
+ * A ordem copia a da funcao do banco: Instagram antes de Facebook, formato na
+ * ordem em que a agencia pensa, e canal que publica antes do que nao publica.
+ */
+export function canaisDoClienteExemplo(clienteId: string): Canal[] {
+  const contas = CONTAS_EXEMPLO.get(clienteId) ?? [];
+  const canais: Canal[] = [];
+
+  for (const c of contas) {
+    for (const tipo of ORDEM_FORMATOS) {
+      const regra = FORMATOS[tipo];
+      const linha = CANAIS.find((x) => x.plataforma === c.plataforma && x.tipo === tipo);
+      // A conta antes do formato, como no banco: conta desligada nao publica em
+      // formato nenhum, e dizer "o Facebook nao faz reel" para uma conta
+      // desligada seria responder a pergunta errada.
+      const recusaDaConta = !c.ativo
+        ? 'Esta conta está desligada na plataforma.'
+        : c.acessoParceiro !== 'concedido'
+          ? `O acesso de parceiro desta conta está ${c.acessoParceiro}. Confira no Business Manager.`
+          : c.plataforma === 'instagram' && !c.igUserId
+            ? 'Falta o id do Instagram desta conta. Reconecte-a.'
+            : null;
+
+      const publicavel = recusaDaConta === null && (linha?.publicavel ?? false);
+      canais.push({
+        contaId: c.id,
+        conta: c.nome,
+        plataforma: c.plataforma,
+        tipo,
+        publicavel,
+        motivo: publicavel ? null : (recusaDaConta ?? linha?.motivo ?? 'Canal sem regra.'),
+        minimo: regra.minimo,
+        maximo: regra.maximo,
+        natureza: regra.natureza,
+      });
+    }
+  }
+
+  const peso = (x: Canal) =>
+    (x.plataforma === 'instagram' ? 0 : 100) +
+    ORDEM_FORMATOS.indexOf(x.tipo) +
+    (x.publicavel ? 0 : 50);
+  return canais.sort((a, b) => peso(a) - peso(b));
 }
 
 export function descobrirContasExemplo(): ContaDescoberta[] {

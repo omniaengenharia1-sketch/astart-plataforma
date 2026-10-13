@@ -1,5 +1,5 @@
 // O compositor: a publicação inteira numa tela, do jeito que a dona descreveu —
-// arquivo, rede, formato, legenda, hashtags, e embaixo agendar ou postar agora.
+// arquivo, canal, legenda, hashtags, e embaixo agendar ou postar agora.
 //
 // O que este roteiro cobra é a corrente, não os campos: criar o rascunho,
 // anexar o que o formato pede, e só então poder agendar. Três coisas que ele
@@ -11,6 +11,15 @@
 //     num, a contagem que autoriza o agendamento no outro.
 //   - "Postar agora" fechava o compositor junto com a confirmação. A pessoa
 //     clicava, o painel desaparecia, e ela ficava sem saber se saiu.
+//
+// Depois da 0055 ele cobra mais duas, e as duas são sobre a tela mentir:
+//
+//   - o canal é UMA escolha (conta × formato), e a fileira de chips aparece por
+//     perfil, com o @ em cima. Duas perguntas separadas deixavam montar Reel
+//     numa Página do Facebook.
+//   - carrossel com vídeo é RECUSADO no anexo, com a frase que diz que a
+//     limitação é nossa. O modo exemplo aceitava — e é nele que este roteiro
+//     roda, então a mentira era invisível para todos os roteiros.
 import { abrirNavegador } from './navegador.mjs';
 import { readFileSync } from 'node:fs';
 
@@ -26,6 +35,8 @@ const JPG = Buffer.from(
   'base64',
 );
 const foto = (nome) => ({ name: nome, mimeType: 'image/jpeg', buffer: JPG });
+// Um "vídeo" de um byte: o que importa aqui é o mime, que é o que a regra lê.
+const video = (nome) => ({ name: nome, mimeType: 'video/mp4', buffer: Buffer.from([0]) });
 
 const navegador = await abrirNavegador();
 const ctx = await navegador.newContext({ viewport: { width: 1400, height: 1500 } });
@@ -45,7 +56,10 @@ const painel = () => p.locator('section', { hasText: 'nova publicação' }).firs
 
 const inicio = await painel();
 cobrar(/NOME INTERNO/i.test(inicio), 'o compositor pede o nome interno');
-cobrar(/FORMATO/i.test(inicio) && /Carrossel/.test(inicio), 'oferece os quatro formatos');
+cobrar(
+  /ONDE E EM QUE FORMATO/i.test(inicio) && /Carrossel/.test(inicio),
+  'pergunta o canal — rede e formato juntos — e oferece os quatro formatos',
+);
 cobrar(/LEGENDA/i.test(inicio) && /HASHTAGS/i.test(inicio), 'legenda e hashtags em campos separados');
 cobrar(/QUANDO/i.test(inicio), 'e a hora de publicar');
 // Dito no comeco, nao no botao: e o que faz a publicacao nao sair.
@@ -53,8 +67,73 @@ cobrar(
   /não tem conta conectada/i.test(inicio),
   'avisa de cara quando o cliente nao tem conta conectada',
 );
+// Sem conta nao ha canal, e sem canal nao haveria como escolher formato: a
+// publicacao nasceria sempre "Post". Escrever e guardar sem conta e caminho de
+// proposito, entao os quatro chips de formato continuam de pe.
+cobrar(
+  !(await p.getByRole('button', { name: 'Carrossel' }).isDisabled()),
+  'e sem conta conectada ainda da para escolher o formato e guardar o rascunho',
+);
 
-// --- o caminho -------------------------------------------------------------
+// --- o canal: uma escolha, por perfil (0055) -------------------------------
+//
+// Conecta uma conta de verdade pelo caminho da tela e volta ao compositor. Sem
+// isto, este roteiro so veria o compositor no estado em que ele tem MENOS a
+// dizer — o estado sem conta, que e justamente o que a fileira de chips nao
+// exercita.
+await p.getByRole('button', { name: 'Fechar' }).first().click();
+await p.getByRole('button', { name: 'Conectar conta' }).click();
+await p.getByText('o que o token da agência alcança').waitFor({ timeout: 10000 });
+await p.getByRole('button', { name: 'Ligar a este cliente' }).first().click();
+await p.waitForTimeout(700);
+
+await p.getByRole('button', { name: 'Nova publicação' }).click();
+await p.getByText('nova publicação').first().waitFor({ timeout: 10000 });
+const comConta = await painel();
+cobrar(
+  /@mormarcas/i.test(comConta),
+  'com a conta ligada, a fileira de chips vem com o @ do perfil em cima',
+);
+cobrar(
+  !/não tem conta conectada/i.test(comConta),
+  'e o aviso de "sem conta" sai da tela',
+);
+cobrar(
+  (await p.locator('button[aria-pressed]').count()) >= 4,
+  'os chips de canal sao botoes de alternancia, nao caixas de marcar',
+);
+// Sem conta o padrao era Post; com conta, o primeiro canal que publica manda —
+// e ele e o Post do Instagram. Quem tem um perfil so nao marca nada.
+cobrar(
+  (await p.locator('button[aria-pressed=true]').count()) === 1,
+  'um canal ja vem marcado: quem tem um perfil so nao precisa marcar nada',
+);
+
+// --- carrossel com video e recusado NO ANEXO (0056) ------------------------
+await p.getByLabel('Nome interno').fill('Carrossel de teste');
+await p.getByRole('button', { name: 'Carrossel' }).click();
+await p.getByRole('button', { name: 'Criar rascunho' }).click();
+await p.waitForTimeout(800);
+await p.locator('input[type=file]').first().setInputFiles(video('clipe.mp4'));
+await p.waitForTimeout(800);
+const recusa = await painel();
+cobrar(
+  /limitacao nossa/i.test(recusa) && /nao da Meta/i.test(recusa),
+  'carrossel com video e recusado no anexo, dizendo que a limitacao e NOSSA',
+);
+// A frase inteira, nao so a palavra "Reel": "Reel" aparece tambem no chip do
+// formato, entao a versao curta desta verificacao passava mesmo com a recusa
+// ausente. Verificacao que nao morde e pior que verificacao nenhuma — ela da
+// confianca.
+cobrar(
+  /ou um Reel para o video/i.test(recusa),
+  'e a recusa diz o que fazer em vez de so dizer que nao pode',
+);
+
+// --- e o caminho que funciona ---------------------------------------------
+await p.getByRole('button', { name: 'Fechar' }).first().click();
+await p.getByRole('button', { name: 'Nova publicação' }).click();
+await p.getByText('nova publicação').first().waitFor({ timeout: 10000 });
 await p.getByRole('button', { name: 'Carrossel' }).click();
 await p.getByLabel('Nome interno').fill('Teste do compositor');
 await p.getByLabel('Legenda', { exact: true }).fill('legenda de teste');
