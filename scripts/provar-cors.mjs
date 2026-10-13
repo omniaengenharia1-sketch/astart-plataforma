@@ -109,12 +109,12 @@ for (const fn of ['aprovar', 'galeria']) {
   );
 }
 
-// As duas de fundo: a variavel TICK_SECRET esta configurada na funcao?
+// As duas de fundo: a configuracao esta completa na funcao?
 //
 // Nao da para ler o valor de fora, e nem deve. Mas da para distinguir os dois
 // casos, porque as funcoes passaram a responder diferente:
-//   401 -> variavel configurada, e o nosso segredo de teste esta errado (certo)
-//   500 -> variavel NAO configurada, e o cron vai bater aqui para sempre em vao
+//   401 -> configuracao completa, e o nosso segredo de teste esta errado (certo)
+//   500 -> falta variavel, e a resposta diz QUAL — o cron bateria aqui em vao
 //
 // Era isso que faltava: antes as duas situacoes davam 401, e "verifique se a
 // chave esta configurada" nao tinha resposta possivel de fora.
@@ -125,10 +125,15 @@ for (const fn of DO_CRON) {
     body: '{}',
   });
   const corpo = await r.text();
-  if (r.status === 500 && corpo.includes('nao configurada')) {
-    cobrar(false, `${fn}: TICK_SECRET NAO esta configurada na funcao — o cron bateria em vao`);
+  if (r.status === 500 && corpo.includes('Faltam variaveis')) {
+    // A mensagem da funcao diz QUAIS faltam. Repetir isso aqui e o que
+    // transforma "deu errado" em "defina META_API_VERSION".
+    cobrar(false, `${fn}: ${corpo.slice(0, 180)}`);
   } else {
-    cobrar(r.status === 401, `${fn}: TICK_SECRET configurada, e segredo errado e recusado (http ${r.status})`);
+    cobrar(
+      r.status === 401,
+      `${fn}: configuracao completa, e segredo errado e recusado (http ${r.status})`,
+    );
   }
 }
 

@@ -810,14 +810,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Dizer "nao configurada" nao entrega nada a um atacante: ele ja sabe que nao
   // passou. Entrega a quem esta ligando a integracao a unica informacao que
   // resolve o problema.
-  const segredo = Deno.env.get('TICK_SECRET');
-  if (!segredo) {
+  // A configuracao e conferida ANTES da autorizacao, e de proposito.
+  //
+  // O META_API_VERSION so era lido no instante de falar com a Meta: faltando,
+  // o sintoma apareceria no primeiro post que nao sai, nao agora. Conferir
+  // tudo na entrada troca "a gente descobre quando doer" por "a gente sabe
+  // hoje" — que e a mesma escolha da mensagem do TICK_SECRET.
+  //
+  // Vem antes do 401 porque erro de configuracao nao e tentativa de invasao, e
+  // quem esta ligando a integracao precisa da resposta sem ter o segredo em
+  // maos. O que isso conta a um estranho — "falta uma variavel aqui" — nao
+  // abre porta nenhuma; o que ele nao recebe continua sendo o acesso.
+  const faltando = (['TICK_SECRET', 'META_API_VERSION'] as const).filter(
+    (nome) => !Deno.env.get(nome)?.trim(),
+  );
+  if (faltando.length > 0) {
     return json(500, {
       ok: false,
       erro:
-        'TICK_SECRET nao configurada nesta funcao. Defina em ' +
-        'Settings > Edge Functions > Secrets, com o MESMO valor da chave tick_secret do Vault.',
+        `Faltam variaveis nesta funcao: ${faltando.join(', ')}. ` +
+        'Defina em Settings > Edge Functions > Secrets. O TICK_SECRET tem de ter o MESMO ' +
+        'valor da chave tick_secret do Vault, e o META_API_VERSION a versao vigente da Graph API.',
     });
+  }
+
+  const segredo = Deno.env.get('TICK_SECRET');
+  if (!segredo) {
+    // Inalcancavel depois da conferencia acima, e fica como rede: o dia em que
+    // alguem mexer na lista, o TypeScript continua sabendo que isto pode ser
+    // undefined.
+    return json(500, { ok: false, erro: 'TICK_SECRET nao configurada nesta funcao.' });
   }
   if (req.headers.get('x-tick-secret') !== segredo) {
     return json(401, { ok: false, erro: 'Requisicao nao autorizada.' });
