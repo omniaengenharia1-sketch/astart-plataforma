@@ -18,6 +18,7 @@ import { Financeiro } from './paginas/Financeiro';
 import { InicioEquipe } from './paginas/InicioEquipe';
 import { NovaSenha } from './paginas/NovaSenha';
 import { NovoCliente } from './paginas/NovoCliente';
+import { ExclusaoDeDados, Privacidade, Termos } from './paginas/Politicas';
 import { PortalCliente } from './paginas/PortalCliente';
 
 function EmBreve({ titulo }: { titulo: string }) {
@@ -36,6 +37,18 @@ export default function App() {
   // recebeu o endereco nao tem conta, e nao vai criar uma para ver as proprias
   // fotos nem para aprovar uma peca. Se a sessao decidisse primeiro, a tela de
   // entrada apareceria para quem nunca vai ter login.
+  // As tres paginas da homologacao: publicas, sem login, porque o revisor da
+  // Meta nao tem conta aqui. Vem ANTES de tudo, como os links sem conta.
+  if (/^\/(privacidade|termos|exclusao-de-dados)$/.test(window.location.pathname)) {
+    return (
+      <Routes>
+        <Route path="/privacidade" element={<Privacidade />} />
+        <Route path="/termos" element={<Termos />} />
+        <Route path="/exclusao-de-dados" element={<ExclusaoDeDados />} />
+      </Routes>
+    );
+  }
+
   const caminho = window.location.pathname + window.location.hash;
   if (/(^|#)\/(g|a)\//.test(caminho)) {
     return (
