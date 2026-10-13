@@ -22,6 +22,14 @@ function quando(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+/** "há 11 horas" diz mais que a data: é o que torna a data um argumento. */
+function faz(iso: string): string {
+  const h = (Date.now() - new Date(iso).getTime()) / 3_600_000;
+  if (h < 1) return `há ${Math.max(1, Math.round(h * 60))} min`;
+  if (h < 48) return `há ${Math.round(h)} h`;
+  return `há ${Math.round(h / 24)} dias`;
+}
+
 export function PainelSaudeDoToken({ saude }: { saude: SaudeDoToken }) {
   // Token de usuário do sistema não expira. Qualquer outro tipo é um token que
   // vai morrer sozinho, e essa é a informação que muda o que a pessoa faz.
@@ -39,13 +47,23 @@ export function PainelSaudeDoToken({ saude }: { saude: SaudeDoToken }) {
         <span className="rotulo-forte">token da meta</span>
         <Marca forte={!bom}>{saude.valido ? 'aceito pela Meta' : 'recusado pela Meta'}</Marca>
         {saude.tipo && <Marca forte={saude.tipo !== 'SYSTEM_USER'}>{saude.tipo}</Marca>}
-        <Marca forte={saude.expiraEm !== null}>
-          {saude.expiraEm === null
-            ? 'não expira'
-            : saude.jaExpirou
-              ? `expirou em ${quando(saude.expiraEm)}`
-              : `expira em ${quando(saude.expiraEm)}`}
-        </Marca>
+        {/* Quando a Meta nem aceitou a pergunta, nao ha o que dizer sobre
+            expiracao — e inventar "nao expira" seria o oposto da verdade. */}
+        {saude.conferidoCom !== 'so_a_data' && (
+          <Marca forte={saude.expiraEm !== null}>
+            {saude.expiraEm === null
+              ? 'não expira'
+              : saude.jaExpirou
+                ? `expirou em ${quando(saude.expiraEm)}`
+                : `expira em ${quando(saude.expiraEm)}`}
+          </Marca>
+        )}
+        {/* A data de cadastro e o argumento que nao depende da Meta: token de
+            usuario do sistema nao expira, entao chave trocada hoje e ja
+            recusada conta a historia sozinha. */}
+        {saude.cadastradaEm && (
+          <Marca forte={!bom}>cadastrada {faz(saude.cadastradaEm)}</Marca>
+        )}
       </div>
 
       <p className="mt-2 text-tinta-2">{saude.diagnostico}</p>
@@ -61,6 +79,23 @@ export function PainelSaudeDoToken({ saude }: { saude: SaudeDoToken }) {
       {saude.escopos.length > 0 && (
         <p className="rotulo mt-2.5 break-words normal-case">
           escopos: {saude.escopos.join(', ')}
+        </p>
+      )}
+
+      {/* O formato do texto guardado. Nenhum pedaço do token aparece aqui — são
+          respostas de sim ou não, mais o tamanho, que é o que denuncia um valor
+          colado incompleto. Serve para separar "o texto está quebrado" de "o
+          token está morto": dois problemas, dois consertos. */}
+      {saude.formato?.cadastrada && (
+        <p className="rotulo mt-2 break-words normal-case">
+          texto guardado: {saude.formato.tamanho} caracteres
+          {saude.formato.comecaComEAA === false && ' · não começa com EAA'}
+          {saude.formato.pontasSujas && ' · com espaço ou quebra de linha nas pontas'}
+          {saude.formato.temAspas && ' · com aspas dentro'}
+          {saude.formato.temSinaisDeMarcador && ' · com os sinais < e > dentro'}
+          {saude.formato.soCaracteresEsperados === false &&
+            !saude.formato.temSinaisDeMarcador &&
+            ' · com caracteres estranhos'}
         </p>
       )}
     </div>

@@ -35,6 +35,14 @@ const NOME_PAPEL: Record<PapelEquipe, string> = {
  * a rede para chegar ao mesmo lugar onde ele já podia ser escrito direto. Seria
  * conveniência paga com a única regra que não se negocia neste projeto.
  */
+/** "há 11 h", "há 3 dias" — a data só vira argumento quando é um intervalo. */
+function desdeQuando(iso: string): string {
+  const h = (Date.now() - new Date(iso).getTime()) / 3_600_000;
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))} min`;
+  if (h < 48) return `${Math.round(h)} h`;
+  return `${Math.round(h / 24)} dias`;
+}
+
 function comandoParaCadastrar(chave: ChaveDeConector): string {
   if (chave.onde === 'funcao') {
     return `Settings › Edge Functions › Secrets  →  ${chave.chave}`;
@@ -43,12 +51,20 @@ function comandoParaCadastrar(chave: ChaveDeConector): string {
   // Chave que JÁ EXISTE se troca com `update_secret`, não com `create_secret`:
   // o nome é único no Vault, e um segundo `create_secret` falha. Esta tela
   // mostrava `create_secret` sempre — e só quando a chave faltava, então quem
-  // precisava TROCAR um token vencido não via comando nenhum. Foi o caso real
-  // do token da Meta que morreu em dez horas.
+  // precisava TROCAR um token vencido não via comando nenhum.
+  //
+  // E o marcador NÃO usa < > — usa COLE_O_TOKEN_AQUI. O `'<valor novo>'` que
+  // estava aqui custou duas horas de diagnóstico errado: o token foi gravado
+  // como `<TOKEN>`, com os sinais dentro, a Meta recusou com o mesmo código de
+  // token expirado, e eu fui atrás de validade. `<algo>` é convenção de
+  // documentação técnica, e esta tela não é lida por quem escreve SQL.
+  //
+  // Se o marcador ficar esquecido, o tamanho e o `comecaComEAA` da 0050
+  // denunciam na hora — ao contrário dos sinais, que passavam por token.
   if (chave.presente === true) {
-    return `select vault.update_secret((select id from vault.secrets where name = '${chave.chave}'), '<valor novo>');`;
+    return `select vault.update_secret((select id from vault.secrets where name = '${chave.chave}'), 'COLE_O_VALOR_AQUI');`;
   }
-  return `select vault.create_secret('<valor>', '${chave.chave}');`;
+  return `select vault.create_secret('COLE_O_VALOR_AQUI', '${chave.chave}');`;
 }
 
 export function Ajustes() {
@@ -415,6 +431,11 @@ export function Ajustes() {
                           </span>
                           <span className="font-mono break-all">{k.chave}</span>
                           {!k.obrigatoria && <span className="rotulo">opcional</span>}
+                          {/* Desde quando. Chave cadastrada hoje e ja recusada
+                              pela Meta diz o que o ● sozinho nao diz. */}
+                          {k.atualizadaEm && (
+                            <span className="rotulo">desde {desdeQuando(k.atualizadaEm)}</span>
+                          )}
                         </div>
                         <p className="rotulo mt-0.5 ml-5 normal-case">{k.paraQue}</p>
                         {/* O comando aparece TAMBÉM com a chave cadastrada: a

@@ -31,16 +31,35 @@ create table storage.objects (
 );
 alter table storage.objects enable row level security;
 
-create table vault.secrets (id uuid primary key default gen_random_uuid(), name text unique, secret text);
+-- `created_at` e `updated_at` existem no Vault de verdade, e faltavam aqui.
+--
+-- Normalmente o stub e MAIS generoso que a realidade, e e isso que esconde bug
+-- (foi a licao do teste 22: o Vault do stub nascia com as chaves prontas). Aqui
+-- foi o contrario: o stub era mais POBRE, e a migration 0049 quebrou no teste
+-- em vez de quebrar em producao. Esse e o lado bom — o que nao pode e o stub
+-- divergir da realidade sem ninguem saber em qual direcao.
+--
+-- E as duas datas sao MANTIDAS pelas funcoes abaixo, nao so declaradas: um
+-- `updated_at` que nunca muda faria a 0049 parecer certa e responder errado,
+-- que e pior que nao existir.
+create table vault.secrets (
+  id         uuid primary key default gen_random_uuid(),
+  name       text unique,
+  secret     text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 create or replace view vault.decrypted_secrets as
-  select id, name, secret as decrypted_secret from vault.secrets;
+  select id, name, secret as decrypted_secret, created_at, updated_at from vault.secrets;
 create or replace function vault.create_secret(p_secret text, p_name text, p_desc text default null)
 returns uuid language sql as $$
   insert into vault.secrets (name, secret) values (p_name, p_secret)
-  on conflict (name) do update set secret = excluded.secret returning id;
+  on conflict (name) do update set secret = excluded.secret, updated_at = now() returning id;
 $$;
 create or replace function vault.update_secret(p_id uuid, p_secret text)
-returns void language sql as $$ update vault.secrets set secret = p_secret where id = p_id $$;
+returns void language sql as $$
+  update vault.secrets set secret = p_secret, updated_at = now() where id = p_id
+$$;
 
 create table cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text);
 create or replace function cron.schedule(jobname text, schedule text, command text)

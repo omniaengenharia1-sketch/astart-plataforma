@@ -1029,6 +1029,17 @@ export function conferirTokenExemplo(): SaudeDoToken {
     escoposFaltando: [],
     appId: '000000000000000',
     conferidoCom: 'app_token',
+    cadastradaEm: new Date(Date.now() - 32 * 86_400_000).toISOString(),
+    formato: {
+      cadastrada: true,
+      tamanho: 212,
+      pontasSujas: false,
+      temQuebraDeLinha: false,
+      temAspas: false,
+      temSinaisDeMarcador: false,
+      soCaracteresEsperados: true,
+      comecaComEAA: true,
+    },
     diagnostico: 'Token de usuário do sistema, válido e sem data de expiração. É o que se quer.',
     oQueFazer: null,
   };

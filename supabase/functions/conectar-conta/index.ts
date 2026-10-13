@@ -119,10 +119,162 @@ interface SaudeDoToken {
   escopos: string[];
   escoposFaltando: string[];
   appId: string | null;
-  /** Como a pergunta foi feita: com o app token, ou com o próprio token. */
-  conferidoCom: 'app_token' | 'proprio_token';
+  /**
+   * Como a pergunta foi feita. `so_a_data` quer dizer que a Meta nem aceitou a
+   * pergunta — o diagnóstico saiu do que o banco sabe, e não dela.
+   */
+  conferidoCom: 'app_token' | 'proprio_token' | 'so_a_data';
+  /** Quando a chave entrou no Vault. É metadado, nunca o valor. */
+  cadastradaEm: string | null;
+  /** Sinalizadores de formato (0050). Nunca o valor nem parte dele. */
+  formato: FormatoDoToken | null;
   diagnostico: string;
   oQueFazer: string | null;
+}
+
+interface FormatoDoToken {
+  cadastrada: boolean;
+  tamanho?: number;
+  pontasSujas?: boolean;
+  temQuebraDeLinha?: boolean;
+  temAspas?: boolean;
+  temSinaisDeMarcador?: boolean;
+  soCaracteresEsperados?: boolean;
+  comecaComEAA?: boolean;
+}
+
+/**
+ * O que o formato do token denuncia, em português.
+ *
+ * Separa "o texto está quebrado" de "o token está morto" — duas coisas com dois
+ * consertos completamente diferentes, que até a 0050 davam a mesma mensagem.
+ * Token recém-gravado e recusado com 190 quase nunca é validade; é o texto.
+ */
+function oQueOFormatoDiz(f: FormatoDoToken | null): string[] {
+  if (!f?.cadastrada) return [];
+  const notas: string[] = [];
+
+  // Primeiro da lista porque é o caso mais provável: a instrução que a gente
+  // mesmo dava — `'<valor novo>'` — convidava a deixar os sinais no valor.
+  if (f.temSinaisDeMarcador) {
+    notas.push(
+      'O valor guardado tem os sinais < e > dentro dele. Eles eram só o marcador de lugar no ' +
+        'comando: o token vai entre as aspas, SEM < e >. Grave de novo tirando os dois sinais.',
+    );
+  }
+  if (f.temAspas) {
+    notas.push(
+      'O valor guardado TEM ASPAS dentro dele. Isso acontece quando as aspas do comando SQL ' +
+        'entram no valor: o certo é só o token entre as aspas, nunca aspas dentro.',
+    );
+  }
+  if (f.pontasSujas || f.temQuebraDeLinha) {
+    notas.push(
+      'O valor tinha espaço ou quebra de linha nas pontas. Isso sozinho faz a Meta recusar, e ' +
+        'é invisível na tela.',
+    );
+  }
+  if (f.soCaracteresEsperados === false) {
+    notas.push(
+      'O valor tem caracteres que não existem em token da Meta. Provavelmente foi colado ' +
+        'incompleto, ou não é um token.',
+    );
+  }
+  if (f.comecaComEAA === false) {
+    notas.push(
+      'O valor não começa com "EAA", como os tokens da Meta começam. Confira se não foi colado ' +
+        'o App ID ou outro campo no lugar do token.',
+    );
+  }
+  if (typeof f.tamanho === 'number' && f.tamanho < 100) {
+    notas.push(
+      `O valor tem só ${f.tamanho} caracteres. Token de usuário do sistema costuma passar de ` +
+        '150 — este parece truncado.',
+    );
+  }
+  return notas;
+}
+
+/** "há 11 horas", "há 3 dias" — o que faz a data virar argumento. */
+function faz(desde: Date): string {
+  const h = (Date.now() - desde.getTime()) / 3_600_000;
+  if (h < 1) return `há ${Math.max(1, Math.round(h * 60))} minuto(s)`;
+  if (h < 48) return `há ${Math.round(h)} hora(s)`;
+  return `há ${Math.round(h / 24)} dia(s)`;
+}
+
+/**
+ * O diagnóstico que NÃO depende da Meta.
+ *
+ * Existe porque a conferência da 0048 tinha um buraco que só apareceu no caso
+ * real: para perguntar `debug_token` você precisa de um token válido, e sem o
+ * app token cadastrado o único token disponível é o que morreu. A pergunta
+ * morria com ele, e a tela dizia "a Meta recusou a conferência" — verdade, e
+ * inútil.
+ *
+ * A data de cadastro resolve o caso mais comum sem uma única chamada de rede:
+ * token de usuário do sistema NÃO EXPIRA, então um token que a Meta recusa e
+ * que foi cadastrado há poucas horas é, quase com certeza, o token curto do
+ * Graph API Explorer. Dizer isso com a data na mão é mais útil que dizer
+ * "expirou ou foi revogado" sem nada.
+ */
+async function saudePelaData(sb: SupabaseClient, recusa: string): Promise<SaudeDoToken> {
+  const { data } = await sb.rpc('quando_a_chave_mudou', { p_nome: 'meta_system_user_token' });
+  const { data: bruto } = await sb.rpc('formato_do_token_meta');
+  const formato = (bruto as FormatoDoToken | null) ?? null;
+
+  const quando = typeof data === 'string' ? new Date(data) : null;
+  const horas = quando ? (Date.now() - quando.getTime()) / 3_600_000 : null;
+  const notas = oQueOFormatoDiz(formato);
+
+  const partes = [`A Meta recusou até a conferência do token: ${recusa}`];
+
+  if (quando) partes.push(`A chave foi gravada ${faz(quando)}.`);
+
+  // O formato vem ANTES de qualquer teoria sobre validade: um token recém
+  // gravado e recusado quase nunca expirou — o texto está quebrado.
+  if (notas.length > 0) {
+    partes.push(...notas);
+  } else if (horas !== null && horas < 1) {
+    partes.push(
+      'O texto do token está bem formado, e ele foi gravado agora — então não é validade. ' +
+        'Sobram três causas: o token é de um app diferente do que a plataforma usa, o usuário ' +
+        'do sistema não tem as Páginas e contas de Instagram como ativos, ou o token foi ' +
+        'revogado logo depois de gerado (gerar um novo invalida o anterior).',
+    );
+  } else if (horas !== null && horas < 72) {
+    partes.push(
+      'Token de usuário do sistema NÃO EXPIRA. Um token gravado há tão pouco tempo e já ' +
+        'recusado costuma ser o token curto que o Graph API Explorer entrega por padrão — ele ' +
+        'vive de uma a duas horas.',
+    );
+  }
+
+  partes.push(
+    'Não dá para perguntar mais à Meta porque a própria pergunta precisa de um token válido, e ' +
+      'meta_app_id/meta_app_secret não estão no Vault.',
+  );
+
+  return {
+    valido: false,
+    tipo: null,
+    expiraEm: null,
+    jaExpirou: false,
+    escopos: [],
+    escoposFaltando: [],
+    appId: null,
+    conferidoCom: 'so_a_data',
+    cadastradaEm: quando ? quando.toISOString() : null,
+    formato,
+    diagnostico: partes.join(' '),
+    oQueFazer: notas.length > 0
+      ? 'Grave o token de novo, com cuidado para colar SÓ o token entre as aspas do comando, ' +
+        'sem espaço, sem quebra de linha e sem aspas extras.'
+      : 'Confira, no Business Manager: (1) que o token foi gerado para o MESMO app que a ' +
+        'plataforma usa; (2) que o usuário do sistema tem as Páginas e as contas de Instagram ' +
+        'como ativos, com controle total; (3) que ninguém gerou outro token depois deste, ' +
+        'porque o novo invalida o anterior.',
+  };
 }
 
 /**
@@ -150,7 +302,7 @@ async function conferirToken(sb: SupabaseClient): Promise<SaudeDoToken> {
   const app = (credenciais as { app_id: string; app_secret: string }[] | null)?.[0];
   const conferidoCom = app ? 'app_token' as const : 'proprio_token' as const;
 
-  const { dados } = await chamarGraph<{
+  interface RespostaDebug {
     data?: {
       app_id?: string;
       type?: string;
@@ -159,13 +311,25 @@ async function conferirToken(sb: SupabaseClient): Promise<SaudeDoToken> {
       scopes?: string[];
       error?: { message?: string };
     };
-  }>({
-    metodo: 'GET',
-    caminho: 'debug_token',
-    token: app ? `${app.app_id}|${app.app_secret}` : token,
-    operacao: 'conferir_token',
-    params: { input_token: token },
-  });
+  }
+
+  let dados: RespostaDebug;
+  try {
+    ({ dados } = await chamarGraph<RespostaDebug>({
+      metodo: 'GET',
+      caminho: 'debug_token',
+      token: app ? `${app.app_id}|${app.app_secret}` : token,
+      operacao: 'conferir_token',
+      params: { input_token: token },
+    }));
+  } catch (e) {
+    // Com o app token, uma recusa aqui é problema do app — e tem de subir.
+    // Sem ele, a recusa é ESPERADA quando o token esta morto: a pergunta usou
+    // o proprio token. Ai o diagnostico sai da data, que e melhor que nada e,
+    // neste caso, melhor que a resposta da Meta teria sido.
+    if (app || !(e instanceof FalhaMeta)) throw e;
+    return await saudePelaData(sb, e.message);
+  }
 
   const d = dados.data ?? {};
   const escopos = d.scopes ?? [];
@@ -225,6 +389,17 @@ async function conferirToken(sb: SupabaseClient): Promise<SaudeDoToken> {
     );
   }
 
+  const { data: desde } = await sb.rpc('quando_a_chave_mudou', {
+    p_nome: 'meta_system_user_token',
+  });
+  const { data: bruto } = await sb.rpc('formato_do_token_meta');
+  const formato = (bruto as FormatoDoToken | null) ?? null;
+
+  // Pontas sujas e aspas valem o aviso mesmo quando a Meta aceitou: hoje
+  // funciona, e amanhã alguem troca a chave do mesmo jeito e nao funciona.
+  const notas = oQueOFormatoDiz(formato);
+  if (notas.length > 0) partes.push(...notas);
+
   return {
     valido,
     tipo,
@@ -234,6 +409,8 @@ async function conferirToken(sb: SupabaseClient): Promise<SaudeDoToken> {
     escoposFaltando,
     appId: d.app_id ?? null,
     conferidoCom,
+    cadastradaEm: typeof desde === 'string' ? desde : null,
+    formato,
     diagnostico: partes.join(' '),
     oQueFazer,
   };

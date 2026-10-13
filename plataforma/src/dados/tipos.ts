@@ -480,9 +480,33 @@ export interface SaudeDoToken {
   escopos: string[];
   escoposFaltando: string[];
   appId: string | null;
-  conferidoCom: 'app_token' | 'proprio_token';
+  /**
+   * Como a pergunta foi feita. `so_a_data` quer dizer que a Meta nem aceitou a
+   * pergunta — o diagnóstico saiu do que o banco sabe, e não dela.
+   */
+  conferidoCom: 'app_token' | 'proprio_token' | 'so_a_data';
+  /** Quando a chave entrou no Vault (0049). É metadado, nunca o valor. */
+  cadastradaEm: string | null;
+  /**
+   * Sinalizadores de formato (0050) — nunca o valor nem parte dele. Separam
+   * "o texto do token está quebrado" de "o token está morto": duas coisas com
+   * dois consertos diferentes, que antes davam a mesma mensagem.
+   */
+  formato: FormatoDoToken | null;
   diagnostico: string;
   oQueFazer: string | null;
+}
+
+export interface FormatoDoToken {
+  cadastrada: boolean;
+  tamanho?: number;
+  pontasSujas?: boolean;
+  temQuebraDeLinha?: boolean;
+  temAspas?: boolean;
+  /** Os sinais `<` e `>` do marcador de lugar ficaram no valor (0051). */
+  temSinaisDeMarcador?: boolean;
+  soCaracteresEsperados?: boolean;
+  comecaComEAA?: boolean;
 }
 
 // --- conectores (migration 0043) --------------------------------------------
@@ -501,6 +525,12 @@ export interface ChaveDeConector {
   paraQue: string;
   /** Nulo quando não dá para conferir daqui. Nunca traz o valor. */
   presente: boolean | null;
+  /**
+   * Quando a chave foi cadastrada ou trocada (0049). Data não é segredo, e é
+   * o que separa "está lá" de "está lá desde quando" — uma chave trocada hoje
+   * e já recusada pela Meta conta uma história que o `●` sozinho não conta.
+   */
+  atualizadaEm?: string | null;
 }
 
 export interface Conector {
