@@ -12,6 +12,7 @@
     "contraste": "node contraste.mjs",
     "acessibilidade": "node acessibilidade.mjs",
     "telas": "node telas.mjs",
+    "aovivo": "node aovivo.mjs",
     "projeto": "node projeto.mjs",
     "cadastro": "node cadastro.mjs",
     "calendario": "node calendario.mjs",

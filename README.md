@@ -158,6 +158,10 @@ initdb -D /tmp/pgdata -A trust -U postgres
 pg_ctl -D /tmp/pgdata -o "-k /tmp -p 5444" start
 supabase/tests/rodar.sh
 
+# a plataforma ligada no banco de verdade, vista por quem nao tem conta
+cd plataforma && npm run build && npx serve -s dist -l 4179
+BASE=http://127.0.0.1:4179 npm run aovivo
+
 # as auditorias de tela (ver docs/ux.md)
 cd plataforma && npm run build && npx vite preview --port 4178
 npm run telas && npm run olhar && npm run acessibilidade && npm run contraste
