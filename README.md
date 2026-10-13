@@ -151,6 +151,11 @@ um aviso no topo. Nada finge estar ligado.
    E **não** defina `VITE_PREVIA` lá: com ela a build vira modo exemplo, e o
    site no ar mostraria dados fictícios.
 
+   No **Cloudflare Pages** é o mesmo projeto com outros nomes: *Root directory*
+   `plataforma`, preset Vite, as mesmas duas variáveis. A regra de rota lá não
+   é o `vercel.json`, é o `public/_redirects` — uma linha, que o Vite copia
+   para o `dist/` na build.
+
    O `plataforma/vercel.json` existe por um motivo só, e é o mesmo do ObrasPro:
    a rota é URL limpa (`BrowserRouter`), então abrir `/clientes/<id>` direto ou
    apertar F5 ali pede ao servidor um arquivo que não existe. O rewrite manda
