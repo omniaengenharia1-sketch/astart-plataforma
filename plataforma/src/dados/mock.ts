@@ -16,6 +16,7 @@ import type {
   EnvioNaFicha, ItemDoLote, ItemNaFila, LancamentoNaLista, LeadNoFunil, LinkDeAprovacao,
   LoteDoLink, MesDeConteudo, NpsDoCliente, PainelCliente,
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
+  DocumentoDoCliente, TipoDocumento,
   PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
@@ -1908,6 +1909,119 @@ const RELATORIOS: (RelatorioDeCampanha & { clienteId: string })[] = [
 
 export function campanhasExemplo(clienteId: string): RelatorioDeCampanha[] {
   return RELATORIOS.filter((r) => r.clienteId === clienteId);
+}
+
+// ---------------------------------------------------------------------------
+// Arquivos do cliente: contrato, proposta, relatório, NPS (0053/0054)
+//
+// O modo exemplo guarda o arquivo no navegador, com `URL.createObjectURL`.
+// Isto não é enfeite de demonstração: sem ele, o roteiro de tela não consegue
+// exercitar a subida — ele roda em modo exemplo, e o caminho inteiro (arrastar,
+// aparecer, mostrar ao cliente, tirar) ficaria sem teste de navegador nenhum.
+// Já paguei essa conta duas vezes nesta semana.
+// ---------------------------------------------------------------------------
+const DOCUMENTOS = new Map<string, DocumentoDoCliente[]>([
+  ['exemplo-mor', [
+    {
+      id: 'doc-1', tipo: 'contrato', nome: 'Contrato Mor Marcas 2026.pdf',
+      caminho: 'exemplo/contrato.pdf', visivelAoCliente: true,
+      enviadoEm: emDias(-120), url: null,
+    },
+    {
+      id: 'doc-2', tipo: 'proposta', nome: 'Proposta com margem (interno).pdf',
+      caminho: 'exemplo/proposta.pdf', visivelAoCliente: false,
+      enviadoEm: emDias(-131), url: null,
+    },
+  ]],
+]);
+
+export function documentosExemplo(clienteId: string): DocumentoDoCliente[] {
+  const lista = DOCUMENTOS.get(clienteId) ?? [];
+  // O portal do cliente vê só o que foi liberado — o mesmo filtro que a função
+  // do banco aplica. Se os dois discordarem, o roteiro acusa.
+  return papelDaVez === 'cliente' ? lista.filter((d) => d.visivelAoCliente) : lista;
+}
+
+export function registrarDocumentoExemplo(
+  clienteId: string,
+  tipo: TipoDocumento,
+  nome: string,
+  arquivo: File,
+): { visivelAoCliente: boolean } {
+  const lista = DOCUMENTOS.get(clienteId) ?? [];
+  // A MESMA regra da 0053: contrato nasce visível, o resto nasce fechado.
+  const visivelAoCliente = tipo === 'contrato';
+  lista.unshift({
+    id: crypto.randomUUID(),
+    tipo,
+    nome,
+    caminho: `exemplo/${arquivo.name}`,
+    visivelAoCliente,
+    enviadoEm: new Date().toISOString(),
+    url: URL.createObjectURL(arquivo),
+  });
+  DOCUMENTOS.set(clienteId, lista);
+  return { visivelAoCliente };
+}
+
+export function removerDocumentoExemplo(id: string): void {
+  for (const [cliente, lista] of DOCUMENTOS) {
+    const i = lista.findIndex((d) => d.id === id);
+    if (i >= 0) {
+      const [fora] = lista.splice(i, 1);
+      if (fora?.url) URL.revokeObjectURL(fora.url);
+      DOCUMENTOS.set(cliente, lista);
+      return;
+    }
+  }
+}
+
+export function mudarVisibilidadeExemplo(id: string, visivel: boolean): void {
+  for (const lista of DOCUMENTOS.values()) {
+    const d = lista.find((x) => x.id === id);
+    if (d) {
+      d.visivelAoCliente = visivel;
+      return;
+    }
+  }
+}
+
+export function relatorioExemplo(
+  clienteId: string,
+  de: string,
+  ate: string,
+  nome: string,
+  arquivo: File,
+): void {
+  // Um relatório por período, como o índice único da 0021: reenviar o mesmo
+  // período troca o arquivo em vez de criar uma segunda linha.
+  //
+  // `existente` em vez de indexar duas vezes: com `noUncheckedIndexedAccess`
+  // ligado, `RELATORIOS[i]` é possivelmente undefined mesmo depois de um
+  // `findIndex` que achou — e o TypeScript está certo em desconfiar, porque
+  // nada impede o array de mudar entre as linhas.
+  const i = RELATORIOS.findIndex(
+    (r) => r.clienteId === clienteId && r.de === de && r.ate === ate,
+  );
+  const existente = i >= 0 ? RELATORIOS[i] : undefined;
+  const linha = {
+    id: existente?.id ?? crypto.randomUUID(),
+    clienteId,
+    de,
+    ate,
+    arquivo: nome,
+    arquivoCaminho: URL.createObjectURL(arquivo),
+    // Métrica digitada não existe nesta versão: o relatório é o arquivo.
+    metricas: existente?.metricas ?? [],
+    campanhas: existente?.campanhas ?? [],
+  };
+  if (existente) RELATORIOS[i] = linha;
+  else RELATORIOS.unshift(linha);
+}
+
+export function removerRelatorioExemplo(id: string): void {
+  const i = RELATORIOS.findIndex((r) => r.id === id);
+  if (i >= 0) RELATORIOS.splice(i, 1);
 }
 
 // ---------------------------------------------------------------------------

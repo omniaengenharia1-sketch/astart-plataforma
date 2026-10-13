@@ -31,7 +31,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 BASE="${BASE:-http://localhost:4178}"
 ROTEIROS=(
-  telas acessos link midia senha galeria olhar cadastro
+  telas acessos link midia senha galeria olhar cadastro arquivos
   acessibilidade tema calendario compositor contraste projeto
 )
 
@@ -66,7 +66,7 @@ echo
 # Fora da lista de proposito: `navegador` e biblioteca, `aovivo` bate no site
 # publicado, e `onde-fica` so tira foto de onde um botao esta — nao verifica
 # nada, entao passar ou falhar nao diz nada sobre a plataforma.
-no_disco=$(ls *.mjs 2>/dev/null | sed 's/\.mjs$//' | grep -vx -e navegador -e aovivo -e onde-fica | sort)
+no_disco=$(ls *.mjs 2>/dev/null | sed 's/\.mjs$//' | grep -vx -e navegador -e aovivo -e onde-fica -e onde-arquivos | sort)
 na_lista=$(printf '%s\n' "${ROTEIROS[@]}" | sort)
 esquecidos=$(comm -23 <(echo "$no_disco") <(echo "$na_lista"))
 if [ -n "$esquecidos" ]; then

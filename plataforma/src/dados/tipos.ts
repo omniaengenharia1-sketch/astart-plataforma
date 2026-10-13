@@ -497,6 +497,26 @@ export interface SaudeDoToken {
   oQueFazer: string | null;
 }
 
+// --- arquivos do cliente (migrations 0053/0054) -----------------------------
+
+export type TipoDocumento = 'proposta' | 'contrato' | 'outro';
+
+export interface DocumentoDoCliente {
+  id: string;
+  tipo: TipoDocumento;
+  nome: string;
+  /** Caminho no bucket privado. Nunca URL pública. */
+  caminho: string;
+  /**
+   * Contrato nasce visível; proposta e outro nascem fechados. Quem decide o
+   * padrão é a função do banco, que sabe o tipo.
+   */
+  visivelAoCliente: boolean;
+  enviadoEm: string;
+  /** Endereço assinado, de validade curta. Nulo quando não deu para assinar. */
+  url?: string | null;
+}
+
 export interface FormatoDoToken {
   cadastrada: boolean;
   tamanho?: number;
@@ -745,7 +765,13 @@ export interface RelatorioDeCampanha {
   id: string;
   de: string;
   ate: string;
+  /** O nome que aparece na tela. */
   arquivo: string | null;
+  /**
+   * O caminho no bucket (0054). Serve para a URL assinada e nada mais — sem
+   * ele o relatório era um texto que ninguém conseguia abrir.
+   */
+  arquivoCaminho?: string | null;
   metricas: { rotulo: string; valor: number }[];
   campanhas: {
     nome: string; plataforma: string; objetivo: string | null;

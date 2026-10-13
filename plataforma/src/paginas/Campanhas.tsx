@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bloco, Fita } from '../componentes/Bloco';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
+import {
+  AbrirArquivo, RelatorioDeCampanhaPainel, TirarRelatorio,
+} from '../componentes/RelatorioDeCampanhaPainel';
 import { campanhasDoCliente } from '../dados/api';
 import { diaMes, reais } from '../formato';
 import type { RelatorioDeCampanha } from '../dados/tipos';
@@ -48,17 +51,33 @@ export function Campanhas({ clienteId, equipe }: { clienteId: string; equipe: bo
           titulo="Nenhum relatório."
           explica={
             equipe
-              ? 'Suba o relatório do mês e as métricas aparecem aqui.'
+              ? 'Anexe o relatório do período no painel abaixo.'
               : 'O relatório do mês aparece aqui quando fecha o período.'
           }
         />
       ) : (
         <>
-          <div className="escada grid grid-cols-2 gap-4 xl:grid-cols-4">
-            {ultimo.metricas.slice(0, 4).map((m) => (
-              <Bloco key={m.rotulo} rotulo={m.rotulo} destaque={comoNumero(m.valor)} />
-            ))}
-          </div>
+          {/* Os blocos de métrica só existem quando alguém cadastrou métrica
+              estruturada — e nesta versão o relatório é o ARQUIVO. Renderizar
+              uma fileira vazia de cartões seria pior que não renderizar: dá a
+              entender que o número existe e é zero. */}
+          {ultimo.metricas.length > 0 && (
+            <div className="escada grid grid-cols-2 gap-4 xl:grid-cols-4">
+              {ultimo.metricas.slice(0, 4).map((m) => (
+                <Bloco key={m.rotulo} rotulo={m.rotulo} destaque={comoNumero(m.valor)} />
+              ))}
+            </div>
+          )}
+
+          {ultimo.arquivo && (
+            <div className="bloco mt-5 flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <div className="rotulo">relatório do período</div>
+                <div className="mt-1 break-words font-bold">{ultimo.arquivo}</div>
+              </div>
+              <AbrirArquivo caminho={ultimo.arquivoCaminho ?? null} />
+            </div>
+          )}
 
           <div className="mt-9">
             <Fita>Último período · {periodo(ultimo)}</Fita>
@@ -105,15 +124,26 @@ export function Campanhas({ clienteId, equipe }: { clienteId: string; equipe: bo
                     className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
                   >
                     <span className="w-36 shrink-0 font-bold uppercase">{periodo(r)}</span>
-                    <span className="rotulo min-w-48 flex-1">
-                      {r.metricas.map((m) => `${m.rotulo}: ${comoNumero(m.valor)}`).join(' · ')}
+                    <span className="rotulo min-w-48 flex-1 break-words normal-case">
+                      {r.arquivo ??
+                        r.metricas.map((m) => `${m.rotulo}: ${comoNumero(m.valor)}`).join(' · ')}
                     </span>
+                    <AbrirArquivo caminho={r.arquivoCaminho ?? null} />
+                    {equipe && <TirarRelatorio id={r.id} aoMudar={() => void carregar()} />}
                   </li>
                 ))}
               </ul>
             </div>
           )}
         </>
+      )}
+
+      {/* O painel de anexar fica FORA do `!ultimo`, e de propósito: o caso em
+          que mais se precisa dele é justamente o do cliente que ainda não tem
+          relatório nenhum. Dentro do ramo de cima ele só apareceria depois do
+          primeiro — e o primeiro não teria como entrar. */}
+      {equipe && (
+        <RelatorioDeCampanhaPainel clienteId={clienteId} aoMudar={() => void carregar()} />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
+import { Documentos } from '../componentes/Documentos';
 import { fichaCliente } from '../dados/api';
 import { diaMes, porExtenso, reais } from '../formato';
 import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO } from '../rotulos';
@@ -159,6 +160,11 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
           </aside>
         </div>
       )}
+
+      {/* O contrato assinado. Fica na aba Contrato porque é onde a pergunta
+          aparece: quem abre esta tela quer ver o que foi combinado, e o
+          combinado está no PDF, não só nas linhas de serviço acima. */}
+      <Documentos clienteId={clienteId} equipe={equipe} />
     </div>
   );
 }
