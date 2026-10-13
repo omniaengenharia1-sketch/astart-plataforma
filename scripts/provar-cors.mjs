@@ -109,5 +109,28 @@ for (const fn of ['aprovar', 'galeria']) {
   );
 }
 
+// As duas de fundo: a variavel TICK_SECRET esta configurada na funcao?
+//
+// Nao da para ler o valor de fora, e nem deve. Mas da para distinguir os dois
+// casos, porque as funcoes passaram a responder diferente:
+//   401 -> variavel configurada, e o nosso segredo de teste esta errado (certo)
+//   500 -> variavel NAO configurada, e o cron vai bater aqui para sempre em vao
+//
+// Era isso que faltava: antes as duas situacoes davam 401, e "verifique se a
+// chave esta configurada" nao tinha resposta possivel de fora.
+for (const fn of DO_CRON) {
+  const r = await fetch(`${BASE}/${fn}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-tick-secret': 'valor-de-teste-que-nao-e-o-certo' },
+    body: '{}',
+  });
+  const corpo = await r.text();
+  if (r.status === 500 && corpo.includes('nao configurada')) {
+    cobrar(false, `${fn}: TICK_SECRET NAO esta configurada na funcao — o cron bateria em vao`);
+  } else {
+    cobrar(r.status === 401, `${fn}: TICK_SECRET configurada, e segredo errado e recusado (http ${r.status})`);
+  }
+}
+
 console.log(falhas.length ? `\n${falhas.length} falha(s)` : '\nCORS conferido nas cinco.');
 process.exit(falhas.length ? 1 : 0);

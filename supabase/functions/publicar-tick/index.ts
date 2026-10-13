@@ -799,8 +799,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json(405, { ok: false, erro: 'Use POST.' });
   }
 
+  // Duas coisas diferentes, duas respostas diferentes.
+  //
+  // Antes era uma: `if (!segredo || header !== segredo) return 401`. Parecia
+  // seguro e era cego — variavel nao configurada e segredo errado davam a mesma
+  // resposta, e ninguem de fora conseguia distinguir. O custo disso e concreto:
+  // sem o TICK_SECRET na funcao, o pg_cron bate aqui de minuto em minuto
+  // levando 401 para sempre, e a unica pista seria um log que ninguem le.
+  //
+  // Dizer "nao configurada" nao entrega nada a um atacante: ele ja sabe que nao
+  // passou. Entrega a quem esta ligando a integracao a unica informacao que
+  // resolve o problema.
   const segredo = Deno.env.get('TICK_SECRET');
-  if (!segredo || req.headers.get('x-tick-secret') !== segredo) {
+  if (!segredo) {
+    return json(500, {
+      ok: false,
+      erro:
+        'TICK_SECRET nao configurada nesta funcao. Defina em ' +
+        'Settings > Edge Functions > Secrets, com o MESMO valor da chave tick_secret do Vault.',
+    });
+  }
+  if (req.headers.get('x-tick-secret') !== segredo) {
     return json(401, { ok: false, erro: 'Requisicao nao autorizada.' });
   }
 
