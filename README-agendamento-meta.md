@@ -157,7 +157,7 @@ select vault.create_secret('<gere_um_valor_longo_e_aleatorio>', 'tick_secret');
 
 ```bash
 supabase secrets set \
-  META_API_VERSION=v23.0 \
+  META_API_VERSION=v26.0 \
   TICK_SECRET='<mesmo valor da chave tick_secret>' \
   TICK_LOTE_MAX=20 \
   SIGNED_URL_TTL_SEGUNDOS=7200 \
@@ -169,6 +169,17 @@ supabase secrets set \
 > `META_API_VERSION` e **obrigatoria e nao tem default no codigo**: versao de API
 > chumbada e a forma mais silenciosa de envelhecer uma integracao com a Meta.
 > Confira a versao vigente na doc antes de definir.
+>
+> O exemplo acima dizia `v23.0`, escrito quando era a vigente. Em 13/10/2026 a
+> vigente e a **v26.0** (publicada em 29/07/2026) e a **v20.0 expirou em
+> 24/09/2026** — ou seja, o exemplo do proprio README envelheceu primeiro, que e
+> exatamente o que o aviso acima descreve. Confira em
+> developers.facebook.com/docs/graph-api/changelog/versions antes de definir, e
+> nao copie o numero daqui.
+>
+> Versao expirada nao quebra com erro: a Meta atende na proxima versao usavel,
+> em silencio. Entao o sintoma de estar atrasado nao e uma falha — e um
+> comportamento que muda sem ninguem pedir.
 
 ### No `.env` local (so para o script de teste)
 
