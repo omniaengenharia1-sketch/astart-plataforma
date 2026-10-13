@@ -7,7 +7,7 @@
 //
 // Duas coisas que ele cobra e que eu errei ao escrever à mão:
 //   - a peça precisa ACEITAR foto antes de eu reclamar de uma recusa: a
-//     primeira da lista era um reel, e recusar PNG ali é o comportamento certo;
+//     primeira da lista era um reel, e recusar foto ali é o comportamento certo;
 //   - peça no ar tem a mídia congelada, e a tela NÃO pode oferecer a área de
 //     arrastar — formulário que vai ser recusado não deve aparecer.
 import { abrirNavegador } from './navegador.mjs';
@@ -17,12 +17,16 @@ const SAIDA = process.env.SAIDA ?? './tiros';
 const falhas = [];
 const cobrar = (ok, o) => { if (!ok) falhas.push(o); console.log(`${ok ? 'OK  ' : 'FALHOU  '}${o}`); };
 
-// Um PNG 1x1 de verdade: arquivo falso faria o navegador recusar antes da tela.
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+// Um JPEG 1x1 de verdade.
+//
+// Era PNG, e a 0047 passou a recusar: a Meta publica imagem so em JPEG. O
+// roteiro quebrou no mesmo instante em que a regra entrou — que e exatamente o
+// que um roteiro serve para fazer.
+const JPG = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwcJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPDs0NDP/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAVEAEBAAAAAAAAAAAAAAAAAAAAAf/EABUBAQEAAAAAAAAAAAAAAAAAAAAB/8QAFREBAQAAAAAAAAAAAAAAAAAAAAH/2gAMAwEAAhEDEQA/AJQA/9k=',
   'base64',
 );
-const foto = (nome) => ({ name: nome, mimeType: 'image/png', buffer: PNG });
+const foto = (nome) => ({ name: nome, mimeType: 'image/jpeg', buffer: JPG });
 
 const navegador = await abrirNavegador();
 const ctx = await navegador.newContext({ viewport: { width: 1280, height: 1400 } });
@@ -81,7 +85,7 @@ for (let i = 0; i < quantas; i += 1) {
     await pecas.nth(i).click({ force: true });
     continue;
   }
-  await p.locator('input[type=file]').first().setInputFiles(foto('nao-e-video.png'));
+  await p.locator('input[type=file]').first().setInputFiles(foto('nao-e-video.jpg'));
   await p.waitForTimeout(700);
   cobrar(
     /Reel aceita video/i.test(await corpo()),
@@ -107,11 +111,11 @@ for (let i = 0; i < quantas; i += 1) {
   cobrar(/não publica/i.test(painel), 'peca sem arquivo diz a consequencia, nao o estado');
 
   const entrada = p.locator('input[type=file]').first();
-  await entrada.setInputFiles(foto('uma.png'));
+  await entrada.setInputFiles(foto('uma.jpg'));
   await p.waitForTimeout(800);
   cobrar((await imagens()) === 1, 'o primeiro arquivo aparece na peca');
 
-  await entrada.setInputFiles(foto('duas.png'));
+  await entrada.setInputFiles(foto('duas.jpg'));
   await p.waitForTimeout(800);
   cobrar((await imagens()) === 2, 'carrossel aceita o segundo arquivo (ate dez)');
 

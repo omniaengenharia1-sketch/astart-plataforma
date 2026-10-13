@@ -17,10 +17,10 @@ export interface PecaParaMidia {
 
 /** Quantos arquivos cada tipo de peça pede. O banco cobra; a tela avisa antes. */
 export const PEDE: Record<TipoPeca, string> = {
-  imagem: '1 foto',
-  carrossel: 'de 2 a 10 fotos ou vídeos',
+  imagem: '1 foto JPG',
+  carrossel: 'de 2 a 10 fotos JPG ou vídeos',
   reel: '1 vídeo',
-  story: '1 foto ou vídeo',
+  story: '1 foto JPG ou vídeo',
 };
 
 /**
@@ -169,14 +169,14 @@ export function MidiaDaPecaPainel({
           }
         >
           {subindo === null ? (
-            <span>arraste o arquivo aqui, ou clique para escolher</span>
+            <span>arraste o arquivo aqui, ou clique para escolher — foto em JPG</span>
           ) : (
             <span className="numeros">subindo… {Math.round(subindo * 100)}%</span>
           )}
           <input
             type="file"
             multiple
-            accept="image/*,video/*"
+            accept="image/jpeg,video/*"
             className="hidden"
             onChange={(e) => void receber(e.target.files)}
           />

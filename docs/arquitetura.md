@@ -368,6 +368,7 @@ E os módulos:
 | `0044` | conectar a conta de Instagram do cliente: `token_do_sistema()`, `salvar_conta_social()`, `contas_do_cliente()` |
 | `0045` | a mídia da peça: `registrar_midia_post()`, `remover_midia_post()`, `limites_de_midia()` |
 | `0046` | o compositor: `criar_publicacao()`, `agendar_publicacao()`, hashtags em campo próprio |
+| `0047` | imagem só JPEG — é o que a API da Meta aceita, e a recusa vem no anexo |
 
 Decisões que viraram regra no banco, não só na tela:
 
@@ -388,7 +389,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Treze armadilhas que já custaram caro aqui
+### Quatorze armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -532,6 +533,25 @@ meses depois sem pista de origem.
 A lição não é "escolha nomes melhores" — é que **`if not exists` é idempotência,
 não verificação**. Onde o nome importa, o jeito de checar é olhar o catálogo
 antes. O registro da agência virou `conectores`/`conector_chaves`.
+
+A décima quarta: **limite da plataforma de fora é regra de validação aqui
+dentro.** A `0045` aceitava qualquer `image/*`, e a API de publicação do
+Instagram aceita **só JPEG** — nem PNG, nem WebP, nem as variantes MPO e JPS do
+próprio JPEG. Um PNG entrava na peça, aparecia na tela, agendava, e era
+recusado no minuto do post, de madrugada, com o cliente sem receber nada. É o
+erro que a `0045` foi escrita para evitar, e eu o deixei passar no formato do
+arquivo.
+
+Quem achou foi uma auditoria do produto concorrente que a dona encomendou e
+mandou — não um teste meu. A lição não é "leia mais documentação": é que **todo
+limite da API alheia é uma regra que tem de existir no anexo**, não na
+publicação. O catálogo desses limites (JPEG, 100 posts/24h por conta, 400
+containers/24h, 10 itens no carrossel) vira validação ou vira surpresa.
+
+E a `0047` recusa em vez de converter: conversão silenciosa muda o que a pessoa
+viu. Fundo transparente viraria preto sem aviso, e ela descobriria no feed do
+cliente. A mensagem diz o que fazer — "exporte como JPG" — porque "formato
+inválido" manda a pessoa para o Google.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um

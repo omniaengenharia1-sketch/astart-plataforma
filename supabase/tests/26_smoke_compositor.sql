@@ -168,4 +168,54 @@ begin
   perform public.afirma(ok, 'e nao aceita ser reagendada');
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- 8. imagem so JPEG (0047)
+--
+-- A Meta publica imagem so em JPEG. PNG entrava, agendava, e era recusado na
+-- hora de publicar — de madrugada, com o cliente sem receber nada.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_post uuid;
+  ok boolean;
+begin
+  perform set_config('teste.uid', '10000000-0000-0000-0000-000000000001', false);
+
+  v_post := (public.criar_publicacao(
+    '20000000-0000-0000-0000-000000000001', 'Teste de formato', 'imagem')->>'id')::uuid;
+
+  begin
+    perform public.registrar_midia_post(
+      v_post,
+      '20000000-0000-0000-0000-000000000001/' || v_post || '/arte.png',
+      'image/png');
+    ok := false;
+  exception when others then
+    -- A mensagem tem de dizer O QUE FAZER, nao so o que esta errado.
+    ok := position('so em JPEG' in sqlerrm) > 0 and position('Exporte como JPG' in sqlerrm) > 0;
+  end;
+  perform public.afirma(ok, 'PNG e recusado, dizendo para exportar como JPG');
+
+  perform public.registrar_midia_post(
+    v_post,
+    '20000000-0000-0000-0000-000000000001/' || v_post || '/arte.jpg',
+    'image/jpeg');
+  perform public.afirma(
+    (select count(*) from public.post_midias where post_id = v_post) = 1,
+    'e JPEG entra'
+  );
+
+  -- Video segue aceito como antes: a regra e so para imagem.
+  v_post := (public.criar_publicacao(
+    '20000000-0000-0000-0000-000000000001', 'Teste de reel', 'reel')->>'id')::uuid;
+  perform public.registrar_midia_post(
+    v_post,
+    '20000000-0000-0000-0000-000000000001/' || v_post || '/video.mp4',
+    'video/mp4');
+  perform public.afirma(
+    (select count(*) from public.post_midias where post_id = v_post) = 1,
+    'video nao e afetado pela regra do JPEG'
+  );
+end $$;
+
 select 'compositor conferido' as resultado;

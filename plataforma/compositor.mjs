@@ -20,12 +20,12 @@ const SAIDA = process.env.SAIDA ?? './tiros';
 const falhas = [];
 const cobrar = (ok, o) => { if (!ok) falhas.push(o); console.log(`${ok ? 'OK  ' : 'FALHOU  '}${o}`); };
 
-// Um PNG 1x1 de verdade: arquivo falso o navegador recusa antes da tela.
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+// Um JPEG 1x1 de verdade: a 0047 recusa PNG, porque a Meta so publica JPEG.
+const JPG = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwcJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPDs0NDP/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAVEAEBAAAAAAAAAAAAAAAAAAAAAf/EABUBAQEAAAAAAAAAAAAAAAAAAAAB/8QAFREBAQAAAAAAAAAAAAAAAAAAAAH/2gAMAwEAAhEDEQA/AJQA/9k=',
   'base64',
 );
-const foto = (nome) => ({ name: nome, mimeType: 'image/png', buffer: PNG });
+const foto = (nome) => ({ name: nome, mimeType: 'image/jpeg', buffer: JPG });
 
 const navegador = await abrirNavegador();
 const ctx = await navegador.newContext({ viewport: { width: 1400, height: 1500 } });
@@ -72,14 +72,14 @@ cobrar(
   'e o botao de agendar NAO deixa clicar sem arquivo',
 );
 
-await p.locator('input[type=file]').first().setInputFiles(foto('uma.png'));
+await p.locator('input[type=file]').first().setInputFiles(foto('uma.jpg'));
 await p.waitForTimeout(800);
 cobrar(
   await p.getByRole('button', { name: 'Agendar' }).isDisabled(),
   'com um arquivo so, o carrossel continua incompleto',
 );
 
-await p.locator('input[type=file]').first().setInputFiles(foto('duas.png'));
+await p.locator('input[type=file]').first().setInputFiles(foto('duas.jpg'));
 await p.waitForTimeout(800);
 cobrar(
   !(await p.getByRole('button', { name: 'Agendar' }).isDisabled()),

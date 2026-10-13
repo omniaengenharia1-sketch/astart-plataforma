@@ -59,6 +59,13 @@ function subirExemplo(postId: string, tipo: string, arquivo: File): void {
   if (regra.aceita === 'imagem' && !ehImagem) {
     throw new FalhaDeMidia(`Peca de imagem aceita foto, nao ${arquivo.type}.`);
   }
+  // A mesma regra da 0047: a Meta publica imagem so em JPEG. Repetida aqui de
+  // proposito — se as duas discordarem, o roteiro acusa.
+  if (ehImagem && !['image/jpeg', 'image/jpg'].includes(arquivo.type)) {
+    throw new FalhaDeMidia(
+      `A Meta publica imagem so em JPEG, e este arquivo e ${arquivo.type}. Exporte como JPG.`,
+    );
+  }
   if (regra.aceita === 'video' && !video) {
     throw new FalhaDeMidia(`Reel aceita video, nao ${arquivo.type}.`);
   }
