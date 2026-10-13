@@ -2,6 +2,13 @@
 \pset pager off
 
 -- ============ cenario ============
+-- O token global que este teste usa. Fica AQUI, e nao no stub: o Vault comeca
+-- vazio de proposito, porque banco novo comeca vazio. Quando o stub criava as
+-- chaves do agendador, toda rodada passava enquanto uma instalacao nova
+-- falhava no primeiro paste — o ambiente de teste estava mais configurado que
+-- a realidade. Teste que precisa de chave cria a dele.
+select vault.create_secret('TOKEN_FAKE_DO_SYSTEM_USER', 'meta_system_user_token');
+
 insert into clientes (id, nome, slug) values
   ('11111111-1111-1111-1111-111111111111', 'Cliente A', 'cliente-a'),
   ('22222222-2222-2222-2222-222222222222', 'Cliente B', 'cliente-b'),

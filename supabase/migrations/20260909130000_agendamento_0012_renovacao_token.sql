@@ -72,38 +72,66 @@ revoke all on function public.atualizar_token_conta(uuid, text, timestamptz)
 grant execute on function public.atualizar_token_conta(uuid, text, timestamptz) to service_role;
 
 -- ---------------------------------------------------------------------------
--- Cron diario. Exige a chave "renovar_tokens_url" no Vault:
+-- Cron diario. Precisa de "renovar_tokens_url" e "tick_secret" no Vault:
 --   select vault.create_secret(
 --     'https://<ref>.supabase.co/functions/v1/renovar-tokens', 'renovar_tokens_url');
+--
+-- Mesmo motivo da 0009: a falta das chaves NAO impede aplicar. Antes impedia, e
+-- isso travava o banco inteiro por causa de uma integracao que ainda nem tinha
+-- sido configurada.
 -- ---------------------------------------------------------------------------
-do $$
+create or replace function public.agendar_renovacao_tokens()
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare v_falta text;
 begin
-  if not exists (select 1 from vault.decrypted_secrets where name = 'renovar_tokens_url') then
-    raise exception
-      'Cadastre a chave "renovar_tokens_url" no Vault antes de agendar a renovacao. Veja o README.';
-  end if;
-end $$;
+  select string_agg(c.nome, ' e ') into v_falta
+    from (values ('renovar_tokens_url'), ('tick_secret')) as c(nome)
+   where not exists (
+     select 1 from vault.decrypted_secrets v where v.name = c.nome
+   );
 
-do $$
-begin
+  if v_falta is not null then
+    return format(
+      'Falta %s no Vault. Cadastre e rode select public.agendar_renovacao_tokens() de novo.', v_falta);
+  end if;
+
   if exists (select 1 from cron.job where jobname = 'renovar-tokens') then
     perform cron.unschedule('renovar-tokens');
   end if;
-end $$;
 
--- 06:20 UTC, longe do pico e longe do tick de publicacao.
-select cron.schedule(
-  'renovar-tokens',
-  '20 6 * * *',
-  $cron$
-  select net.http_post(
-    url := (select decrypted_secret from vault.decrypted_secrets where name = 'renovar_tokens_url'),
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-tick-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'tick_secret')
-    ),
-    body := '{}'::jsonb,
-    timeout_milliseconds := 55000
+  -- 06:20 UTC, longe do pico e longe do tick de publicacao.
+  perform cron.schedule(
+    'renovar-tokens',
+    '20 6 * * *',
+    $cron$
+    select net.http_post(
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'renovar_tokens_url'),
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-tick-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'tick_secret')
+      ),
+      body := '{}'::jsonb,
+      timeout_milliseconds := 55000
+    );
+    $cron$
   );
-  $cron$
-);
+
+  return 'Renovacao de token ligada: roda todo dia as 06:20 UTC.';
+end;
+$$;
+
+revoke all on function public.agendar_renovacao_tokens() from public, anon, authenticated;
+grant execute on function public.agendar_renovacao_tokens() to service_role;
+
+do $$
+declare v_resposta text;
+begin
+  v_resposta := public.agendar_renovacao_tokens();
+  if v_resposta like 'Falta%' then
+    raise warning 'Renovacao de token nao foi ligada. %', v_resposta;
+  end if;
+end $$;

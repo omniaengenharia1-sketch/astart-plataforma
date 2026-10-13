@@ -426,7 +426,22 @@ DEFINER, que conferem o papel. Isso tira o acesso direto do admin também, de
 propósito — e é justamente o motivo de a `0032` **não** ter usado privilégio de
 coluna para `perfis.papel`: lá não havia função no caminho, aqui há.
 
-A sétima: **banco novo nasce trancado.** `perfis` vazia significa
+A sétima: **stub generoso testa só o caminho já configurado.** As migrations
+`0009` e `0012` recusavam **aplicar** sem as chaves do agendador no Vault, e o
+primeiro paste num projeto novo morria em `Cadastre a chave publicar_tick_url`.
+Nenhum dos 21 testes pegava, porque o `00_stubs_supabase.sql` criava justamente
+aquelas quatro chaves: o ambiente de teste estava mais configurado que uma
+instalação nova. Agora o Vault do stub nasce vazio, cada teste cria a chave que
+precisa, e o `22_smoke_instalacao_nova.sql` percorre o caminho da primeira vez.
+
+A correção de fundo é de ordem: o agendador da Meta é **um** módulo de oito, e
+não pode impedir clientes, aprovações, financeiro e galeria de existirem. O
+agendamento do cron virou `agendar_tick()` e `agendar_renovacao_tokens()` —
+sem as chaves elas dizem o que falta, em português, e a migration segue com um
+aviso. Melhor não agendado que batendo de minuto em minuto numa Edge Function
+que ainda não foi publicada.
+
+A oitava: **banco novo nasce trancado.** `perfis` vazia significa
 `usuario_admin()` falso para todos, e a Edge Function de convite recusa todo
 mundo — inclusive quem acabou de criar o projeto. Nenhum teste pegaria isso,
 porque todo teste insere o seu próprio perfil de admin na primeira linha. A
@@ -435,14 +450,14 @@ segundo uso: a porta se fecha sozinha. Ela é de `service_role`, não de
 `authenticated` — se fosse chamável por quem está logado, numa base recém-criada
 a primeira pessoa a aparecer se promoveria a dona.
 
-A oitava: **`for all` inclui `delete`.** A política de `clientes` da `0006` era
+A nona: **`for all` inclui `delete`.** A política de `clientes` da `0006` era
 `for all using (usuario_edita())`, então qualquer pessoa de operação podia
 apagar um cliente — e o cascade levaria posts, cobranças, galerias e aprovações
 com ele. A `0039` separa em três políticas e deixa delete só para admin. Mesmo
 ele passa por `remover_cliente()`, que recusa quem tem histórico e manda usar
 `desativar_cliente()`.
 
-A nona: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
+A décima: **`SECURITY DEFINER` em bucket privado precisa de guarda de formato
 antes do cast.** A `0035` e a `0038` leem o dono do arquivo a partir do caminho,
 e as duas funções rodam dentro do `using` da política do bucket. Um nome de
 arquivo fora da convenção fazendo `::uuid` estourar não derrubaria só aquele

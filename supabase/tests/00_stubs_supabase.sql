@@ -73,7 +73,12 @@ alter default privileges in schema public grant all on tables to anon, authentic
 grant usage on schema public to anon, authenticated, service_role;
 
 -- Chaves que a migration 0009 (pg_cron) exige antes de agendar o job.
-select vault.create_secret('https://exemplo.supabase.co/functions/v1/publicar-tick', 'publicar_tick_url');
-select vault.create_secret('segredo-de-teste', 'tick_secret');
-select vault.create_secret('TOKEN_FAKE_DO_SYSTEM_USER', 'meta_system_user_token');
-select vault.create_secret('https://exemplo.supabase.co/functions/v1/renovar-tokens', 'renovar_tokens_url');
+-- O Vault comeca VAZIO, de proposito.
+--
+-- Ele vinha com as quatro chaves que as migrations do agendador exigiam, e por
+-- isso toda rodada de teste passava enquanto uma instalacao nova falhava no
+-- primeiro paste: o ambiente de teste estava mais configurado que a realidade.
+-- Stub generoso testa so o caminho felizmente configurado.
+--
+-- Teste que precisa de uma chave cria a dele, e assim o pre-requisito fica
+-- escrito onde ele vale.
