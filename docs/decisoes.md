@@ -35,15 +35,25 @@ decidiu diferente de mim, e nas duas ela estava certa.**
    em quatro lugares; virou uma constante no `Politicas.tsx`, e o
    `provar-politicas.mjs` cobra o endereço exato nas páginas publicadas.
 
-   **Falta o endereço RECEBER.** A zona tem dois registros `MX` ao mesmo tempo:
-   um servidor de verdade (`_dc-mx.5ba896815cfc...`, que resolve para
-   177.104.174.39) e um `0 .` — o *null MX* da RFC 7505, que declara que o
-   domínio não recebe e-mail. A RFC manda o null MX ser o **único** quando
-   existe; com os dois, cada remetente decide: servidor rigoroso recusa na
-   hora, servidor tolerante ignora o ponto e entrega. Ou seja, chega às vezes —
-   que é pior que nunca chegar, porque ninguém descobre. Some a isso os dois
-   SPF na zona (`v=spf1 -all` e o do provedor), que é erro permanente por si
-   só. Os registros a apagar estão no `docs/homologacao-meta.md`.
+   **Falta o endereço RECEBER, e isso foi medido.** Teste em 14/10, de um Gmail
+   para `projetos@`: bounce em **3 segundos** — *"o domínio astartstudio.com.br
+   não foi encontrado"*. A dona já tinha testado `adm@` (duas vezes) e
+   `contato@` em 13/10, com retorno idêntico. **Nenhum endereço do domínio
+   recebe**, então trocar de caixa não adianta: o buraco é da zona.
+
+   A causa: dois registros `MX` ao mesmo tempo, um servidor de verdade
+   (`_dc-mx.5ba896815cfc...` → 177.104.174.39) e um `0 .`, o *null MX* da
+   RFC 7505, que declara que o domínio não recebe e-mail. A RFC manda o null MX
+   ser o **único** quando existe; com os dois, quem decide é o remetente, e o
+   Google honra o ponto. Some a isso os dois SPF na zona (`v=spf1 -all` e o do
+   provedor), que é erro permanente por si só. Os registros a apagar estão no
+   `docs/homologacao-meta.md`.
+
+   Eu escrevi antes que "chegaria às vezes" — amoleci sem ter medido. Chegaria
+   num servidor tolerante; o Google não é um, e é por ele que a Meta escreve.
+
+   Até a zona ser consertada, as páginas públicas precisam de um endereço que
+   receba, senão a política promete um canal que não existe.
 
 ## Campanhas e relatórios
 

@@ -68,7 +68,7 @@ sem navegador. Rodar depois de cada deploy que toque nas políticas:
 cd plataforma && node provar-politicas.mjs
 ```
 
-### Pendência que bloqueia: o e-mail de contato chega *às vezes*
+### Pendência que bloqueia: nenhum endereço @astartstudio.com.br recebe
 
 As três páginas mandam escrever para `projetos@astartstudio.com.br` (confirmado
 pela dona em 14/10; antes era `contato@`, palpite meu).
@@ -83,19 +83,31 @@ problema é o que está **ao lado** dele na zona:
 | `TXT` | `v=spf1 -all` | segundo SPF na zona; dois SPF é erro permanente, e quem recebe nem avalia |
 
 A RFC manda o null MX ser o **único** `MX` quando existe. Com os dois ao mesmo
-tempo, o comportamento fica com o remetente: servidor rigoroso recusa na hora
-("este domínio não recebe e-mail"), servidor tolerante ignora o ponto e entrega
-no servidor de verdade. **Chega às vezes** — o que é pior que nunca chegar,
-porque ninguém descobre que está perdendo mensagem.
+tempo, o comportamento fica com o remetente — e foi **medido**, não deduzido.
 
-Apagar os dois. Manter o outro `MX` e o outro SPF
-(`v=spf1 +a +mx +ip4:199.193.117.170 ...`). Enquanto não for apagado, o revisor
-que escrever pode levar bounce, e um canal de contato que funciona por sorte não
-é canal de contato.
+Teste em 14/10: mensagem de um Gmail para `projetos@astartstudio.com.br`.
+Bounce em **3 segundos**:
 
-O jeito de conferir sem adivinhar é mandar uma mensagem de teste de um Gmail
-para `projetos@astartstudio.com.br` e ver se volta bounce. Google é remetente
-rigoroso — se chegar pelo Gmail, chega pela maioria.
+> Endereço não encontrado. A mensagem não foi entregue para
+> `projetos@astartstudio.com.br` porque o domínio `astartstudio.com.br` não foi
+> encontrado.
+
+A dona já tinha feito o mesmo teste em 13/10 com `adm@` (duas vezes) e
+`contato@`: bounce idêntico nas três. Ou seja, **nenhum endereço do domínio
+recebe**, e trocar de caixa não adianta — o buraco é da zona, não do endereço.
+
+Isto corrige uma afirmação anterior minha de que "chegaria às vezes". Chegaria,
+num servidor tolerante; o Google honra o null MX e recusa na hora, e Google é
+quem a Meta usa com mais frequência.
+
+Apagar os dois registros. Manter o outro `MX` (que tem servidor de verdade:
+`_dc-mx...` resolve para `177.104.174.39`) e o outro SPF
+(`v=spf1 +a +mx +ip4:199.193.117.170 ...`).
+
+**Enquanto a zona não for consertada**, as três páginas públicas precisam de um
+endereço que receba, ou a política promete um canal que não existe — e o revisor
+que escrever leva bounce. Um endereço de Gmail da agência resolve e é honesto: a
+política precisa dizer para onde escrever, não precisa ser no domínio.
 
 ---
 
