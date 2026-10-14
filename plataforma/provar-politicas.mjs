@@ -23,6 +23,18 @@
 
 const BASE = (process.env['BASE'] ?? 'https://astart-plataforma.pages.dev').replace(/\/$/, '');
 
+// O endereço para onde o titular dos dados — e o revisor da Meta — escrevem.
+//
+// Escrito à mão aqui, e não lido do `Politicas.tsx`, de propósito: prover que lê
+// o valor da fonte que está conferindo não prova nada, ele só confirma que a
+// fonte é igual a si mesma. Trocar o endereço passa a exigir mexer nos dois,
+// que é exatamente a fricção que se quer.
+//
+// Existe porque o endereço anterior (`contato@`) era um palpite meu, escrito à
+// mão em quatro lugares. Endereço errado numa política promete um canal que não
+// existe.
+const CONTATO = 'projetos@astartstudio.com.br';
+
 // Espelha `src/prerender.tsx`. Pouca coisa e de propósito: o que esta lista
 // cobra é "chegou texto com o título certo", não o texto inteiro — senão
 // corrigir uma vírgula na política quebraria o prover.
@@ -70,7 +82,16 @@ for (const p of PAGINAS) {
     `${p.caminho}: chega com texto, nao com casca (${texto.length} caracteres)`,
   );
   cobrar(texto.includes(p.titulo), `${p.caminho}: o texto traz "${p.titulo}"`);
-  cobrar(/mailto:[^"']+@/.test(html), `${p.caminho}: traz endereco de contato`);
+  // O endereço EXATO, não "existe um mailto". A versão frouxa passaria com um
+  // endereço errado, que é o estado em que estas páginas ficaram por dias.
+  cobrar(
+    html.includes(`mailto:${CONTATO}`) && texto.includes(CONTATO),
+    `${p.caminho}: o contato e ${CONTATO}, clicavel e escrito`,
+  );
+  cobrar(
+    !/contato@astartstudio/.test(html),
+    `${p.caminho}: o endereco antigo (palpite) sumiu da pagina`,
+  );
   // O revisor da Meta precisa do aviso de que a plataforma publica em nome do
   // cliente. Se este trecho sumir da política, some o motivo de ela existir.
   if (p.caminho === 'privacidade') {

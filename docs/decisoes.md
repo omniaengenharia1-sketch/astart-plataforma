@@ -30,8 +30,20 @@ decidiu diferente de mim, e nas duas ela estava certa.**
 3. **Domínio:** `astartstudio.com.br`, que ela já tem. Eu uso um subdomínio e
    mando o que apontar no Cloudflare. Decidir isto antes da submissão evita
    refazer a análise.
-4. **E-mail de contato das páginas públicas** — ainda não confirmado. Está
-   `contato@astartstudio.com.br` por palpite meu.
+4. ~~**E-mail de contato das páginas públicas**~~ — **respondido em 14/10:
+   `projetos@astartstudio.com.br`.** Era `contato@`, palpite meu, escrito à mão
+   em quatro lugares; virou uma constante no `Politicas.tsx`, e o
+   `provar-politicas.mjs` cobra o endereço exato nas páginas publicadas.
+
+   **Falta o endereço RECEBER.** A zona tem dois registros `MX` ao mesmo tempo:
+   um servidor de verdade (`_dc-mx.5ba896815cfc...`, que resolve para
+   177.104.174.39) e um `0 .` — o *null MX* da RFC 7505, que declara que o
+   domínio não recebe e-mail. A RFC manda o null MX ser o **único** quando
+   existe; com os dois, cada remetente decide: servidor rigoroso recusa na
+   hora, servidor tolerante ignora o ponto e entrega. Ou seja, chega às vezes —
+   que é pior que nunca chegar, porque ninguém descobre. Some a isso os dois
+   SPF na zona (`v=spf1 -all` e o do provedor), que é erro permanente por si
+   só. Os registros a apagar estão no `docs/homologacao-meta.md`.
 
 ## Campanhas e relatórios
 

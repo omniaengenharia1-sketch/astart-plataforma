@@ -17,7 +17,23 @@
  */
 import { Logo } from '../componentes/Marca';
 
-const ATUALIZADO = '13 de outubro de 2026';
+const ATUALIZADO = '14 de outubro de 2026';
+
+/**
+ * O endereço para onde o titular dos dados escreve — e para onde o revisor da
+ * Meta escreve, se escrever.
+ *
+ * Uma constante, não o texto repetido nas duas páginas: antes era
+ * `contato@astartstudio.com.br`, escrito à mão em quatro lugares, e era um
+ * PALPITE meu — está registrado como tal no `docs/decisoes.md`. A dona
+ * respondeu: é `projetos@`. Endereço errado numa política é pior que endereço
+ * nenhum, porque promete um canal que não existe.
+ *
+ * O `provar-politicas.mjs` cobra este endereço exato nas páginas publicadas, e
+ * de propósito ele o tem escrito à mão também: prover que lê o valor da fonte
+ * que está conferindo não prova nada.
+ */
+const CONTATO = 'projetos@astartstudio.com.br';
 
 function Pagina({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -32,8 +48,8 @@ function Pagina({ titulo, children }: { titulo: string; children: React.ReactNod
         <div className="mt-9 border-t border-linha-fraca pt-5">
           <p className="text-[12.5px] text-tinta-3">
             Astart Studio · dúvidas sobre dados:{' '}
-            <a href="mailto:contato@astartstudio.com.br" className="risca hover:text-pink-texto">
-              contato@astartstudio.com.br
+            <a href={`mailto:${CONTATO}`} className="risca hover:text-pink-texto">
+              {CONTATO}
             </a>
           </p>
         </div>
@@ -200,8 +216,8 @@ export function ExclusaoDeDados() {
       <T>Como pedir</T>
       <p>
         Mande um e-mail para{' '}
-        <a href="mailto:contato@astartstudio.com.br" className="risca hover:text-pink-texto">
-          contato@astartstudio.com.br
+        <a href={`mailto:${CONTATO}`} className="risca hover:text-pink-texto">
+          {CONTATO}
         </a>{' '}
         com o assunto <strong>“Exclusão de dados”</strong>, dizendo de qual conta ou de qual
         empresa. Respondemos em até 15 dias, confirmando o que foi apagado.

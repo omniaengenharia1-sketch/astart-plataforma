@@ -124,7 +124,8 @@ for (const p of lista) {
     `${p.caminho}: continua com o CSS da plataforma`,
   );
   // O endereço de contato é o que a Meta usa para falar com a agência. Página de
-  // política sem para onde escrever é motivo de reprovação por si só.
+  // política sem para onde escrever é motivo de reprovação por si só. O endereço
+  // EXATO é cobrado pelo `provar-politicas.mjs`, no site publicado.
   cobrar(
     /mailto:[^"']+@/.test(html),
     `${p.caminho}: tem endereco de contato clicavel`,

@@ -68,21 +68,34 @@ sem navegador. Rodar depois de cada deploy que toque nas políticas:
 cd plataforma && node provar-politicas.mjs
 ```
 
-### Pendência que bloqueia: o e-mail de contato não recebe
+### Pendência que bloqueia: o e-mail de contato chega *às vezes*
 
-As três páginas mandam escrever para `contato@astartstudio.com.br`, e hoje esse
-endereço **recusa mensagem no nível do servidor**. A zona tem dois registros que
-precisam sair:
+As três páginas mandam escrever para `projetos@astartstudio.com.br` (confirmado
+pela dona em 14/10; antes era `contato@`, palpite meu).
+
+O endereço existe e tem servidor: o `MX` aponta para
+`_dc-mx.5ba896815cfc.astartstudio.com.br`, que resolve para `177.104.174.39`. O
+problema é o que está **ao lado** dele na zona:
 
 | registro | valor | o que ele faz |
 |---|---|---|
-| `MX` | `0 .` | declara formalmente que o domínio não recebe e-mail (RFC 7505) |
-| `TXT` | `v=spf1 -all` | segundo SPF na zona; dois SPF é erro permanente, e o servidor que recebe nem avalia |
+| `MX` | `0 .` | o *null MX* da RFC 7505: declara que o domínio não recebe e-mail |
+| `TXT` | `v=spf1 -all` | segundo SPF na zona; dois SPF é erro permanente, e quem recebe nem avalia |
 
-Manter o outro `MX` e o outro SPF (`v=spf1 +a +mx +ip4:199.193.117.170 ...`). Até
-isso ser corrigido, o revisor que escrever para o endereço da política leva
-bounce — e endereço de contato que não recebe é tão ruim quanto não ter
-endereço.
+A RFC manda o null MX ser o **único** `MX` quando existe. Com os dois ao mesmo
+tempo, o comportamento fica com o remetente: servidor rigoroso recusa na hora
+("este domínio não recebe e-mail"), servidor tolerante ignora o ponto e entrega
+no servidor de verdade. **Chega às vezes** — o que é pior que nunca chegar,
+porque ninguém descobre que está perdendo mensagem.
+
+Apagar os dois. Manter o outro `MX` e o outro SPF
+(`v=spf1 +a +mx +ip4:199.193.117.170 ...`). Enquanto não for apagado, o revisor
+que escrever pode levar bounce, e um canal de contato que funciona por sorte não
+é canal de contato.
+
+O jeito de conferir sem adivinhar é mandar uma mensagem de teste de um Gmail
+para `projetos@astartstudio.com.br` e ver se volta bounce. Google é remetente
+rigoroso — se chegar pelo Gmail, chega pela maioria.
 
 ---
 
@@ -263,8 +276,8 @@ Em *Facebook Login for Business → Configurações*:
 
 1. **Hoje:** abrir a Business Verification. É a fila mais lenta e não depende
    de mais nada.
-2. **Hoje:** conferir as três páginas públicas e me dizer se o texto está certo
-   — o e-mail de contato nelas é um palpite meu (`contato@astartstudio.com.br`).
+2. **Hoje:** conferir as três páginas públicas e me dizer se o texto está certo.
+   O e-mail de contato já foi confirmado: `projetos@astartstudio.com.br`.
 3. **Antes de qualquer submissão:** apontar o subdomínio de `astartstudio.com.br`
    para a plataforma, e trocar as três URLs. Fazer isso depois custa uma
    atualização no app da Meta e, no pior caso, outra análise.
