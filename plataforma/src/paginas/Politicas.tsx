@@ -23,17 +23,31 @@ const ATUALIZADO = '14 de outubro de 2026';
  * O endereço para onde o titular dos dados escreve — e para onde o revisor da
  * Meta escreve, se escrever.
  *
+ * É PROVISÓRIO, e um Gmail de propósito. O endereço da agência é
+ * `projetos@astartstudio.com.br`, mas **nenhum endereço desse domínio recebe
+ * hoje**: a zona tem um `MX 0 .` (o null MX da RFC 7505, que declara que o
+ * domínio não aceita e-mail) ao lado do MX de verdade, e o Google honra o
+ * ponto. Teste de 14/10: bounce em três segundos, *"o domínio
+ * astartstudio.com.br não foi encontrado"*. Com `adm@` e `contato@`, idêntico.
+ *
+ * Política que manda escrever para um endereço que recusa é pior que política
+ * sem endereço: ela promete um canal que não existe, e quem descobre é o
+ * revisor da Meta tentando falar com a agência.
+ *
+ * **Quando a zona for consertada** (apagar `MX 0 .` e `TXT v=spf1 -all`, ver
+ * `docs/homologacao-meta.md`), isto volta para `projetos@astartstudio.com.br` —
+ * aqui e no `provar-politicas.mjs`, que guarda a regra que proíbe endereço
+ * desse domínio enquanto ele recusar.
+ *
  * Uma constante, não o texto repetido nas duas páginas: antes era
  * `contato@astartstudio.com.br`, escrito à mão em quatro lugares, e era um
- * PALPITE meu — está registrado como tal no `docs/decisoes.md`. A dona
- * respondeu: é `projetos@`. Endereço errado numa política é pior que endereço
- * nenhum, porque promete um canal que não existe.
+ * PALPITE meu — está registrado como tal no `docs/decisoes.md`.
  *
  * O `provar-politicas.mjs` cobra este endereço exato nas páginas publicadas, e
  * de propósito ele o tem escrito à mão também: prover que lê o valor da fonte
  * que está conferindo não prova nada.
  */
-const CONTATO = 'projetos@astartstudio.com.br';
+const CONTATO = 'astartagencia@gmail.com';
 
 function Pagina({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (

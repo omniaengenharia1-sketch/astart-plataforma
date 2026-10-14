@@ -70,8 +70,19 @@ cd plataforma && node provar-politicas.mjs
 
 ### Pendência que bloqueia: nenhum endereço @astartstudio.com.br recebe
 
-As três páginas mandam escrever para `projetos@astartstudio.com.br` (confirmado
-pela dona em 14/10; antes era `contato@`, palpite meu).
+As três páginas mandam escrever para **`astartagencia@gmail.com`**, e isso é
+provisório. O endereço da agência é `projetos@astartstudio.com.br` (confirmado
+pela dona em 14/10; antes era `contato@`, palpite meu) — mas ele não recebe, e
+nenhum outro desse domínio recebe.
+
+**Quando a zona for consertada:** mandar um teste de entrega de verdade para
+`projetos@`, e só depois trocar nos dois lugares —
+`plataforma/src/paginas/Politicas.tsx` (a constante `CONTATO`) e
+`plataforma/provar-politicas.mjs` (a constante `CONTATO` e a regra
+`DOMINIO_QUE_RECUSA`, que pode sair junto). A regra existe por causa do defeito,
+não por princípio: ela proíbe qualquer endereço `@astartstudio.com.br` nas
+páginas, inclusive uma troca bem-intencionada para outra caixa do mesmo domínio,
+que pareceria conserto e seria o mesmo buraco.
 
 O endereço existe e tem servidor: o `MX` aponta para
 `_dc-mx.5ba896815cfc.astartstudio.com.br`, que resolve para `177.104.174.39`. O

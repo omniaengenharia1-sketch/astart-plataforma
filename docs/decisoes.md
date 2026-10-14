@@ -52,8 +52,15 @@ decidiu diferente de mim, e nas duas ela estava certa.**
    Eu escrevi antes que "chegaria às vezes" — amoleci sem ter medido. Chegaria
    num servidor tolerante; o Google não é um, e é por ele que a Meta escreve.
 
-   Até a zona ser consertada, as páginas públicas precisam de um endereço que
-   receba, senão a política promete um canal que não existe.
+   **Decidido em 14/10:** até a zona ser consertada, as três páginas públicas
+   usam `astartagencia@gmail.com`. Política apontando para um Gmail é comum em
+   agência pequena e é honesta — ela precisa dizer para onde escrever, não
+   precisa ser no domínio. Apontar para um endereço que recusa seria pior:
+   prometeria um canal que não existe, e quem descobriria é o revisor da Meta
+   tentando falar com a agência.
+
+   O caminho de volta está escrito no `docs/homologacao-meta.md`: teste de
+   entrega de verdade primeiro, depois trocar nos dois lugares.
 
 ## Campanhas e relatórios
 

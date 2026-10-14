@@ -30,10 +30,23 @@ const BASE = (process.env['BASE'] ?? 'https://astart-plataforma.pages.dev').repl
 // fonte é igual a si mesma. Trocar o endereço passa a exigir mexer nos dois,
 // que é exatamente a fricção que se quer.
 //
-// Existe porque o endereço anterior (`contato@`) era um palpite meu, escrito à
-// mão em quatro lugares. Endereço errado numa política promete um canal que não
-// existe.
-const CONTATO = 'projetos@astartstudio.com.br';
+// Por que um Gmail e não `projetos@astartstudio.com.br`, que é o endereço da
+// agência: NENHUM endereço desse domínio recebe hoje. A zona tem um `MX 0 .` (o
+// null MX da RFC 7505) ao lado do MX de verdade, e o Google honra o ponto —
+// bounce em três segundos, medido em 14/10 com `projetos@`, e em 13/10 com
+// `adm@` e `contato@`.
+const CONTATO = 'astartagencia@gmail.com';
+
+// E a regra que vem junto: enquanto a zona recusar, NENHUM endereço do domínio
+// pode aparecer como contato nestas páginas. Vale mais que cobrar o endereço
+// certo — pega também a troca bem-intencionada para outra caixa do mesmo
+// domínio, que pareceria conserto e seria o mesmo buraco.
+//
+// Quando `MX 0 .` e `TXT v=spf1 -all` saírem da Cloudflare: conferir com um
+// teste de entrega de verdade, aí trocar `CONTATO` para
+// `projetos@astartstudio.com.br` e APAGAR esta regra. Ela existe por causa do
+// defeito, não por princípio.
+const DOMINIO_QUE_RECUSA = 'astartstudio.com.br';
 
 // Espelha `src/prerender.tsx`. Pouca coisa e de propósito: o que esta lista
 // cobra é "chegou texto com o título certo", não o texto inteiro — senão
@@ -88,9 +101,16 @@ for (const p of PAGINAS) {
     html.includes(`mailto:${CONTATO}`) && texto.includes(CONTATO),
     `${p.caminho}: o contato e ${CONTATO}, clicavel e escrito`,
   );
+  // Nenhum `mailto:` para o domínio que recusa — nem o antigo palpite
+  // (`contato@`), nem `projetos@`, nem qualquer outro. Enquanto a zona estiver
+  // com o null MX, esse endereço seria um canal que não existe.
+  const paraODominio = [...html.matchAll(/mailto:([^"'?\s>]+)/g)]
+    .map((m) => m[1])
+    .filter((e) => e.endsWith(`@${DOMINIO_QUE_RECUSA}`));
   cobrar(
-    !/contato@astartstudio/.test(html),
-    `${p.caminho}: o endereco antigo (palpite) sumiu da pagina`,
+    paraODominio.length === 0,
+    `${p.caminho}: nenhum contato em @${DOMINIO_QUE_RECUSA}, que recusa e-mail` +
+      (paraODominio.length ? ` — achei ${paraODominio.join(', ')}` : ''),
   );
   // O revisor da Meta precisa do aviso de que a plataforma publica em nome do
   // cliente. Se este trecho sumir da política, some o motivo de ela existir.
