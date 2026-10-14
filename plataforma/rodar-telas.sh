@@ -65,8 +65,12 @@ echo
 # Entao a lista e conferida contra o disco, nos dois sentidos.
 # Fora da lista de proposito: `navegador` e biblioteca, `aovivo` bate no site
 # publicado, e `onde-fica` so tira foto de onde um botao esta — nao verifica
-# nada, entao passar ou falhar nao diz nada sobre a plataforma.
-no_disco=$(ls *.mjs 2>/dev/null | sed 's/\.mjs$//' | grep -vx -e navegador -e aovivo -e onde-fica -e onde-arquivos | sort)
+# nada, entao passar ou falhar nao diz nada sobre a plataforma. `prerender` nao
+# verifica, ele GERA, e roda dentro do `npm run build`. `provar-politicas` bate
+# no site publicado, como o `aovivo`.
+no_disco=$(ls *.mjs 2>/dev/null | sed 's/\.mjs$//' \
+  | grep -vx -e navegador -e aovivo -e onde-fica -e onde-arquivos -e prerender -e provar-politicas \
+  | sort)
 na_lista=$(printf '%s\n' "${ROTEIROS[@]}" | sort)
 esquecidos=$(comm -23 <(echo "$no_disco") <(echo "$na_lista"))
 if [ -n "$esquecidos" ]; then

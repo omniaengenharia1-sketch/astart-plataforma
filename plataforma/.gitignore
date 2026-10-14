@@ -4,3 +4,8 @@ dist/
 .env.local
 tiros/
 dist-exemplo/
+
+# Temporario do prerender.mjs (ele mesmo apaga, mas um build interrompido deixa)
+# e cache do emulador do Cloudflare Pages (`npx wrangler pages dev dist`).
+.prerender/
+.wrangler/

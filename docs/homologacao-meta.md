@@ -44,6 +44,46 @@ aqui seria mentira.
 **Não é peça jurídica.** É a descrição técnica do que acontece com o dado.
 Antes de valer como documento legal, advogado tem de ler.
 
+### As três chegam como HTML, não como casca
+
+Elas abriam no navegador e vinham **vazias no `curl`**: 1.115 bytes de casca e
+19 caracteres de texto, só o `<title>`. O conteúdo é React, e React precisa de
+JavaScript — mas quem confere no App Review é uma checagem automática que faz um
+GET, não um navegador. Política de privacidade em branco é dos motivos mais
+citados de reprovação, e esta não estava em branco: ela só não chegava.
+
+O `plataforma/prerender.mjs` roda depois do `vite build` e escreve
+`dist/privacidade.html`, `dist/termos.html` e `dist/exclusao-de-dados.html` com
+o texto já renderizado (arquivo solto, não `pasta/index.html`, para o Pages
+servir sem barra no fim e sem um 301 no caminho). O JavaScript continua
+carregando por cima; a diferença é que agora o texto chega sem ele.
+
+**O comando de build do Cloudflare Pages tem de ser `npm run build`.** Com
+`vite build` sozinho o `prerender.mjs` não roda e as três voltam a ser casca,
+sem erro nenhum — o site publica normalmente. Quem cobra isso é o
+`plataforma/provar-politicas.mjs`, que bate no site publicado com `fetch` puro,
+sem navegador. Rodar depois de cada deploy que toque nas políticas:
+
+```
+cd plataforma && node provar-politicas.mjs
+```
+
+### Pendência que bloqueia: o e-mail de contato não recebe
+
+As três páginas mandam escrever para `contato@astartstudio.com.br`, e hoje esse
+endereço **recusa mensagem no nível do servidor**. A zona tem dois registros que
+precisam sair:
+
+| registro | valor | o que ele faz |
+|---|---|---|
+| `MX` | `0 .` | declara formalmente que o domínio não recebe e-mail (RFC 7505) |
+| `TXT` | `v=spf1 -all` | segundo SPF na zona; dois SPF é erro permanente, e o servidor que recebe nem avalia |
+
+Manter o outro `MX` e o outro SPF (`v=spf1 +a +mx +ip4:199.193.117.170 ...`). Até
+isso ser corrigido, o revisor que escrever para o endereço da política leva
+bounce — e endereço de contato que não recebe é tão ruim quanto não ter
+endereço.
+
 ---
 
 ## 1.5. O token: o que deu errado hoje, e como não repetir
