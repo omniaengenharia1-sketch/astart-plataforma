@@ -257,10 +257,11 @@ function Lente({
               noTamanho(grandes[item.id] ?? item.miniatura, LARGURA.lente) ?? ''
             }
             alt={item.nome}
-            // `max-*` limita, não estica: sem isto uma foto de 640px aparece em
-            // 640px no meio da tela, que foi o defeito. Com `h-full` ela ocupa
-            // a altura e `object-contain` guarda a proporção.
-            className="max-h-full max-w-full rounded-[var(--raio)] object-contain sm:h-full"
+            // Só `max-*`: altura em porcentagem dentro de container flex é
+            // armadilha velha de Safari, onde a imagem pode colapsar para zero
+            // — tela preta. O que resolve o "foto pequena no meio do preto" é
+            // a FONTE ser grande, não o CSS esticar uma miniatura de 640px.
+            className="max-h-full max-w-full rounded-[var(--raio)] object-contain"
           />
         )}
 

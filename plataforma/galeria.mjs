@@ -31,6 +31,55 @@ const equipe = await limpo();
 for (const esperado of ['captação na fábrica', 'nova galeria', '8 itens']) {
   if (!equipe.includes(esperado)) problemas.push(`a aba da equipe nao mostra "${esperado}"`);
 }
+// A CAPA CARREGOU DE VERDADE?
+//
+// LIMITE HONESTO desta verificacao: em modo exemplo o `sb` e nulo, entao
+// `galeriasDoCliente` devolve o mock e o codigo que ASSINA a capa nao roda.
+// Quebrei a assinatura de proposito e este roteiro passou — ele pega capa que
+// nao carrega por caminho errado ou arquivo ausente, nao o defeito de
+// assinatura. Esse so aparece contra o Supabase de verdade, e quem o pega e
+// abrir a tela depois do deploy (com `scripts/conferir-publicado.mjs` dizendo
+// que o deploy chegou).
+//
+// `galerias_do_cliente` devolve a capa como CAMINHO no balde privado, e o
+// cartao punha esse caminho direto no `src`. O navegador mostrava o icone de
+// imagem quebrada. Esteve assim desde a 0034 e passou por tipo, por build e
+// por olho — porque a capa era uma faixa fina e escura, e faixa escura
+// quebrada parece faixa escura.
+//
+// `naturalWidth` e a unica pergunta que pega isso: ela e 0 quando a imagem nao
+// carregou, qualquer que seja o motivo. Comparar o `src` com uma expressao
+// aceitaria um endereco bem formado que devolve 404.
+const capas = await p.locator('article img').all();
+if (capas.length === 0) {
+  problemas.push('nenhum cartao de colecao tem capa');
+} else {
+  for (const img of capas) {
+    // ESPERA carregar, nao le `naturalWidth` na hora. A primeira versao desta
+    // verificacao lia direto e reprovou uma capa que estava certa: `naturalWidth`
+    // e 0 ate a imagem terminar de decodificar, e com `loading="lazy"` isso
+    // acontece depois do `networkidle`. Guarda que acusa o inocente custa a
+    // mesma confianca que guarda que nao acusa ninguem.
+    const estado = await img
+      .evaluate(
+        (e) =>
+          new Promise((ok) => {
+            const responder = () =>
+              ok({ largura: e.naturalWidth, src: (e.getAttribute('src') ?? '').slice(0, 80) });
+            if (e.complete) return responder();
+            e.addEventListener('load', responder, { once: true });
+            e.addEventListener('error', responder, { once: true });
+            setTimeout(responder, 8000);
+          }),
+      )
+      .catch(() => ({ largura: 0, src: '(nao consegui ler)' }));
+
+    if (estado.largura === 0) {
+      problemas.push(`a capa da colecao nao carregou (src: "${estado.src}")`);
+    }
+  }
+}
+
 await p.screenshot({ path: `${SAIDA}/18-galeria-equipe.png`, fullPage: true });
 
 // abre a galeria: grade de conferencia + envio + link

@@ -36,7 +36,7 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
-  RelatorioDeCampanha, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
+  RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
   TipoPeca,
 } from './tipos';
 
@@ -838,7 +838,33 @@ export async function galeriasDoCliente(clienteId: string): Promise<GaleriaNaLis
   if (!sb) return galeriasExemplo(clienteId);
   const { data, error } = await sb.rpc('galerias_do_cliente', { p_cliente: clienteId });
   if (error) throw new FalhaDados(`Não consegui carregar as galerias: ${error.message}`);
-  return exija(data as GaleriaNaLista[] | null, 'As galerias deste cliente');
+  const lista = exija(data as GaleriaNaLista[] | null, 'As galerias deste cliente');
+
+  // A `capa` vem como CAMINHO no balde privado (`<galeria>/mini/<id>.webp`),
+  // porque funcao SQL nao assina nada. O cartao punha esse caminho direto no
+  // `src` da imagem, e o navegador mostrava o icone de imagem quebrada.
+  //
+  // Esteve assim desde a 0034 e ninguem viu: a capa era uma faixa fina de 16:7
+  // no alto do cartao, e faixa escura quebrada parece faixa escura. Quando ela
+  // virou uma capa 4:3 de verdade, o defeito apareceu na primeira olhada.
+  //
+  // Uma assinatura so para todas as capas da tela: uma chamada por galeria
+  // seria uma viagem de rede por cartao.
+  const caminhos = [...new Set(lista.map((g) => g.capa).filter((c): c is string => !!c))];
+  if (caminhos.length === 0) return lista;
+
+  const { data: urls } = await sb.storage.from('galerias').createSignedUrls(caminhos, 3600);
+  // Sem predicado de tipo aqui: o tipo do supabase-js traz `path` e `signedUrl`
+  // anulaveis (e um `signedURL` legado), e afirmar um formato proprio nao
+  // compila. Monta o mapa no laco, que e honesto e nao precisa de asserçao.
+  const mapa = new Map<string, string>();
+  for (const u of urls ?? []) {
+    if (u.path && u.signedUrl) mapa.set(u.path, u.signedUrl);
+  }
+
+  // Capa que nao assinou vira `null`, nao caminho cru: o cartao sabe desenhar
+  // o lugar vazio, e nao sabe desenhar um endereco que nao existe.
+  return lista.map((g) => ({ ...g, capa: g.capa ? (mapa.get(g.capa) ?? null) : null }));
 }
 
 /**

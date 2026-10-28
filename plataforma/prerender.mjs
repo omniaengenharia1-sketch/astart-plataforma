@@ -85,6 +85,35 @@ for (const p of lista) {
 
 rmSync(TEMP, { recursive: true, force: true });
 
+// --- 3b. a marca da versão ---------------------------------------------------
+//
+// Carimba no `index.html` o commit que gerou este build. Existe por um prejuízo
+// concreto: o build de produção (`npm run build`, que roda `tsc -b`) ficou
+// QUEBRADO por duas horas enquanto eu conferia com `tsc --noEmit`, que usa
+// outro escopo e passava. Quatro commits não chegaram no ar, e a dona testava
+// o conserto no código velho enquanto eu dizia que estava pronto.
+//
+// Com a marca, `scripts/conferir-publicado.mjs` responde em um comando se o
+// site publicado é o que está na `main`. "Subi" deixa de ser uma crença.
+const sha =
+  process.env['CF_PAGES_COMMIT_SHA'] ??
+  (() => {
+    try {
+      return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    } catch {
+      return 'desconhecido';
+    }
+  })();
+
+for (const arquivo of ['index.html', ...lista.map((p) => `${p.caminho}.html`)]) {
+  const alvo = join(DIST, arquivo);
+  const html = readFileSync(alvo, 'utf8');
+  writeFileSync(
+    alvo,
+    html.replace('<head>', `<head>\n    <meta name="versao" content="${sha.slice(0, 40)}" />`),
+  );
+}
+
 // --- 4. e a conferência, relendo o que foi escrito -------------------------
 console.log();
 cobrar(lista.length === 3, `as tres paginas publicas foram geradas (${lista.length})`);

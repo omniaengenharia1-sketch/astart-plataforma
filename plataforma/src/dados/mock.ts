@@ -17,7 +17,8 @@ import type {
   LoteDoLink, MesDeConteudo, NpsDoCliente, PainelCliente,
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
   DocumentoDoCliente, TipoDocumento,
-  PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoNps, SaudeDoToken,
+  PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps,
+  SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
 } from './tipos';
@@ -1237,7 +1238,10 @@ export function tirarAcessoDoClienteExemplo(email: string, clienteId: string): v
 // arquivo vira um object URL e entra na grade, para o fluxo inteiro poder ser
 // percorrido antes de existir Supabase.
 // ---------------------------------------------------------------------------
-interface GaleriaExemplo extends GaleriaNaLista {
+// `arquivadaEm` e `capaItemId` ficam de FORA: quem os preenche e
+// `galeriasExemplo`, lendo os mapas de lixeira e de capa. Exigi-los em cada
+// literal seria repetir `arquivadaEm: null` em toda galeria de exemplo.
+interface GaleriaExemplo extends Omit<GaleriaNaLista, 'arquivadaEm' | 'capaItemId'> {
   clienteId: string;
   itens: ItemGaleria[];
 }
@@ -2255,7 +2259,7 @@ export function removerClienteExemplo(clienteId: string): ResumoDaRemocao {
 
   // O cascade do banco, imitado: o que pendura no cliente sai junto. Sem isto,
   // a demonstracao mostraria peca orfa de cliente que nao existe mais.
-  const fora = (lista: { clienteId: string }[]) => {
+  const fora = (lista: { clienteId: string | null }[]) => {
     for (let n = lista.length - 1; n >= 0; n -= 1) {
       if (lista[n]?.clienteId === clienteId) lista.splice(n, 1);
     }
