@@ -106,7 +106,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const token = (pedido.token ?? '').trim();
-  if (token.length < 32) return erro(req, 'Link invalido.', 404);
+  // 16, nao 32. O piso antigo era do token de 64 caracteres em hex; a 0057
+  // trocou a forma para `nome-da-galeria-<16 de segredo>`, e uma galeria de
+  // nome curto ("Teste") gera um token de 22 — que esta porta recusaria com
+  // 404 antes de chegar ao banco, sem nenhuma pista do motivo.
+  //
+  // O piso existe para nao gastar um sha256 com lixo, nao para proteger: o que
+  // protege sao os 96 bits de segredo. O banco usa o mesmo numero
+  // (`galeria_por_token`, 0057) — dois pisos diferentes para a mesma porta e
+  // como se perde link legitimo.
+  if (token.length < 16) return erro(req, 'Link invalido.', 404);
 
   const sb = createClient(exigir('SUPABASE_URL'), exigir('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
