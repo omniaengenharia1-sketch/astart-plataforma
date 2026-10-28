@@ -4,7 +4,7 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
-  arquivarGaleria, criarGaleria, criarLinkGaleria, excluirGaleria,
+  arquivarGaleria, criarGaleria, criarLinkGaleria, definirCapaGaleria, excluirGaleria,
   galeriasDoCliente, itensDaGaleria, revogarLinkGaleria,
 } from '../dados/api';
 import { naFila, subirItem } from '../dados/galeria';
@@ -120,6 +120,7 @@ function Cartao({
   itens,
   equipe,
   acoes,
+  aoEscolherCapa,
 }: {
   g: GaleriaNaLista;
   aoAbrir: () => void;
@@ -127,6 +128,7 @@ function Cartao({
   itens: ItemGaleria[] | null;
   equipe: boolean;
   acoes: { texto: string; perigo?: boolean; aoClicar: () => void }[];
+  aoEscolherCapa: (item: ItemGaleria) => void;
 }) {
   return (
     <article className={'group bloco overflow-hidden' + (g.arquivadaEm ? ' opacity-70' : '')}>
@@ -189,26 +191,64 @@ function Cartao({
             <p className="text-tinta-3">Nada subiu ainda.</p>
           ) : (
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
-              {itens.map((i) => (
-                <li
-                  key={i.id}
-                  title={i.nome}
-                  className="relative aspect-square overflow-hidden rounded-[12px] border border-linha-fraca"
-                >
-                  {i.miniatura ? (
-                    <img src={i.miniatura} alt={i.nome} loading="lazy" className="size-full object-cover" />
-                  ) : (
-                    <span className="aurora grid size-full place-items-center px-1 text-center">
-                      <span className="rotulo truncate">{i.nome}</span>
-                    </span>
-                  )}
-                  {i.tipo === 'video' && (
-                    <span className="rotulo-forte absolute bottom-1 left-1 rounded-full bg-[rgb(3_3_8/0.6)] px-1.5 text-[9px] text-tinta">
-                      vídeo
-                    </span>
-                  )}
-                </li>
-              ))}
+              {itens.map((i) => {
+                const ehCapa = i.id === g.capaItemId;
+                return (
+                  <li
+                    key={i.id}
+                    title={i.nome}
+                    className={
+                      'group/foto relative aspect-square overflow-hidden rounded-[12px] border ' +
+                      (ehCapa ? 'border-pink' : 'border-linha-fraca')
+                    }
+                  >
+                    {i.miniatura ? (
+                      <img src={i.miniatura} alt={i.nome} loading="lazy" className="size-full object-cover" />
+                    ) : (
+                      <span className="aurora grid size-full place-items-center px-1 text-center">
+                        <span className="rotulo truncate">{i.nome}</span>
+                      </span>
+                    )}
+                    {i.tipo === 'video' && (
+                      <span className="rotulo-forte absolute bottom-1 left-1 rounded-full bg-[rgb(3_3_8/0.6)] px-1.5 text-[9px] text-tinta">
+                        vídeo
+                      </span>
+                    )}
+
+                    {/* ESCOLHER A CAPA, aqui.
+                        Este botão só existia dentro da lupa, e a lupa só abre
+                        no modo cliente — ou seja, a equipe não tinha tela
+                        nenhuma para trocar a capa. A capa da entrega da
+                        Confraria era a primeira foto por falta de caminho, não
+                        por escolha.
+
+                        Num canto, e não na foto inteira: clicar na foto para
+                        trocar a capa troca a capa sem querer o tempo todo. No
+                        celular fica sempre visível, porque não há passar o
+                        mouse. */}
+                    {equipe && i.tipo === 'foto' && (
+                      <button
+                        type="button"
+                        onClick={() => aoEscolherCapa(i)}
+                        disabled={ehCapa}
+                        aria-pressed={ehCapa}
+                        aria-label={ehCapa ? `${i.nome} é a capa` : `Usar ${i.nome} de capa`}
+                        title={ehCapa ? 'Esta é a capa da entrega' : 'Usar esta foto de capa'}
+                        className={
+                          'rotulo-forte absolute top-1 right-1 rounded-full px-2 py-1 text-[9px] ' +
+                          'backdrop-blur-md transition-opacity duration-200 ' +
+                          (ehCapa
+                            ? 'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink'
+                            : 'bg-[rgb(3_3_8/0.55)] text-white opacity-0 ' +
+                              'group-hover/foto:opacity-100 focus-visible:opacity-100 max-[768px]:opacity-100')
+                        }
+                      >
+                        capa
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -250,6 +290,27 @@ export function Galeria({
   // Excluir e da direcao. O portao de verdade e o `usuario_admin()` da funcao
   // no banco — isto aqui so evita mostrar um botao que seria recusado.
   const ehDirecao = equipe && sessao.tipo === 'equipe' && sessao.perfil.papel === 'admin';
+
+  /**
+   * Trocar a capa da entrega.
+   *
+   * Recarrega a lista porque a capa muda o cartao: a foto grande do cartao E a
+   * capa, e deixar a antiga na tela depois de trocar e a tela discordando do
+   * banco bem na hora em que a pessoa quer conferir se deu certo.
+   */
+  async function escolherCapa(galeriaId: string, item: ItemGaleria) {
+    setErro(null);
+    setMexendo(galeriaId);
+    try {
+      await definirCapaGaleria(galeriaId, item.id);
+      setRecado(`"${item.nome}" virou a capa. E a primeira coisa que a cliente ve ao abrir o link.`);
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Nao consegui trocar a capa.');
+    } finally {
+      setMexendo(null);
+    }
+  }
 
   async function arquivar(g: GaleriaNaLista, arquivarAgora: boolean) {
     setErro(null);
@@ -538,6 +599,7 @@ export function Galeria({
                 itens={aberta === g.id ? itens : null}
                 aoAbrir={() => void abrir(g.id)}
                 acoes={acoesDa(g)}
+                aoEscolherCapa={(i) => void escolherCapa(g.id, i)}
               />
 
               {equipe && aberta === g.id && (

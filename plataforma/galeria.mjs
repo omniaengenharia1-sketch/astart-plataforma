@@ -94,6 +94,33 @@ if ((await p.locator('img[alt^="ASTART_padaria"]').count()) < 5) {
 }
 await p.screenshot({ path: `${SAIDA}/19-galeria-aberta.png`, fullPage: true });
 
+// A EQUIPE CONSEGUE ESCOLHER A CAPA?
+//
+// A dona perguntou "como eu seleciono a foto de capa?" e a resposta era: nao
+// consegue. O botao existia — dentro da lupa — e a lupa so abre no modo
+// cliente. Entao havia funcao no banco, funcao na api, botao na tela, e
+// NENHUM caminho da equipe ate ele. A capa da entrega de verdade era a
+// primeira foto, por falta de caminho.
+//
+// Nenhuma verificacao pegava isso porque todas perguntavam "o botao existe?".
+// Esta pergunta "da para chegar nele a partir da tela da equipe?", que e outra
+// coisa — e e a que importa.
+{
+  const naFoto = p.locator('li button', { hasText: /^capa$/ });
+  const quantos = await naFoto.count();
+  if (quantos === 0) {
+    problemas.push('a equipe nao tem como escolher a capa na grade de conferencia');
+  } else {
+    // Clicar troca mesmo? Depois de trocar, a foto escolhida fica marcada.
+    await naFoto.first().click();
+    await p.waitForTimeout(700);
+    const marcadas = await p.locator('li button[aria-pressed="true"]').count();
+    if (marcadas !== 1) problemas.push(`depois de escolher a capa, ${marcadas} fotos ficaram marcadas (esperava 1)`);
+    const depois = await limpo();
+    if (!depois.includes('virou a capa')) problemas.push('trocar a capa nao avisou nada na tela');
+  }
+}
+
 // cria o link
 await p.getByRole('button', { name: /Criar (outro )?link/ }).click();
 await p.waitForTimeout(400);
