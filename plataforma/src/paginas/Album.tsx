@@ -257,11 +257,36 @@ function Lente({
               noTamanho(grandes[item.id] ?? item.miniatura, LARGURA.lente) ?? ''
             }
             alt={item.nome}
-            // Só `max-*`: altura em porcentagem dentro de container flex é
-            // armadilha velha de Safari, onde a imagem pode colapsar para zero
-            // — tela preta. O que resolve o "foto pequena no meio do preto" é
-            // a FONTE ser grande, não o CSS esticar uma miniatura de 640px.
-            className="max-h-full max-w-full rounded-[var(--raio)] object-contain"
+            // MEDIDA DE TELA, não porcentagem. `max-h-full` é `max-height:100%`
+            // e precisa que o pai tenha altura DEFINIDA; dentro deste flex ele
+            // não tem, então o navegador trata como "sem limite" e desenha a
+            // foto no tamanho natural. Medido na galeria da cliente:
+            //
+            //   natural 1365x2048 · caixa 1365x2048 · janela 1440x900
+            //
+            // Ou seja: 2048px de altura em 900 de espaço, e o que aparece é um
+            // pedaço escuro do meio da foto — a "tela preta". Com a miniatura
+            // de 640px o mesmo defeito aparecia como "foto pequena no preto".
+            // Uma causa, dois sintomas, e eu tratei os dois como coisas
+            // diferentes.
+            //
+            // `dvh` e `vw` resolvem sempre, em qualquer navegador, sem depender
+            // de o pai ter altura. O desconto de 7rem é a barra de ações.
+            // MEDIDA DE TELA, não porcentagem. `max-h-full` é `max-height:100%`
+            // e exige que o pai tenha altura DEFINIDA; dentro deste flex ele
+            // não tem, então o navegador trata como "sem limite" e desenha a
+            // foto no tamanho natural. Medido na galeria da cliente:
+            //
+            //   natural 1365x2048 · caixa 1365x2048 · janela 1440x900
+            //
+            // São 2048px de altura em 900 de espaço: aparece um pedaço escuro
+            // do meio da foto, que é a "tela preta". Com a miniatura de 640px o
+            // MESMO defeito aparecia como "foto pequena no preto" — uma causa,
+            // dois sintomas, e eu tratei como duas coisas diferentes.
+            //
+            // `dvh` e `vw` resolvem sempre, sem depender do pai. 7rem é a barra
+            // de ações em cima.
+            className="max-h-[calc(100dvh-7rem)] max-w-[96vw] rounded-[var(--raio)] object-contain"
           />
         )}
 

@@ -248,6 +248,52 @@ if (depois <= antes) problemas.push('marcar a escolhida nao funcionou');
 await q.locator('button[aria-label^="Abrir"]').first().click();
 await q.waitForTimeout(400);
 if (!(await q.getByRole('dialog').isVisible())) problemas.push('a lupa nao abriu');
+
+// A FOTO CABE NA TELA?
+//
+// A verificacao que faltava, e que teria poupado quatro rodadas. `max-h-full` e
+// `max-height:100%`, que exige pai com altura DEFINIDA — dentro do flex da lupa
+// ele nao tem, entao o navegador ignora o limite e desenha a foto no tamanho
+// natural. Medido na galeria da cliente: natural 1365x2048, caixa 1365x2048,
+// janela 1440x900. O que ela via era um pedaco escuro do meio da foto, e
+// chamou de "tela preta" — com razao.
+//
+// "A lupa abriu" passava com o defeito. "A foto cabe" nao passa.
+{
+  // JANELA PEQUENA de propósito. A primeira versao desta verificacao rodava na
+  // janela de 1440x1000 e PASSOU com o defeito presente: a foto de exemplo tem
+  // 520x347 e cabia de qualquer jeito, com ou sem limite. Verificacao que so
+  // acusa com foto grande nao acusa nunca em modo exemplo.
+  //
+  // LARGA E BAIXA, e isso e o ponto fino. Com janela estreita a foto encolhe
+  // pela LARGURA — "max-width: 100%" resolve normalmente — e cabe mesmo com o
+  // defeito presente. O que NAO resolve e "max-height: 100%". A janela precisa ser
+  // mais larga que a foto (520px) e mais baixa que ela (347px): assim so a
+  // altura pode limitar, e se ela nao limitar, transborda.
+  //
+  // Minha primeira tentativa usou 420x320 e passou com o defeito presente.
+  await q.setViewportSize({ width: 900, height: 240 });
+  await q.waitForTimeout(400);
+
+  const alvo = q.locator('div[role="dialog"] img').first();
+  if (!(await alvo.count())) {
+    problemas.push('a lupa abriu sem imagem');
+  } else {
+    const m = await alvo.evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      return { l: Math.round(r.width), a: Math.round(r.height), jl: innerWidth, ja: innerHeight };
+    });
+    // Uma folga de 2px para arredondamento de subpixel.
+    if (m.a > m.ja + 2 || m.l > m.jl + 2) {
+      problemas.push(
+        `a foto da lupa nao cabe na tela: ${m.l}x${m.a} numa janela de ${m.jl}x${m.ja}`,
+      );
+    }
+    if (m.a === 0 || m.l === 0) problemas.push('a foto da lupa tem tamanho zero');
+  }
+  await q.setViewportSize({ width: 1440, height: 1000 });
+  await q.waitForTimeout(300);
+}
 await q.keyboard.press('ArrowRight');
 await q.waitForTimeout(250);
 await q.screenshot({ path: `${SAIDA}/22-album-lupa.png`, fullPage: false });
