@@ -25,7 +25,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Botao } from '../componentes/Botao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { albumDoCliente, definirCapaGaleria, favoritarItem, urlsDosOriginais } from '../dados/api';
-import { albumPorToken, baixarItem, baixarTudo, favoritarPorToken } from '../dados/galeria';
+import { albumPorToken, baixarItem, baixarTudo, favoritarPorToken, verItem } from '../dados/galeria';
 import type { FonteAlbum } from '../dados/galeria';
 import { LARGURA, noTamanho } from '../dados/imagem';
 import { diaMes, plural } from '../formato';
@@ -109,6 +109,7 @@ function Lente({
   itens,
   indice,
   favoritos,
+  fonte,
   aoFechar,
   aoAndar,
   aoFavoritar,
@@ -120,6 +121,7 @@ function Lente({
   itens: ItemGaleria[];
   indice: number;
   favoritos: Set<string>;
+  fonte: FonteAlbum;
   aoFechar: () => void;
   aoAndar: (passo: number) => void;
   aoFavoritar: (item: ItemGaleria) => void;
@@ -130,6 +132,39 @@ function Lente({
   ehCapa: (item: ItemGaleria) => boolean;
 }) {
   const item = itens[indice];
+
+  /**
+   * O endereço do ORIGINAL de cada item, pedido sob demanda.
+   *
+   * A lupa mostrava `item.miniatura`, que tem 640px de lado — numa tela de
+   * 1440 ela aparecia pequena no meio do preto, e parecia defeito. Agora ela
+   * mostra a miniatura NA HORA (que já está no cache, vinda da grade) e troca
+   * pelo original assim que ele chega. Nunca há um quadro vazio.
+   *
+   * Guardado num mapa porque andar com as setas volta nas mesmas fotos, e
+   * assinar de novo a cada passo seria um pedido por seta.
+   */
+  const [grandes, setGrandes] = useState<Record<string, string>>({});
+  const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    if (!item || item.tipo === 'video' || grandes[item.id]) return;
+    let valeu = true;
+    setCarregando(true);
+    void verItem(fonte, item.id)
+      .then((url) => {
+        if (valeu && url) setGrandes((g) => ({ ...g, [item.id]: url }));
+      })
+      // Falhou? A miniatura continua na tela. Pior que uma foto menos nítida é
+      // uma lupa que abre vazia porque a assinatura não voltou.
+      .catch(() => {})
+      .finally(() => {
+        if (valeu) setCarregando(false);
+      });
+    return () => {
+      valeu = false;
+    };
+  }, [item, fonte, grandes]);
 
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
@@ -162,6 +197,7 @@ function Lente({
         <span className="rotulo truncate">
           {indice + 1} de {itens.length}
           {item.bytes ? ` · ${peso(item.bytes)}` : ''}
+          {carregando && !grandes[item.id] ? ' · carregando em alta…' : ''}
         </span>
         <div className="flex items-center gap-2">
           {aoUsarDeCapa && (
@@ -214,9 +250,17 @@ function Lente({
           />
         ) : (
           <img
-            src={noTamanho(item.miniatura, LARGURA.lente) ?? ''}
+            // O original quando ele chega; a miniatura enquanto não chega.
+            // Os dois passam pelo redimensionador: pedir 6000px para mostrar
+            // em 1600 é baixar quinze vezes mais do que a tela usa.
+            src={
+              noTamanho(grandes[item.id] ?? item.miniatura, LARGURA.lente) ?? ''
+            }
             alt={item.nome}
-            className="max-h-full max-w-full rounded-[var(--raio)] object-contain"
+            // `max-*` limita, não estica: sem isto uma foto de 640px aparece em
+            // 640px no meio da tela, que foi o defeito. Com `h-full` ela ocupa
+            // a altura e `object-contain` guarda a proporção.
+            className="max-h-full max-w-full rounded-[var(--raio)] object-contain sm:h-full"
           />
         )}
 
@@ -576,6 +620,7 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
           itens={mostrados}
           indice={Math.min(aberto, mostrados.length - 1)}
           favoritos={favoritos}
+          fonte={fonte}
           podeBaixar={album.permiteDownload}
           ehCapa={(item) => album.capaItemId === item.id}
           aoUsarDeCapa={porToken ? null : (item) => void usarDeCapa(item)}

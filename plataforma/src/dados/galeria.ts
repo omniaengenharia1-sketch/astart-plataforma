@@ -140,6 +140,40 @@ export async function albumPorToken(token: string): Promise<Album> {
   return chamarFuncao<Album>({ token, acao: 'abrir' });
 }
 
+/**
+ * O original de UMA foto, assinado para OLHAR — não para baixar.
+ *
+ * A lupa mostrava a miniatura esticada: 640px de lado numa tela de 1440, o que
+ * dá uma foto pequena no meio de um fundo preto. A dona mandou a captura e
+ * parecia a tela quebrada.
+ *
+ * Não dá para reaproveitar o caminho de baixar: ele registra o download, e a
+ * agência usa esse registro para saber se o cliente já pegou as fotos. Abrir
+ * para olhar não é pegar.
+ */
+export async function verItem(fonte: FonteAlbum, item: string): Promise<string | null> {
+  if (!sb) {
+    // No modo exemplo não há original separado: a "miniatura" é o arquivo.
+    const { albumExemplo } = await import('./mock');
+    const a = albumExemplo(fonte.tipo === 'token' ? fonte.token : fonte.galeriaId);
+    return a.itens.find((i) => i.id === item)?.miniatura ?? null;
+  }
+
+  if (fonte.tipo === 'token') {
+    const r = await chamarFuncao<{ url: string | null }>({
+      token: fonte.token,
+      acao: 'ver',
+      item,
+    });
+    return r.url;
+  }
+
+  // A equipe está logada e o RLS já sabe quem é: assina direto, sem função.
+  const { urlsDosOriginais } = await import('./api');
+  const [arquivo] = await urlsDosOriginais(fonte.galeriaId, item);
+  return arquivo?.url ?? null;
+}
+
 export async function favoritarPorToken(
   token: string,
   item: string,

@@ -10,6 +10,7 @@ import {
 import { naFila, subirItem } from '../dados/galeria';
 import { Album } from './Album';
 import { useSessao } from '../sessao';
+import { LARGURA, noTamanho } from '../dados/imagem';
 import { diaMes, haQuanto, plural } from '../formato';
 import type { EnvioEmCurso, GaleriaNaLista, ItemGaleria } from '../dados/tipos';
 
@@ -33,48 +34,151 @@ function Progresso({ fracao }: { fracao: number }) {
   );
 }
 
+/**
+ * O menu de três pontos de uma coleção.
+ *
+ * É o do Pixieset, que a dona mandou de referência: as ações da entrega ficam
+ * aqui, não espalhadas pelo cartão. Fecha com Esc e com clique fora — menu que
+ * só fecha clicando de novo no botão é menu que fica aberto por engano.
+ */
+function MenuDaColecao({ acoes }: { acoes: { texto: string; perigo?: boolean; aoClicar: () => void }[] }) {
+  const [aberto, setAberto] = useState(false);
+  const caixa = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => {
+      if (!caixa.current?.contains(e.target as Node)) setAberto(false);
+    };
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAberto(false);
+    };
+    document.addEventListener('mousedown', fora);
+    document.addEventListener('keydown', tecla);
+    return () => {
+      document.removeEventListener('mousedown', fora);
+      document.removeEventListener('keydown', tecla);
+    };
+  }, [aberto]);
+
+  return (
+    <div ref={caixa} className="relative">
+      <button
+        type="button"
+        aria-label="Ações desta coleção"
+        aria-expanded={aberto}
+        onClick={() => setAberto((v) => !v)}
+        className={
+          'grid size-9 place-items-center rounded-full bg-[rgb(3_3_8/0.5)] text-white ' +
+          'backdrop-blur-md transition-opacity duration-200 ' +
+          (aberto ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-[768px]:opacity-100')
+        }
+      >
+        <span aria-hidden className="text-[18px] leading-none">⋯</span>
+      </button>
+
+      {/* Fundo SÓLIDO, não o vidro do `bloco`: este menu abre em cima de uma
+          foto, e vidro sobre foto clara deixa o texto ilegível — a opção de
+          apagar some justamente por ser a mais clara. */}
+      {aberto && (
+        <div
+          role="menu"
+          className={
+            'absolute top-11 right-0 z-30 w-60 overflow-hidden rounded-[var(--raio)] ' +
+            'border border-linha bg-[var(--papel-2)] p-1.5 text-left ' +
+            'shadow-[0_18px_50px_rgb(0_0_0/0.55)]'
+          }
+        >
+          {acoes.map((a) => (
+            <button
+              key={a.texto}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setAberto(false);
+                a.aoClicar();
+              }}
+              className={
+                'block w-full rounded-[var(--raio-p)] px-3 py-2 text-left text-[13.5px] ' +
+                'hover:bg-superficie-2 ' +
+                (a.perigo ? 'text-pink-texto' : 'text-tinta')
+              }
+            >
+              {a.texto}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Cartao({
   g,
   aoAbrir,
   aberta,
   itens,
   equipe,
+  acoes,
 }: {
   g: GaleriaNaLista;
   aoAbrir: () => void;
   aberta: boolean;
   itens: ItemGaleria[] | null;
   equipe: boolean;
+  acoes: { texto: string; perigo?: boolean; aoClicar: () => void }[];
 }) {
   return (
-    <article className="bloco overflow-hidden">
-      <button type="button" onClick={aoAbrir} className="block w-full text-left">
-        <span className="block aspect-[16/7] w-full overflow-hidden">
-          {g.capa ? (
-            <img src={g.capa} alt="" className="size-full object-cover" loading="lazy" />
-          ) : (
-            <span className="aurora block size-full" />
-          )}
-        </span>
-        <span className="block px-4 pt-3.5 pb-2 sm:px-5">
-          <span className="rotulo">
-            {diaMes(g.quando)}
-            {g.local ? ` · ${g.local}` : ''}
+    <article className={'group bloco overflow-hidden' + (g.arquivadaEm ? ' opacity-70' : '')}>
+      <div className="relative">
+        <button type="button" onClick={aoAbrir} className="block w-full text-left">
+          {/* 4:3 como no Pixieset: a capa é a coisa, não uma faixa fina. */}
+          <span className="block aspect-[4/3] w-full overflow-hidden">
+            {g.capa ? (
+              <img
+                src={noTamanho(g.capa, LARGURA.grade) ?? g.capa}
+                alt=""
+                className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                loading="lazy"
+              />
+            ) : (
+              <span className="aurora block size-full" />
+            )}
           </span>
-          <span className="titulao mt-1.5 block text-[clamp(1.05rem,3vw,1.35rem)]">{g.titulo}</span>
+        </button>
+        {equipe && acoes.length > 0 && (
+          <div className="absolute top-2.5 right-2.5">
+            <MenuDaColecao acoes={acoes} />
+          </div>
+        )}
+      </div>
+
+      <button type="button" onClick={aoAbrir} className="block w-full px-4 pt-3.5 text-left sm:px-5">
+        <span className="block text-[15.5px] font-bold text-tinta">{g.titulo}</span>
+        <span className="rotulo mt-1.5 flex flex-wrap items-center gap-x-2 normal-case">
+          {/* A bolinha de status, como na referência: verde no ar, apagada
+              fora. É o que se lê de relance numa grade de vinte entregas. */}
+          <span
+            aria-hidden
+            className={
+              'inline-block size-2 rounded-full ' +
+              (g.arquivadaEm ? 'bg-tinta-3' : g.publicadaEm ? 'bg-[#22c55e]' : 'bg-tinta-3')
+            }
+          />
+          <span>{plural(g.fotos + g.videos, 'item', 'itens')}</span>
+          <span>· {diaMes(g.quando)}</span>
+          {g.local ? <span>· {g.local}</span> : null}
         </span>
       </button>
 
-      <div className="flex flex-wrap items-center gap-2 px-4 pb-4 sm:px-5">
-        <Marca>{plural(g.fotos, 'foto', 'fotos')}</Marca>
-        {g.videos > 0 && <Marca>{plural(g.videos, 'vídeo', 'vídeos')}</Marca>}
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-2.5 pb-4 sm:px-5">
         {g.bytes > 0 && <Marca>{peso(g.bytes)}</Marca>}
         {g.favoritos > 0 && <Marca forte>{g.favoritos} escolhidas</Marca>}
         {equipe && g.baixou && <Marca>já baixou</Marca>}
         {equipe && g.links.length === 0 && g.publicadaEm === null && <Marca>sem link</Marca>}
         {/* Fora do ar precisa gritar: a equipe pode estar olhando a galeria e
             achando que a cliente ve a mesma coisa. */}
-        {g.arquivadaEm && <Marca forte>fora do ar</Marca>}
+        {g.arquivadaEm && <Marca forte>na lixeira</Marca>}
       </div>
 
       {aberta && (
@@ -140,6 +244,7 @@ export function Galeria({
   const [mexendo, setMexendo] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState<string | null>(null);
   const [digitado, setDigitado] = useState('');
+  const [vendoLixeira, setVendoLixeira] = useState(false);
 
   const { sessao } = useSessao();
   // Excluir e da direcao. O portao de verdade e o `usuario_admin()` da funcao
@@ -289,6 +394,61 @@ export function Galeria({
   if (erro && !galerias) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!galerias) return <Carregando oQue="as galerias" />;
 
+  // A lixeira e a mesma lista, filtrada. O banco so manda as arquivadas para
+  // quem edita (0058), entao para o cliente as duas listas sao iguais.
+  const noAr = galerias.filter((g) => !g.arquivadaEm);
+  const naLixeira = galerias.filter((g) => g.arquivadaEm);
+  const visiveis = vendoLixeira ? naLixeira : noAr;
+
+  /**
+   * As ações do menu "⋯", montadas por galeria.
+   *
+   * Compartilhar e Visualizar só entram quando já existe link: oferecer
+   * "compartilhar" numa entrega sem link daria um menu que falha ao ser usado.
+   * Na lixeira a lista é outra — restaurar e apagar, nada de compartilhar o
+   * que está fora do ar.
+   */
+  function acoesDa(g: GaleriaNaLista) {
+    if (!equipe) return [];
+    const token = tokens[g.id];
+
+    if (g.arquivadaEm) {
+      return [
+        { texto: 'Restaurar', aoClicar: () => void arquivar(g, false) },
+        ...(ehDirecao
+          ? [
+              {
+                texto: 'Apagar de vez',
+                perigo: true,
+                aoClicar: () => {
+                  void abrir(g.id);
+                  setConfirmando(g.id);
+                  setDigitado('');
+                },
+              },
+            ]
+          : []),
+      ];
+    }
+
+    return [
+      ...(token
+        ? [
+            {
+              texto: 'Copiar link do cliente',
+              aoClicar: () => void navigator.clipboard?.writeText(enderecoDe(token)),
+            },
+            {
+              texto: 'Visualizar como cliente',
+              aoClicar: () => window.open(`/g/${token}`, '_blank', 'noopener'),
+            },
+          ]
+        : [{ texto: 'Criar link do cliente', aoClicar: () => void gerarLink(g.id) }]),
+      { texto: 'Subir arquivos', aoClicar: () => void abrir(g.id) },
+      { texto: 'Mover para a lixeira', perigo: true, aoClicar: () => void arquivar(g, true) },
+    ];
+  }
+
   if (!equipe && aberta) {
     return (
       <div>
@@ -328,18 +488,48 @@ export function Galeria({
 
       {erro && galerias && <Falhou mensagem={erro} />}
 
-      {galerias.length === 0 ? (
+      {/* Coleções / Lixeira — as duas abas da referência que a dona mandou.
+          A lixeira não é uma tela separada de propósito: ela é a mesma lista
+          filtrada, e o número do lado diz que há algo lá sem ninguém precisar
+          entrar para descobrir. */}
+      {equipe && (naLixeira.length > 0 || vendoLixeira) && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <Botao
+            tamanho="pequeno"
+            aria-pressed={!vendoLixeira}
+            onClick={() => setVendoLixeira(false)}
+          >
+            Coleções {noAr.length > 0 ? `· ${noAr.length}` : ''}
+          </Botao>
+          <Botao
+            tamanho="pequeno"
+            aria-pressed={vendoLixeira}
+            onClick={() => setVendoLixeira(true)}
+          >
+            Lixeira {naLixeira.length > 0 ? `· ${naLixeira.length}` : ''}
+          </Botao>
+          {vendoLixeira && (
+            <span className="rotulo normal-case">
+              fora do ar: o link não abre e a cliente não vê. os arquivos continuam aqui.
+            </span>
+          )}
+        </div>
+      )}
+
+      {visiveis.length === 0 ? (
         <Vazio
-          titulo="Nenhuma entrega."
+          titulo={vendoLixeira ? 'A lixeira está vazia.' : 'Nenhuma entrega.'}
           explica={
-            equipe
-              ? 'Crie a galeria, suba os arquivos e mande o link.'
-              : 'As entregas aparecem aqui.'
+            vendoLixeira
+              ? 'O que você mover para cá aparece aqui, e dá para restaurar.'
+              : equipe
+                ? 'Crie a galeria, suba os arquivos e mande o link.'
+                : 'As entregas aparecem aqui.'
           }
         />
       ) : (
-        <div className="escada grid gap-5 lg:grid-cols-2">
-          {galerias.map((g) => (
+        <div className="escada grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {visiveis.map((g) => (
             <div key={g.id}>
               <Cartao
                 g={g}
@@ -347,6 +537,7 @@ export function Galeria({
                 aberta={aberta === g.id}
                 itens={aberta === g.id ? itens : null}
                 aoAbrir={() => void abrir(g.id)}
+                acoes={acoesDa(g)}
               />
 
               {equipe && aberta === g.id && (
@@ -463,11 +654,11 @@ export function Galeria({
 
                   {/* ---- tirar do ar / apagar ---------------------------- */}
                   <div className="mt-6" />
-                  <Fita>Tirar do ar</Fita>
+                  <Fita>Lixeira</Fita>
                   <p className="rotulo mt-2 normal-case">
                     {g.arquivadaEm
-                      ? 'está fora do ar: o link não abre e a cliente não vê esta entrega'
-                      : 'arquivar tira do ar sem apagar nada — o mesmo link volta a abrir se você reativar'}
+                      ? 'está na lixeira: o link não abre e a cliente não vê esta entrega'
+                      : 'mover para a lixeira tira do ar sem apagar nada — o mesmo link volta a abrir se você restaurar'}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Botao
@@ -475,7 +666,7 @@ export function Galeria({
                       disabled={mexendo === g.id}
                       onClick={() => void arquivar(g, !g.arquivadaEm)}
                     >
-                      {g.arquivadaEm ? 'Reativar' : 'Arquivar'}
+                      {g.arquivadaEm ? 'Restaurar' : 'Mover para a lixeira'}
                     </Botao>
 
                     {/* Excluir é da direção, e pede o nome digitado. Apagar a

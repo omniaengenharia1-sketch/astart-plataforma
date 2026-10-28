@@ -25,7 +25,10 @@ await p.waitForTimeout(300);
 await p.getByRole('link', { name: 'Galeria' }).first().click();
 await p.waitForLoadState('networkidle');
 const equipe = await limpo();
-for (const esperado of ['captação na fábrica', 'nova galeria', '7 fotos']) {
+// "8 itens" e nao "7 fotos": o cartao passou a contar foto e video juntos, como
+// na referencia do Pixieset que a dona mandou. A contagem continua cobrada —
+// trocar o rotulo sem continuar conferindo o numero seria afrouxar o teste.
+for (const esperado of ['captação na fábrica', 'nova galeria', '8 itens']) {
   if (!equipe.includes(esperado)) problemas.push(`a aba da equipe nao mostra "${esperado}"`);
 }
 await p.screenshot({ path: `${SAIDA}/18-galeria-equipe.png`, fullPage: true });
@@ -53,27 +56,61 @@ if (!comLink.includes('/g/')) problemas.push('o endereco do cliente nao apareceu
 if (/\/g\/[0-9a-f]{64}\b/.test(comLink)) problemas.push('o link voltou a ser 64 caracteres de hex');
 await p.screenshot({ path: `${SAIDA}/20-galeria-link.png`, fullPage: true });
 
-// --- tirar do ar (0058), como OPERACAO
-// Layana e 'operacao': arquiva, mas nao apaga. O portao de verdade e o
-// `usuario_admin()` no banco; isto cobra que a tela nao OFERECA o que seria
+// --- o menu "⋯" da colecao, como na referencia do Pixieset
+// O menu existe para as acoes da entrega ficarem num lugar so, em vez de
+// espalhadas pelo cartao. Com link criado, ele tem copiar e visualizar.
+const menu = p.getByRole('button', { name: 'Ações desta coleção' }).first();
+if (!(await menu.count())) problemas.push('o cartao da colecao nao tem o menu de acoes');
+await menu.click();
+await p.waitForTimeout(300);
+for (const esperado of ['Copiar link do cliente', 'Visualizar como cliente', 'Mover para a lixeira']) {
+  if (!(await p.getByRole('menuitem', { name: esperado }).count())) {
+    problemas.push(`o menu da colecao nao oferece "${esperado}"`);
+  }
+}
+// Layana e 'operacao': move para a lixeira, mas nao apaga. O portao de verdade
+// e o `usuario_admin()` no banco; isto cobra que a tela nao OFEREÇA o que seria
 // recusado — botao que so falha ensina a pessoa a desconfiar da tela.
-if (!(await p.getByRole('button', { name: 'Arquivar' }).count())) {
-  problemas.push('a equipe nao tem como arquivar a galeria');
+if (await p.getByRole('menuitem', { name: /Apagar de vez/ }).count()) {
+  problemas.push('quem nao e direcao esta vendo o apagar no menu');
 }
-if (await p.getByRole('button', { name: /Apagar de vez/ }).count()) {
-  problemas.push('quem nao e direcao esta vendo o botao de apagar');
-}
+// Esc fecha: menu que so fecha clicando de novo fica aberto por engano.
+await p.keyboard.press('Escape');
+await p.waitForTimeout(250);
+if (await p.getByRole('menu').count()) problemas.push('Esc nao fechou o menu da colecao');
 
-await p.getByRole('button', { name: 'Arquivar' }).first().click();
-await p.waitForTimeout(600);
-const arquivada = await limpo();
-if (!arquivada.includes('fora do ar')) problemas.push('arquivar nao marcou a galeria como fora do ar');
-if (!(await p.getByRole('button', { name: 'Reativar' }).count())) {
-  problemas.push('nao da para reativar o que foi arquivado');
+// --- a lixeira (0058)
+await p.getByRole('button', { name: 'Ações desta coleção' }).first().click();
+await p.waitForTimeout(250);
+await p.getByRole('menuitem', { name: 'Mover para a lixeira' }).click();
+await p.waitForTimeout(800);
+
+// Saiu da aba "Coleções": a entrega fora do ar nao fica junto com as que estao
+// no ar, senao a equipe manda link de galeria arquivada.
+if ((await limpo()).includes('captação na fábrica')) {
+  problemas.push('a galeria na lixeira continua aparecendo entre as colecoes');
 }
-await p.getByRole('button', { name: 'Reativar' }).first().click();
+if (!(await p.getByRole('button', { name: /Lixeira/ }).count())) {
+  problemas.push('a aba da lixeira nao apareceu');
+}
+await p.getByRole('button', { name: /Lixeira/ }).first().click();
 await p.waitForTimeout(600);
-if ((await limpo()).includes('fora do ar')) problemas.push('reativar nao devolveu a galeria ao ar');
+const naLixeira = await limpo();
+if (!naLixeira.includes('captação na fábrica')) problemas.push('a galeria nao esta na lixeira');
+if (!naLixeira.includes('na lixeira')) problemas.push('a lixeira nao marca a galeria');
+
+await p.getByRole('button', { name: 'Ações desta coleção' }).first().click();
+await p.waitForTimeout(250);
+if (!(await p.getByRole('menuitem', { name: 'Restaurar' }).count())) {
+  problemas.push('nao da para restaurar o que foi para a lixeira');
+}
+await p.getByRole('menuitem', { name: 'Restaurar' }).click();
+await p.waitForTimeout(800);
+await p.getByRole('button', { name: /Coleções/ }).first().click();
+await p.waitForTimeout(500);
+if (!(await limpo()).includes('captação na fábrica')) {
+  problemas.push('restaurar nao devolveu a galeria para as colecoes');
+}
 await ctx.close();
 
 // --- e a direcao, que apaga, mas tem de digitar o nome

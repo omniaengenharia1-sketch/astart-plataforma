@@ -23,6 +23,8 @@ const BALDE = 'galerias';
 const SEGUNDOS_MINIATURA = 60 * 60;
 /** O original dura o bastante para um download grande terminar. */
 const SEGUNDOS_ORIGINAL = 60 * 60 * 6;
+/** Olhar uma foto na lupa: minutos, nao horas. Nao e para guardar o endereco. */
+const SEGUNDOS_VER = 60 * 15;
 
 interface ItemBruto {
   id: string;
@@ -141,6 +143,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
     });
     if (e) return erro(req, e.message, 400);
     return new Response(JSON.stringify({ ok: true }), { headers: cabecalhos(req) });
+  }
+
+  // acao = ver: o original de UM item, assinado para olhar.
+  //
+  // Existe porque a lupa mostrava a MINIATURA esticada. A miniatura tem 640px
+  // de lado; numa tela de 1440 ela aparecia no tamanho original, pequena no
+  // meio de um fundo preto — a dona mandou a captura, e parecia tela preta.
+  //
+  // Nao da para reaproveitar a acao `baixar`: ela registra o download, e a
+  // agencia usa esse registro para saber se o cliente ja pegou as fotos. Abrir
+  // uma foto para olhar nao e pegar as fotos; contar assim apagaria a unica
+  // informacao que a tela da sobre isso.
+  //
+  // Validade curta e UM item por vez, de proposito: assinar os 185 originais
+  // de uma galeria para mostrar um na tela seria entregar a galeria inteira
+  // por engano, a cada abertura.
+  if (acao === 'ver') {
+    if (!pedido.item) return erro(req, 'Faltou dizer qual item.', 400);
+    const alvo = galeria.itens.find((i) => i.id === pedido.item);
+    if (!alvo) return erro(req, 'Item nao encontrado.', 404);
+
+    const urls = await assinar(sb, [alvo.caminho], SEGUNDOS_VER);
+    return new Response(
+      JSON.stringify({ id: alvo.id, url: urls.get(alvo.caminho) ?? null }),
+      { headers: cabecalhos(req) },
+    );
   }
 
   if (acao === 'baixar') {
