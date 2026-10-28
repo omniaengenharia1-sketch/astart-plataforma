@@ -25,7 +25,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Botao } from '../componentes/Botao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { albumDoCliente, definirCapaGaleria, favoritarItem, urlsDosOriginais } from '../dados/api';
-import { albumPorToken, baixarItem, baixarTudo, favoritarPorToken, verItem } from '../dados/galeria';
+import { albumPorToken, baixarArquivo, baixarItem, baixarTudo, favoritarPorToken, verItem } from '../dados/galeria';
 import type { FonteAlbum } from '../dados/galeria';
 import { LARGURA, noTamanho } from '../dados/imagem';
 import { diaMes, plural } from '../formato';
@@ -406,12 +406,11 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
       } else {
         const [arquivo] = await urlsDosOriginais(galeriaId, item.id);
         if (!arquivo?.url) throw new Error('Não consegui gerar o link deste arquivo.');
-        const a = document.createElement('a');
-        a.href = arquivo.url;
-        a.download = item.nome;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        // `baixarArquivo`, nao um link montado aqui: era a copia que ficou
+        // atras. Consertei o download do cliente e a equipe continuou abrindo
+        // a foto numa aba, porque quem baixa de verdade e o cabecalho que o
+        // `paraBaixar` pede, e so a outra copia pedia.
+        baixarArquivo(arquivo.url, item.nome);
       }
     } catch (x) {
       setErroBaixa(x instanceof Error ? x.message : 'Não consegui baixar.');

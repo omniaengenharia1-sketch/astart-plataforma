@@ -51,3 +51,30 @@ export function noTamanho(url: string | null, largura: number, qualidade = 72): 
   const junta = base.includes('?') ? '&' : '?';
   return `${base}${junta}width=${largura}&quality=${qualidade}`;
 }
+
+/**
+ * Pedir o arquivo para BAIXAR, não para abrir.
+ *
+ * Quem manda baixar é o servidor, no cabeçalho `content-disposition`. O
+ * atributo `download` do link é só uma sugestão, e o navegador IGNORA a
+ * sugestão quando o arquivo está em outro domínio — e o Storage é outro
+ * domínio. Era o defeito: clicar em "baixar" abria a foto numa aba.
+ *
+ * `&download=<nome>` faz o Storage responder com `attachment`. Medido na
+ * mesma foto da Confraria:
+ *
+ *   sem o parâmetro   content-type: image/jpeg                       → abre
+ *   com o parâmetro   content-disposition: attachment; filename=...  → baixa
+ *
+ * O parâmetro fica FORA da assinatura, como o `width` — a mesma URL assinada
+ * serve para olhar e para baixar, sem assinar duas vezes.
+ *
+ * Endereço que não é do Storage volta intacto: no modo exemplo a URL é um
+ * blob, e aí o atributo `download` funciona (mesma origem) e colar query num
+ * blob só estragaria o endereço.
+ */
+export function paraBaixar(url: string, nome: string): string {
+  if (!url.includes('/object/sign/')) return url;
+  const junta = url.includes('?') ? '&' : '?';
+  return `${url}${junta}download=${encodeURIComponent(nome)}`;
+}

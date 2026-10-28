@@ -190,6 +190,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
           id: i.id,
           nome: i.nome,
           bytes: i.bytes,
+          // A URL sai LIMPA, sem `&download=`. Quem cola esse parametro e o
+          // front (`paraBaixar`, em dados/imagem.ts), porque o painel da equipe
+          // baixa sem passar por aqui — assina direto, pelo RLS. Colar nos dois
+          // lugares daria `&download=` duas vezes no dia em que alguem mexer so
+          // num deles.
           url: urls.get(i.caminho) ?? null,
         })),
       }),

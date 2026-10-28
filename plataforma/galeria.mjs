@@ -197,7 +197,9 @@ if (!(await confirmar.isDisabled())) problemas.push('apagar liberou com o nome e
 await ctxD.close();
 
 // --- o link, sem conta nenhuma
-const ctx2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'dark', deviceScaleFactor: 2 });
+// `acceptDownloads` explicito: e o padrao hoje, mas a verificacao de baixar
+// depende dele, e dependencia de padrao e dependencia que muda de versao.
+const ctx2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'dark', deviceScaleFactor: 2, acceptDownloads: true });
 const q = await ctx2.newPage();
 q.on('pageerror', (e) => problemas.push('erro(link): ' + e.message));
 await q.goto('http://localhost:4178/g/exemplo-gal-1', { waitUntil: 'networkidle' });
@@ -223,6 +225,33 @@ if ((await q.locator('header img').count()) < 1) problemas.push('o album abriu s
 // do cliente. `Math.round(0,5)` e 0.
 if (/\b0 MB\b/.test(await q.locator('body').innerText())) {
   problemas.push('ainda tem foto marcada como "0 MB"');
+}
+
+// O "baixar" BAIXA? Era o ultimo passo quebrado da entrega: a cliente abria o
+// link, via as fotos, clicava em baixar e a foto ABRIA numa aba.
+//
+// LIMITE HONESTO: em modo exemplo a foto e da MESMA origem
+// (`/exemplo/foto-1.jpg`), e para a mesma origem o atributo `download` do link
+// funciona — entao esta verificacao passa com o defeito de producao presente.
+// Removi o `paraBaixar` e ela continuou verde. O que ela pega e outra coisa,
+// que tambem ja aconteceu: o clique que nao dispara nada, porque a URL veio
+// nula ou a chamada estourou.
+//
+// Quem pega o defeito de origem cruzada e `enderecos.mjs`, que da a estas
+// funcoes uma URL com a forma real do Storage e confere o endereco que sai.
+{
+  const alvo = q.locator('figure button', { hasText: /^baixar$/ }).first();
+  await alvo.scrollIntoViewIfNeeded();
+  await alvo.hover();
+  try {
+    const [baixa] = await Promise.all([
+      q.waitForEvent('download', { timeout: 8000 }),
+      alvo.click(),
+    ]);
+    if (!(await baixa.suggestedFilename())) problemas.push('o download veio sem nome de arquivo');
+  } catch {
+    problemas.push('clicar em "baixar" nao baixou nada');
+  }
 }
 
 // Pelo LINK nao se troca capa: isso e da equipe. Se este botao vazar para o

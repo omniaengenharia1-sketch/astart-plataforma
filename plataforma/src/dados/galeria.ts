@@ -9,6 +9,7 @@
 import { Zip, ZipPassThrough } from 'fflate';
 import { ligado, sb } from './supabase';
 import { derivadasDe, ehVideo } from './derivadas';
+import { paraBaixar } from './imagem';
 import { registrarItemExemplo } from './mock';
 import type { Album, EnvioEmCurso, ItemGaleria } from './tipos';
 
@@ -214,9 +215,20 @@ async function urlsDaFonte(fonte: FonteAlbum): Promise<ArquivoParaBaixar[]> {
   return urlsDosOriginais(fonte.galeriaId);
 }
 
-function baixarUm(url: string, nome: string) {
+/**
+ * O unico lugar que transforma "tenho a URL" em "o arquivo baixou".
+ *
+ * Exportado porque havia DOIS: este e uma copia dentro do `Album.tsx`, para
+ * quando a equipe baixa (que assina direto, sem passar pela Edge Function).
+ * Consertei um e o outro continuou abrindo a foto numa aba — duas copias do
+ * mesmo gesto e uma delas sempre fica atras.
+ */
+export function baixarArquivo(url: string, nome: string) {
   const a = document.createElement('a');
-  a.href = url;
+  // `paraBaixar` é o que BAIXA; o atributo abaixo é sugestão e não vale para
+  // outro domínio. Os dois ficam: o atributo ainda serve no modo exemplo, onde
+  // a URL é um blob da mesma origem.
+  a.href = paraBaixar(url, nome);
   a.download = nome;
   a.rel = 'noopener';
   document.body.appendChild(a);
@@ -227,7 +239,7 @@ function baixarUm(url: string, nome: string) {
 export async function baixarItem(token: string, item: string, nome: string): Promise<void> {
   const [arquivo] = await urlsParaBaixar(token, item);
   if (!arquivo?.url) throw new FalhaEnvio('Não consegui gerar o link deste arquivo.');
-  baixarUm(arquivo.url, nome);
+  baixarArquivo(arquivo.url, nome);
 }
 
 /**
@@ -256,7 +268,7 @@ export async function baixarTudo(
 
   if (!podeStream) {
     for (const [i, a] of arquivos.entries()) {
-      if (a.url) baixarUm(a.url, a.nome);
+      if (a.url) baixarArquivo(a.url, a.nome);
       aoProgredir(i + 1, arquivos.length);
       // Sem respiro o navegador descarta os downloads seguintes.
       await new Promise((r) => setTimeout(r, 400));
