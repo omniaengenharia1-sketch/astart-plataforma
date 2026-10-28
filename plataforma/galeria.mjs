@@ -261,6 +261,53 @@ await q.waitForTimeout(400);
 if (await q.getByRole('button', { name: /capa/i }).count()) {
   problemas.push('o cliente ve o botao de trocar a capa');
 }
+
+// A LUPA E A DA REFERENCIA?
+//
+// A dona gravou a tela do Pixieset e cobrou: clicar na foto abre a foto MAIOR,
+// com tres icones discretos em cima — favoritar, baixar, compartilhar — e o
+// nome do arquivo embaixo. O que havia era uma barra com "Baixar em alta" em
+// botao rosa e "3 de 185 · 450 KB · carregando em alta…" no canto: a tela
+// mandando baixar antes de ela ter olhado a foto.
+//
+// Isto cobra a FORMA, que e o que ela pediu. Verificar so "a lupa abriu"
+// deixaria eu trocar a tela inteira de novo sem ninguem notar.
+{
+  const lupa = q.getByRole('dialog');
+  for (const rotulo of [/voltar/i, /escolher esta foto|tirar das escolhidas/i, /baixar esta foto/i, /compartilhar/i]) {
+    if (!(await lupa.getByRole('button', { name: rotulo }).count())) {
+      problemas.push(`a lupa esta sem o botao ${rotulo}`);
+    }
+  }
+  // O nome do arquivo embaixo, que substituiu o contador e o peso.
+  const rodape = (await lupa.locator('footer').innerText().catch(() => '')).trim();
+  if (!/\.(jpg|jpeg|png|webp|mp4|mov)$/i.test(rodape)) {
+    problemas.push(`a lupa nao mostra o nome do arquivo embaixo (achei "${rodape}")`);
+  }
+  // E o que SAIU tem de ficar fora: botao escrito de baixar e o contador.
+  const dentro = await lupa.innerText();
+  if (/baixar em alta/i.test(dentro)) problemas.push('a lupa voltou a ter "Baixar em alta" escrito');
+  if (/\d+ de \d+/.test(dentro)) problemas.push('a lupa voltou a ter o contador "N de M"');
+
+  // NO CELULAR, as setas somem e quem anda e o dedo. Na referencia nao ha seta
+  // nenhuma sobre a foto: dois circulos translucidos em cima dela sao dois
+  // furos na unica coisa que a cliente veio ver.
+  await q.setViewportSize({ width: 393, height: 852 });
+  await q.waitForTimeout(400);
+  for (const seta of ['Anterior', 'Proxima', 'Próxima']) {
+    const b = lupa.getByRole('button', { name: seta });
+    if ((await b.count()) && (await b.first().isVisible())) {
+      problemas.push(`a seta "${seta}" aparece na tela de celular`);
+    }
+  }
+  // E no computador elas voltam: la nao ha dedo para arrastar.
+  await q.setViewportSize({ width: 1440, height: 1000 });
+  await q.waitForTimeout(400);
+  if (!(await lupa.getByRole('button', { name: /pr.xima/i }).first().isVisible())) {
+    problemas.push('a seta de avancar sumiu tambem no computador');
+  }
+}
+
 await q.keyboard.press('Escape');
 await q.waitForTimeout(250);
 

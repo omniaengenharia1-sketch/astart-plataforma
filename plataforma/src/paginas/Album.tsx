@@ -105,6 +105,72 @@ function Coracao({ cheio }: { cheio: boolean }) {
   );
 }
 
+/**
+ * Os três ícones da lupa, no traço fino da referência que a dona gravou.
+ *
+ * Traço de 1.6 e nenhum preenchimento: na captura do Pixieset eles são linha
+ * pura sobre o fundo, do mesmo peso do texto ao lado. Ícone pesado numa barra
+ * limpa chama mais atenção que a foto, que é o contrário do que a tela quer.
+ */
+function Voltar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="size-6" fill="none"
+      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 12H5m0 0 6-6m-6 6 6 6" />
+    </svg>
+  );
+}
+
+function Baixar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="size-5" fill="none"
+      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" />
+    </svg>
+  );
+}
+
+function Compartilhar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="size-5" fill="none"
+      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 18c0-5 3.6-7.6 9-7.9V6l7 6-7 6v-4.1c-4.2 0-6.8 1-9 4.1Z" />
+    </svg>
+  );
+}
+
+/**
+ * Botão só de ícone, com área de toque de 44px.
+ *
+ * O ícone tem 20px, mas o dedo não. 44px é o mínimo que a Apple e o Google
+ * pedem, e numa barra onde os alvos ficam a 1cm um do outro a diferença é
+ * favoritar sem querer uma foto que a cliente não escolheu.
+ */
+function Acao({
+  rotulo, aoTocar, aceso, children, ...resto
+}: {
+  rotulo: string;
+  aoTocar: () => void;
+  aceso?: boolean;
+  children: React.ReactNode;
+} & { 'aria-pressed'?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={aoTocar}
+      aria-label={rotulo}
+      title={rotulo}
+      className={
+        'grid size-11 place-items-center rounded-full transition-colors ' +
+        (aceso ? 'text-pink-texto' : 'text-tinta hover:text-tinta-2')
+      }
+      {...resto}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** A lupa: o item aberto, com teclado. Esc fecha, setas andam. */
 function Lente({
   itens,
@@ -146,22 +212,25 @@ function Lente({
    * assinar de novo a cada passo seria um pedido por seta.
    */
   const [grandes, setGrandes] = useState<Record<string, string>>({});
-  const [carregando, setCarregando] = useState(false);
+  /** Ocupa a linha do nome do arquivo por alguns segundos, e volta. */
+  const [recado, setRecado] = useState<string | null>(null);
+  /** Onde o dedo encostou, para saber se arrastou e para que lado. */
+  const toque = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!item || item.tipo === 'video' || grandes[item.id]) return;
     let valeu = true;
-    setCarregando(true);
     void verItem(fonte, item.id)
       .then((url) => {
         if (valeu && url) setGrandes((g) => ({ ...g, [item.id]: url }));
       })
       // Falhou? A miniatura continua na tela. Pior que uma foto menos nítida é
       // uma lupa que abre vazia porque a assinatura não voltou.
-      .catch(() => {})
-      .finally(() => {
-        if (valeu) setCarregando(false);
-      });
+      //
+      // Sem aviso de "carregando em alta": a referência não tem nenhum, e a
+      // troca da miniatura pelo original é invisível quando chega rápido. Texto
+      // que pisca a cada foto cansa mais do que informa.
+      .catch(() => {});
     return () => {
       valeu = false;
     };
@@ -187,6 +256,34 @@ function Lente({
   const cheio = favoritos.has(item.id);
   const capa = ehCapa(item);
 
+  /**
+   * Compartilhar — o terceiro ícone da referência.
+   *
+   * No celular abre a folha nativa, que é onde a cliente manda no WhatsApp sem
+   * copiar nada. No computador não existe essa folha, então copia o endereço e
+   * avisa na linha de baixo.
+   *
+   * O que vai é o endereço da GALERIA, não da foto: o link é o que dá acesso, e
+   * quem recebe precisa poder abrir. Cancelar a folha nativa lança `AbortError`
+   * — não é erro, é a pessoa desistindo, e não vira recado.
+   */
+  async function compartilhar() {
+    const onde = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: item?.nome ?? 'Galeria', url: onde });
+        return;
+      }
+      await navigator.clipboard.writeText(onde);
+      setRecado('Link da galeria copiado.');
+      setTimeout(() => setRecado(null), 3000);
+    } catch (x) {
+      if (x instanceof Error && x.name === 'AbortError') return;
+      setRecado('Não consegui compartilhar. Copie o endereço da barra.');
+      setTimeout(() => setRecado(null), 4000);
+    }
+  }
+
   // PORTAL PARA O `body`, e não aqui dentro da árvore.
   //
   // `position: fixed` deixa de valer contra a janela quando QUALQUER ancestral
@@ -205,15 +302,28 @@ function Lente({
       role="dialog"
       aria-modal="true"
       aria-label={item.nome}
-      className="fixed inset-0 z-50 flex flex-col bg-[rgb(3_3_8/0.92)] backdrop-blur-2xl"
+      // FUNDO SÓLIDO, do papel da página — não um véu escuro desfocado.
+      //
+      // Na referência que a dona gravou, a lupa do Pixieset é uma TELA, não uma
+      // cortina por cima da grade: fundo limpo, foto no meio, nome embaixo. O
+      // véu escuro com desfoque fazia a foto competir com a grade borrada
+      // atrás, e foi o que ela chamou de "aparece logo para baixar".
+      className="fixed inset-0 z-50 flex flex-col bg-papel"
     >
-      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <span className="rotulo truncate">
-          {indice + 1} de {itens.length}
-          {item.bytes ? ` · ${peso(item.bytes)}` : ''}
-          {carregando && !grandes[item.id] ? ' · carregando em alta…' : ''}
-        </span>
-        <div className="flex items-center gap-2">
+      {/* A BARRA DE CIMA, como no vídeo: voltar à esquerda, ações à direita.
+          Ícones, não botões escritos. "Baixar em alta" em botão rosa grande era
+          a tela gritando para a cliente baixar antes de ela ter olhado a foto —
+          e olhar a foto é para o que ela abriu a lupa. */}
+      <header className="flex items-center justify-between px-2 py-2 sm:px-4">
+        <Acao rotulo="Voltar" aoTocar={aoFechar}>
+          <Voltar />
+        </Acao>
+
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Só a equipe vê isto; pelo link do cliente `aoUsarDeCapa` é nulo.
+              Fica em texto, e não em ícone, porque "usar de capa" não tem
+              desenho que se entenda sozinho — e quem usa são duas pessoas que
+              podem ler uma palavra. */}
           {aoUsarDeCapa && (
             <Botao
               tamanho="pequeno"
@@ -224,32 +334,57 @@ function Lente({
               {capa ? 'É a capa' : 'Usar de capa'}
             </Botao>
           )}
-          <Botao
-            tamanho="pequeno"
+
+          <Acao
+            rotulo={cheio ? 'Tirar das escolhidas' : 'Escolher esta foto'}
+            aoTocar={() => aoFavoritar(item)}
+            aceso={cheio}
             aria-pressed={cheio}
-            onClick={() => aoFavoritar(item)}
-            className={cheio ? 'text-pink-texto' : ''}
           >
             <Coracao cheio={cheio} />
-            {cheio ? 'Escolhida' : 'Escolher'}
-          </Botao>
-          {podeBaixar && (
-            <Botao tamanho="pequeno" variante="primario" onClick={() => aoBaixar(item)}>
-              Baixar em alta
-            </Botao>
-          )}
-          <Botao tamanho="pequeno" onClick={aoFechar} aria-label="Fechar">
-            Fechar
-          </Botao>
-        </div>
-      </div>
+          </Acao>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4">
+          {podeBaixar && (
+            <Acao rotulo="Baixar esta foto" aoTocar={() => aoBaixar(item)}>
+              <Baixar />
+            </Acao>
+          )}
+
+          <Acao rotulo="Compartilhar" aoTocar={() => void compartilhar()}>
+            <Compartilhar />
+          </Acao>
+        </div>
+      </header>
+
+      {/* DESLIZAR no celular, SETAS no computador.
+          No vídeo da referência não há seta nenhuma sobre a foto: o dedo
+          arrasta. Dois círculos translúcidos em cima da foto são dois furos na
+          foto — e a foto é a única coisa que a cliente veio ver. No computador
+          não há dedo, então as setas ficam, a partir de `sm`. */}
+      <div
+        className="relative flex min-h-0 flex-1 items-center justify-center"
+        onTouchStart={(e) => {
+          const t = e.changedTouches[0];
+          if (t) toque.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          const t = e.changedTouches[0];
+          const inicio = toque.current;
+          toque.current = null;
+          if (!t || !inicio) return;
+          const dx = t.clientX - inicio.x;
+          const dy = t.clientY - inicio.y;
+          // 48px para não confundir com toque parado, e `|dx| > |dy|` para não
+          // trocar de foto quando a pessoa está rolando a página.
+          if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) return;
+          aoAndar(dx < 0 ? 1 : -1);
+        }}
+      >
         <button
           type="button"
           onClick={() => aoAndar(-1)}
           aria-label="Anterior"
-          className="absolute left-2 z-10 size-12 rounded-full bg-superficie-2 backdrop-blur-xl"
+          className="absolute left-2 z-10 hidden size-12 rounded-full bg-superficie-2 backdrop-blur-xl sm:grid sm:place-items-center"
         >
           ‹
         </button>
@@ -272,21 +407,6 @@ function Lente({
             }
             alt={item.nome}
             // MEDIDA DE TELA, não porcentagem. `max-h-full` é `max-height:100%`
-            // e precisa que o pai tenha altura DEFINIDA; dentro deste flex ele
-            // não tem, então o navegador trata como "sem limite" e desenha a
-            // foto no tamanho natural. Medido na galeria da cliente:
-            //
-            //   natural 1365x2048 · caixa 1365x2048 · janela 1440x900
-            //
-            // Ou seja: 2048px de altura em 900 de espaço, e o que aparece é um
-            // pedaço escuro do meio da foto — a "tela preta". Com a miniatura
-            // de 640px o mesmo defeito aparecia como "foto pequena no preto".
-            // Uma causa, dois sintomas, e eu tratei os dois como coisas
-            // diferentes.
-            //
-            // `dvh` e `vw` resolvem sempre, em qualquer navegador, sem depender
-            // de o pai ter altura. O desconto de 7rem é a barra de ações.
-            // MEDIDA DE TELA, não porcentagem. `max-h-full` é `max-height:100%`
             // e exige que o pai tenha altura DEFINIDA; dentro deste flex ele
             // não tem, então o navegador trata como "sem limite" e desenha a
             // foto no tamanho natural. Medido na galeria da cliente:
@@ -298,9 +418,9 @@ function Lente({
             // MESMO defeito aparecia como "foto pequena no preto" — uma causa,
             // dois sintomas, e eu tratei como duas coisas diferentes.
             //
-            // `dvh` e `vw` resolvem sempre, sem depender do pai. 7rem é a barra
-            // de ações em cima.
-            className="max-h-[calc(100dvh-7rem)] max-w-[96vw] rounded-[var(--raio)] object-contain"
+            // `dvh` e `vw` resolvem sempre, sem depender do pai. 9rem desconta a
+            // barra de cima mais o nome do arquivo embaixo.
+            className="max-h-[calc(100dvh-9rem)] max-w-full object-contain"
           />
         )}
 
@@ -308,11 +428,19 @@ function Lente({
           type="button"
           onClick={() => aoAndar(1)}
           aria-label="Próxima"
-          className="absolute right-2 z-10 size-12 rounded-full bg-superficie-2 backdrop-blur-xl"
+          className="absolute right-2 z-10 hidden size-12 rounded-full bg-superficie-2 backdrop-blur-xl sm:grid sm:place-items-center"
         >
           ›
         </button>
       </div>
+
+      {/* O NOME DO ARQUIVO, embaixo da foto, discreto — como no vídeo.
+          No lugar de "3 de 185 · 450 KB · carregando em alta…", que era
+          informação da ferramenta, não da cliente. O nome serve: é por ele que
+          ela diz "quero a DSC08194". */}
+      <footer className="px-4 pb-5 pt-3 text-center">
+        <p className="truncate text-[15px] text-tinta-3">{recado ?? item.nome}</p>
+      </footer>
     </div>,
     document.body,
   );
