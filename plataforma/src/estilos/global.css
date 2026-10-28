@@ -448,9 +448,26 @@ body::before {
   }
 }
 
-/** A tela entra subindo e saindo do desfoque. */
+/**
+ * A tela entra subindo e saindo do desfoque.
+ *
+ * `backwards`, NUNCA `both`. Com `both` a animação continua APLICADA depois de
+ * terminar, e aí `transform: none` vira a matriz identidade — que, mesmo sendo
+ * identidade, cria bloco de contenção. Todo `position: fixed` lá dentro para de
+ * valer contra a janela e passa a valer contra esta tela, que tem a altura do
+ * conteúdo inteiro.
+ *
+ * Foi isso a "tela preta" da galeria, vista quatro vezes: a lupa pedia
+ * `inset: 0`, recebia 9093px de altura e desenhava a foto a 4341px do topo —
+ * carregada, do tamanho certo, fora da tela. O fundo escuro aparecia; a foto,
+ * não.
+ *
+ * `backwards` guarda o que importa (o primeiro quadro vale ANTES de começar,
+ * então não há piscada) e larga o elemento quando acaba. Esta classe está em 24
+ * lugares: o defeito existia em todas as telas, esperando o primeiro `fixed`.
+ */
 @utility entra {
-  animation: entra-tela 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: entra-tela 320ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 
 @keyframes entra-tela {
@@ -659,7 +676,12 @@ body { background-image: none; }
 /* Entrada das lâminas de uma grade: uma depois da outra, de baixo para cima.
    Seis delas levam meio segundo no total — o suficiente para parecer que a
    tela assentou, e pouco para não virar espera. */
-.escada > * { animation: subir-lamina 520ms cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+/* `backwards`, pelo mesmo motivo do `.entra`: com `both` a animação fica
+   aplicada para sempre, `transform: none` vira matriz identidade, e cada lâmina
+   destas passa a ser bloco de contenção — todo `position: fixed` lá dentro para
+   de valer contra a janela. Aqui ainda não mordeu ninguém; é a mesma armadilha
+   esperando o primeiro modal dentro de uma grade. */
+.escada > * { animation: subir-lamina 520ms cubic-bezier(0.2, 0.9, 0.2, 1) backwards; }
 .escada > *:nth-child(2) { animation-delay: 60ms; }
 .escada > *:nth-child(3) { animation-delay: 120ms; }
 .escada > *:nth-child(4) { animation-delay: 180ms; }

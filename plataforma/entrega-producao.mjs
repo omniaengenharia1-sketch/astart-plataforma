@@ -17,18 +17,35 @@ if (!ENDERECO) {
   process.exit(1);
 }
 
-const b = await abrirNavegador();
-const ctx = await b.newContext({
-  viewport: { width: 1440, height: 900 },
-  colorScheme: 'dark',
-  deviceScaleFactor: 2,
-  acceptDownloads: true,
-});
-const p = await ctx.newPage();
-const problemas = [];
-p.on('pageerror', (e) => problemas.push('erro na pagina: ' + e.message));
+// DUAS TELAS, e a do celular nao e enfeite: a "tela preta" que a dona viu
+// quatro vezes aparecia no celular dela enquanto o computador parecia certo,
+// porque a foto caia logo abaixo da dobra. Testar so em 1440x900 foi o que
+// deixou isso passar.
+const TELAS = [
+  { nome: 'COMPUTADOR', opcoes: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 } },
+  {
+    nome: 'CELULAR',
+    opcoes: {
+      viewport: { width: 393, height: 852 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+      userAgent:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 ' +
+        '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    },
+  },
+];
 
+const b = await abrirNavegador();
+const problemas = [];
 const linha = (n, o, v) => console.log(`${n}. ${o.padEnd(28, '.')} ${v}`);
+
+for (const tela of TELAS) {
+console.log(`\n--- ${tela.nome} ---`);
+const ctx = await b.newContext({ colorScheme: 'dark', acceptDownloads: true, ...tela.opcoes });
+const p = await ctx.newPage();
+p.on('pageerror', (e) => problemas.push(`erro na pagina (${tela.nome}): ` + e.message));
 
 // 1 — abre, e em quanto tempo
 const t0 = Date.now();
@@ -69,11 +86,17 @@ if (fotos < 1) problemas.push('a grade abriu sem foto');
 
 // 5 — favoritar
 const antes = await p.locator('button[aria-pressed="true"]').count();
-await p.locator('button[aria-label^="Escolher"]').first().click();
+const escolher = p.locator('button[aria-label^="Escolher"]').first();
+await escolher.click();
 await p.waitForTimeout(900);
 const depois = await p.locator('button[aria-pressed="true"]').count();
 linha(5, 'favoritar', depois > antes ? 'funciona' : 'NAO funciona');
 if (depois <= antes) problemas.push('favoritar nao marcou');
+// DESMARCA. O favorito e da cliente: e com ele que ela diz quais fotos quer.
+// Teste que deixa coracao marcado faz a agencia revelar foto que ninguem
+// escolheu. A primeira versao disto deixou tres.
+await p.locator('button[aria-label^="Tirar"]').first().click().catch(() => {});
+await p.waitForTimeout(700);
 
 // 6 — a lupa: a foto CABE? Era o "fundo preto" que a dona viu tres vezes. A
 // janela de 1440x900 e menor que a foto (1365x2048), entao a altura tem de
@@ -89,13 +112,20 @@ if (!(await naLupa.count())) {
     const r = e.getBoundingClientRect();
     return {
       l: Math.round(r.width), a: Math.round(r.height),
+      topo: Math.round(r.top), base: Math.round(r.bottom),
       nl: e.naturalWidth, na: e.naturalHeight,
       jl: innerWidth, ja: innerHeight,
     };
   });
   const cabe = m.a <= m.ja + 2 && m.l <= m.jl + 2;
-  linha(6, 'a lupa', `foto ${m.nl}x${m.na} desenhada em ${m.l}x${m.a} (janela ${m.jl}x${m.ja}) — ${cabe ? 'cabe' : 'NAO CABE'}`);
+  // DO TAMANHO CERTO *E* NA TELA. Medir so o tamanho foi o erro que deixou a
+  // "tela preta" passar quatro vezes: a foto estava carregada, do tamanho
+  // exato, e desenhada a 4341px do topo — fora da janela, atras do fundo
+  // escuro. Ver o comentario do `.entra` em global.css.
+  const naTela = m.topo >= -2 && m.base <= m.ja + 2;
+  linha(6, 'a lupa', `foto ${m.nl}x${m.na} em ${m.l}x${m.a}, topo ${m.topo}px (janela ${m.jl}x${m.ja}) — ${cabe && naTela ? 'aparece inteira' : 'NAO APARECE'}`);
   if (!cabe) problemas.push(`a foto da lupa nao cabe: ${m.l}x${m.a} em ${m.jl}x${m.ja}`);
+  if (!naTela) problemas.push(`a foto da lupa esta fora da tela: topo ${m.topo}px, base ${m.base}px, janela ${m.ja}px`);
   if (m.nl === 0) problemas.push('a foto da lupa nao carregou');
 }
 await p.keyboard.press('Escape');
@@ -127,6 +157,9 @@ if (!(await botao.count())) {
     linha(7, 'baixar uma foto', 'NAO BAIXOU');
     problemas.push('clicar em baixar nao baixou nada');
   }
+}
+
+await ctx.close();
 }
 
 await b.close();

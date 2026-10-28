@@ -22,6 +22,7 @@
  * para isso seria mais código do que a conta.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Botao } from '../componentes/Botao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { albumDoCliente, definirCapaGaleria, favoritarItem, urlsDosOriginais } from '../dados/api';
@@ -186,7 +187,20 @@ function Lente({
   const cheio = favoritos.has(item.id);
   const capa = ehCapa(item);
 
-  return (
+  // PORTAL PARA O `body`, e não aqui dentro da árvore.
+  //
+  // `position: fixed` deixa de valer contra a janela quando QUALQUER ancestral
+  // tem transform, filter, backdrop-filter, perspective, contain ou
+  // will-change. Era o que acontecia: a animação de entrada da tela deixava uma
+  // matriz identidade grudada no `<main>` (ver `.entra`, em global.css), a lupa
+  // recebia a altura da galeria inteira em vez da altura da janela, e a foto
+  // ficava a 4341px do topo — fora da tela, com o fundo escuro cobrindo tudo.
+  //
+  // O `.entra` está consertado, mas a lição não é essa. É que um modal dentro
+  // da árvore depende de ninguém, nunca, pôr um transform acima dele — e essa
+  // é uma promessa que ninguém consegue manter. Fora da árvore não há ancestral
+  // para quebrar nada.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -299,7 +313,8 @@ function Lente({
           ›
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

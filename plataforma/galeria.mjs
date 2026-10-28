@@ -310,7 +310,11 @@ if (!(await q.getByRole('dialog').isVisible())) problemas.push('a lupa nao abriu
   } else {
     const m = await alvo.evaluate((e) => {
       const r = e.getBoundingClientRect();
-      return { l: Math.round(r.width), a: Math.round(r.height), jl: innerWidth, ja: innerHeight };
+      return {
+        l: Math.round(r.width), a: Math.round(r.height),
+        topo: Math.round(r.top), base: Math.round(r.bottom),
+        jl: innerWidth, ja: innerHeight,
+      };
     });
     // Uma folga de 2px para arredondamento de subpixel.
     if (m.a > m.ja + 2 || m.l > m.jl + 2) {
@@ -319,6 +323,28 @@ if (!(await q.getByRole('dialog').isVisible())) problemas.push('a lupa nao abriu
       );
     }
     if (m.a === 0 || m.l === 0) problemas.push('a foto da lupa tem tamanho zero');
+
+    // E ESTA NA TELA? Do tamanho certo e fora da tela da no mesmo: fundo
+    // escuro e nenhuma foto.
+    //
+    // Foi o que aconteceu, e esta verificacao estava medindo so o tamanho:
+    // a lupa pedia `inset: 0`, mas a animacao `.entra` deixava uma matriz
+    // identidade no `<main>`, que cria bloco de contencao e anula o
+    // `position: fixed`. A lupa recebia 9093px de altura — a galeria inteira —
+    // e centrava a foto a 4341px do topo. Tamanho perfeito, invisivel.
+    //
+    // A dona relatou "tela preta" quatro vezes. Nas tres primeiras eu tratei
+    // como problema de tamanho, porque era so isso que eu media.
+    // INTEIRA dentro da janela, nao "um pedaco aparece". A primeira versao
+    // desta verificacao exigia so que nao estivesse toda fora, e PASSOU com o
+    // defeito presente: a foto caia em topo 149 / base 277 numa janela de 240,
+    // ou seja 37px cortados, e isso contava como visivel. A lupa promete a
+    // foto inteira; e isso que tem de ser cobrado.
+    if (m.topo < -2 || m.base > m.ja + 2) {
+      problemas.push(
+        `a foto da lupa nao esta inteira na tela: topo ${m.topo}px, base ${m.base}px, janela de ${m.ja}px`,
+      );
+    }
   }
   await q.setViewportSize({ width: 1440, height: 1000 });
   await q.waitForTimeout(300);
