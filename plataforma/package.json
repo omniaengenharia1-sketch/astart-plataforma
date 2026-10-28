@@ -25,7 +25,8 @@
     "senha": "node senha.mjs",
     "midia": "node midia.mjs",
     "compositor": "node compositor.mjs",
-    "enderecos": "node --experimental-strip-types enderecos.mjs"
+    "enderecos": "node --experimental-strip-types enderecos.mjs",
+    "entrega-producao": "node entrega-producao.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
