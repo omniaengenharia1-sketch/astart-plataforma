@@ -12,7 +12,10 @@ export function AlbumPublico() {
 
   return (
     <div className="min-h-dvh text-tinta">
-      <header className="flex items-center justify-between gap-4 px-5 pt-6 sm:px-8 lg:px-12">
+      {/* `py`, não `pt`. Só com respiro em cima a logo encostava na capa: a
+          barra media exatamente a altura da logo, e a foto começava no pixel
+          seguinte. Parecia logo cortada, e a dona leu como logo quebrada. */}
+      <header className="flex items-center justify-between gap-4 px-5 py-6 sm:px-8 lg:px-12">
         <Logo altura={26} />
         <span className="rotulo">galeria</span>
       </header>

@@ -132,9 +132,22 @@ begin
   perform public.afirma(
     g->>'capaItemId' = v_foto2::text,
     'e diz qual item e a capa');
+  -- O ORIGINAL, nao a miniatura (0061).
+  --
+  -- Esta linha afirmava o contrario, e e por isso que vale escrever o motivo
+  -- junto da afirmacao: quando a capa era uma faixa fina de 16:7, a miniatura
+  -- de 640px bastava e a afirmacao estava certa. A capa virou a tela inteira,
+  -- e a afirmacao virou um cadeado em cima do defeito — o teste passava, verde,
+  -- enquanto a dona via a capa borrada na entrega da cliente.
+  --
+  -- Continua sendo CAMINHO, e nao URL: quem assina e a Edge Function, com
+  -- validade curta. Caminho de balde privado nao serve para nada solto.
   perform public.afirma(
-    g->>'capa' = v_a || '/mini/2.webp',
-    'e devolve o CAMINHO da miniatura, nao uma URL — quem assina e a Edge Function');
+    g->>'capa' = v_a || '/orig/2.jpg',
+    'e devolve o CAMINHO do ORIGINAL — a miniatura tem 640px e a capa ocupa a tela toda');
+  perform public.afirma(
+    g->>'capa' not like '%/mini/%',
+    'nunca a miniatura: esticada na largura da tela ela fica borrada');
 end $$;
 
 -- ---------------------------------------------------------------------------

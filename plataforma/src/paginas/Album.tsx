@@ -607,7 +607,11 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
       <header className="relative isolate flex min-h-[58vh] items-end overflow-hidden sm:min-h-[72vh]">
         {capa ? (
           <img
-            src={noTamanho(capa, LARGURA.capa) ?? ''}
+            // Qualidade 82, acima dos 72 do resto. A capa é a primeira coisa
+            // que a cliente vê, ocupa a tela inteira e é UMA imagem — o lugar
+            // onde vale pagar alguns KB a mais. Na grade, com 185 fotos, o
+            // mesmo gesto custaria dezenas de MB.
+            src={noTamanho(capa, LARGURA.capa, 82) ?? ''}
             alt=""
             aria-hidden
             className="absolute inset-0 -z-10 size-full object-cover"

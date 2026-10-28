@@ -31,8 +31,14 @@
 export const LARGURA = {
   /** O quadrado da grade, com folga para tela retina. */
   grade: 500,
-  /** A capa da galeria, que ocupa a largura toda. */
-  capa: 1800,
+  /**
+   * A capa da galeria, que ocupa a largura toda.
+   *
+   * 2000 e não 1800 porque as fotos que chegam têm 2048 de lado: pedir 2000 é
+   * pedir praticamente tudo o que existe, e numa tela retina de 1440 ainda
+   * falta. Pedir menos seria jogar fora nitidez que já está no arquivo.
+   */
+  capa: 2000,
   /** A foto aberta na lupa. */
   lente: 1600,
 } as const;

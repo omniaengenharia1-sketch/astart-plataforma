@@ -65,14 +65,41 @@ if (/não abre nenhuma galeria|link inválido|não consegui/i.test(txt)) {
 // 2 — a capa CARREGOU? `naturalWidth` e a unica pergunta que pega capa
 // assinada errado: ela e 0 quando a imagem nao carregou, qualquer que seja o
 // motivo. Foi assim que a capa ficou quebrada desde a 0034.
-const capa = p.locator('header img').first();
+// `.last()`: ha dois <header> na pagina — o da marca, com a logo pequena, e o
+// do album, com a capa. O `.first()` pegava a LOGO, e media a logo achando que
+// media a capa.
+const capa = p.locator('header img').last();
 let capaOk = false;
-if (await capa.count()) {
+if (!(await capa.count())) {
+  linha(2, 'a capa aparece', 'NAO HA IMAGEM DE CAPA');
+  problemas.push('a capa nao carregou');
+} else {
   await capa.evaluate((e) => (e.complete ? null : new Promise((r) => { e.onload = r; e.onerror = r; }))).catch(() => {});
-  capaOk = await capa.evaluate((e) => e.naturalWidth > 0);
+  const m = await capa.evaluate((e) => {
+    const r = e.getBoundingClientRect();
+    return { nat: e.naturalWidth, caixa: Math.round(r.width) };
+  });
+  capaOk = m.nat > 0;
+  linha(2, 'a capa aparece', capaOk ? `imagem de ${m.nat}px numa caixa de ${m.caixa}px` : 'NAO');
+  if (!capaOk) problemas.push('a capa nao carregou');
+
+  // A CAPA ESTA SENDO AMPLIADA?
+  //
+  // A dona escreveu "a qualidade da capa ta ruim", e estava: a capa saia da
+  // MINIATURA de 640px, esticada para a largura da tela. Nenhum
+  // redimensionador inventa detalhe que nao esta no arquivo — pedir 1800 de
+  // uma imagem de 640 devolve 1800 borrados.
+  //
+  // "A capa carregou" passava com o defeito. "A capa tem pixel suficiente"
+  // nao passa.
+  //
+  // Cobro contra a caixa em CSS, e nao contra a caixa vezes o dpr: o original
+  // tem 2048 de lado e numa tela retina de 1440 faltaria sempre. Teste que nao
+  // da para satisfazer nao e teste, e barulho.
+  if (capaOk && m.nat < m.caixa) {
+    problemas.push(`a capa esta sendo ampliada: ${m.nat}px numa caixa de ${m.caixa}px`);
+  }
 }
-linha(2, 'a capa aparece', capaOk ? 'sim' : 'NAO');
-if (!capaOk) problemas.push('a capa nao carregou');
 
 // 3 — o titulo
 const titulo = (await p.locator('h1, h2').first().innerText().catch(() => '')).trim();
