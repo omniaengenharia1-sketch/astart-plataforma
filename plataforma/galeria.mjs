@@ -62,7 +62,33 @@ for (const esperado of ['captação na fábrica', 'baixar tudo em alta', '7 foto
   if (!albumTxt.includes(esperado)) problemas.push(`o album nao mostra "${esperado}"`);
 }
 if (problemas.length) { console.log('PROBLEMAS:\n' + problemas.join('\n')); process.exit(1); }
-if ((await q.locator('li.bloco img').count()) < 6) problemas.push('o album nao carregou as fotos');
+
+// A grade e <figure>, nao mais `li.bloco`: o cartao branco com barra de
+// "0 MB · BAIXAR" embaixo de cada foto saiu na 0057. Este seletor ja estava
+// velho quando quebrou — e um roteiro que aponta para marcacao que nao existe
+// mais nao testa nada.
+if ((await q.locator('figure img').count()) < 6) problemas.push('o album nao carregou as fotos');
+
+// A capa: uma imagem grande ANTES da primeira foto da grade. Sem ela a entrega
+// abre numa parede branca, que foi a queixa que originou tudo isto.
+if ((await q.locator('header img').count()) < 1) problemas.push('o album abriu sem capa');
+
+// O peso saia "0 MB" em toda foto de menos de meio mega, com 185 delas na tela
+// do cliente. `Math.round(0,5)` e 0.
+if (/\b0 MB\b/.test(await q.locator('body').innerText())) {
+  problemas.push('ainda tem foto marcada como "0 MB"');
+}
+
+// Pelo LINK nao se troca capa: isso e da equipe. Se este botao vazar para o
+// cliente, ele muda a capa da propria entrega.
+await q.locator('button[aria-label^="Abrir"]').first().click();
+await q.waitForTimeout(400);
+if (await q.getByRole('button', { name: /capa/i }).count()) {
+  problemas.push('o cliente ve o botao de trocar a capa');
+}
+await q.keyboard.press('Escape');
+await q.waitForTimeout(250);
+
 await q.screenshot({ path: `${SAIDA}/21-album-link.png`, fullPage: true });
 
 // escolher uma foto

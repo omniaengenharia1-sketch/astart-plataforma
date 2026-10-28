@@ -21,14 +21,40 @@ export interface Derivadas {
 
 const LADO_MINIATURA = 640;
 
-function paraBlob(tela: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    tela.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('Não consegui gerar a miniatura.'))),
-      'image/webp',
-      0.82,
-    );
-  });
+/**
+ * `toBlob` NÃO avisa quando não sabe o formato pedido — ele devolve PNG.
+ *
+ * Isto custou caro e ficou invisível. O código pedia `('image/webp', 0.82)`; o
+ * navegador que subiu a galeria "Confraria 23/09" não sabia codificar webp,
+ * devolveu PNG, e o 0.82 foi ignorado (PNG é sem perda, não tem qualidade).
+ * Medido nessa galeria: 185 "miniaturas" de **404 KB em PNG**, contra originais
+ * de 514 KB. A miniatura tinha 85% do peso do original, e a grade do cliente
+ * baixava 77 MB para desenhar 185 quadradinhos.
+ *
+ * Pior: a linha de upload mandava `contentType: 'image/webp'` fixo, então o
+ * arquivo subia mentindo sobre o que era.
+ *
+ * Nada disso deu erro em lugar nenhum. É o padrão que este projeto já pagou
+ * várias vezes: pedir e não conferir o que voltou.
+ *
+ * Agora confere. Tenta webp; se o que voltar não for webp, tenta JPEG, que todo
+ * navegador codifica desde sempre. PNG de fotografia é recusado de propósito —
+ * é o pior dos dois mundos, pesado e sem ganho que alguém veja numa miniatura.
+ */
+async function paraBlob(tela: HTMLCanvasElement): Promise<Blob> {
+  const tentar = (tipo: string, qualidade: number): Promise<Blob | null> =>
+    new Promise((resolve) => tela.toBlob((b) => resolve(b), tipo, qualidade));
+
+  for (const [tipo, qualidade] of [
+    ['image/webp', 0.82],
+    ['image/jpeg', 0.82],
+  ] as const) {
+    const b = await tentar(tipo, qualidade);
+    // `b.type` é o que o navegador REALMENTE produziu, não o que foi pedido.
+    if (b && b.type === tipo) return b;
+  }
+
+  throw new Error('Nao consegui gerar a miniatura neste navegador.');
 }
 
 function encolher(largura: number, altura: number): [number, number] {

@@ -390,7 +390,7 @@ O estado de **aprovação** mora em `itens_aprovacao`; `posts.status` continua
 cuidando da **publicação**. São dois eixos. Um gatilho de mão única espelha o
 primeiro no segundo para o worker seguir funcionando sem alteração.
 
-### Dezenove armadilhas que já custaram caro aqui
+### Vinte armadilhas que já custaram caro aqui
 
 Estão viradas em teste na `08_auditoria_rls.sql`, que varre o catálogo em vez
 de listar tabela por tabela — tabela nova que esquecer o RLS cai sozinha. Mas
@@ -669,6 +669,35 @@ Verificação que não morde é pior que nenhuma: ela dá confiança. Outra: o
 `accept` do seletor de arquivo passou a sair da regra do formato, então num
 carrossel o seletor **não mostra vídeo**. Deixar escolher para recusar depois é
 fazer a pessoa descobrir batendo.
+
+A vigésima: **`canvas.toBlob` devolve PNG quando não sabe o formato pedido, e
+não avisa.** O gerador de miniaturas pedia `('image/webp', 0.82)`. O navegador
+que subiu a galeria "Confraria 23/09" não sabia codificar webp, devolveu PNG, e
+o `0.82` foi ignorado — PNG é sem perda, não tem qualidade. O upload mandava
+`contentType: 'image/webp'` fixo, então o arquivo ainda subia mentindo sobre o
+que era.
+
+Medido na galeria da cliente, com 185 fotos:
+
+| | |
+|---|---|
+| "miniatura" guardada | **404 KB**, PNG 427×640 |
+| original | 514 KB |
+| a grade inteira | **77 MB** para desenhar 185 quadrados de 300px |
+
+A miniatura tinha 85% do peso do original. Ninguém viu porque nada deu erro: a
+foto aparecia, só demorava — e "demorar" não tem log.
+
+Dois consertos, e o segundo é o que importa. O gerador passou a **conferir
+`blob.type`**, com JPEG de reserva e PNG recusado de propósito; e a extensão e o
+`contentType` saem do blob, não de uma constante. Mas a entrega de verdade veio
+de parar de mandar o arquivo inteiro para caber num quadrado: o Storage do
+Supabase redimensiona na entrega, a assinatura vale igual porque `width` e
+`quality` ficam fora dela, e a mesma foto sai a **22 KB em webp** — dezoito
+vezes mais leve, e nas fotos que já estavam no balde, sem reenviar nada.
+
+A lição é a da lista inteira, no lugar mais bobo possível: **pedir não é
+receber.** O código pedia webp e nunca olhou o que voltou.
 
 **O lint que fica, e fica de propósito:** o Supabase avisa que 31 funções
 `SECURITY DEFINER` são executáveis por quem está logado. É a arquitetura, não um

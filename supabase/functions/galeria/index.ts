@@ -42,6 +42,9 @@ interface GaleriaBruta {
   titulo: string;
   recado: string | null;
   permiteDownload: boolean;
+  /** CAMINHO da miniatura escolhida como capa (0057). Quem assina e aqui. */
+  capa: string | null;
+  capaItemId: string | null;
   cliente: string | null;
   quando: string | null;
   itens: ItemBruto[];
@@ -158,9 +161,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // acao = abrir: a página da galeria.
-  const caminhos = galeria.itens.flatMap((i) =>
-    [i.miniatura, i.tipo === 'video' ? i.poster : null].filter((c): c is string => !!c)
-  );
+  //
+  // A capa entra na mesma leva de assinatura. Quase sempre ela JÁ está na lista
+  // (é a miniatura de um dos itens), mas incluir explicitamente é o que garante
+  // capa assinada se a foto escolhida sair da listagem por algum motivo.
+  const caminhos = [
+    ...galeria.itens.flatMap((i) =>
+      [i.miniatura, i.tipo === 'video' ? i.poster : null].filter((c): c is string => !!c)
+    ),
+    ...(galeria.capa ? [galeria.capa] : []),
+  ];
   const urls = await assinar(sb, caminhos, SEGUNDOS_MINIATURA);
 
   return new Response(
@@ -170,6 +180,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       cliente: galeria.cliente,
       quando: galeria.quando,
       permiteDownload: galeria.permiteDownload,
+      capa: galeria.capa ? (urls.get(galeria.capa) ?? null) : null,
+      capaItemId: galeria.capaItemId ?? null,
       favoritos: galeria.favoritos,
       itens: galeria.itens.map((i) => ({
         id: i.id,

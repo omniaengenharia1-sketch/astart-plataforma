@@ -957,7 +957,7 @@ export async function albumDoCliente(galeriaId: string): Promise<Album> {
 
   const [{ data: cabeca, error: e1 }, itens] = await Promise.all([
     sb.from('galerias')
-      .select('titulo, recado, permite_download, sessoes_captacao(data, clientes(nome))')
+      .select('titulo, recado, permite_download, capa_item_id, sessoes_captacao(data, clientes(nome))')
       .eq('id', galeriaId)
       .single(),
     itensDaGaleria(galeriaId),
@@ -973,8 +973,15 @@ export async function albumDoCliente(galeriaId: string): Promise<Album> {
     titulo: string | null;
     recado: string | null;
     permite_download: boolean;
+    capa_item_id: string | null;
     sessoes_captacao: { data: string; clientes: { nome: string } | null } | null;
   };
+
+  // A capa e a miniatura de um dos itens que ja vieram assinados — nao vale
+  // uma segunda assinatura so para ela.
+  const capa = c.capa_item_id
+    ? (itens.find((i) => i.id === c.capa_item_id)?.miniatura ?? null)
+    : null;
 
   return {
     titulo: c.titulo ?? 'Galeria',
@@ -982,9 +989,31 @@ export async function albumDoCliente(galeriaId: string): Promise<Album> {
     cliente: c.sessoes_captacao?.clientes?.nome ?? null,
     quando: c.sessoes_captacao?.data ?? null,
     permiteDownload: c.permite_download,
+    capa,
+    capaItemId: c.capa_item_id,
     favoritos: ((favs ?? []) as { item_id: string }[]).map((f) => f.item_id),
     itens,
   };
+}
+
+/**
+ * Troca a capa da galeria (0057).
+ *
+ * A capa e a primeira coisa que o cliente ve ao abrir o link. A coluna
+ * `capa_item_id` existia desde a 0034 e ninguem conseguia mexer nela: a
+ * primeira foto entrava sozinha e ficava para sempre.
+ */
+export async function definirCapaGaleria(galeriaId: string, itemId: string | null): Promise<void> {
+  if (!sb) {
+    const { definirCapaExemplo } = await import('./mock');
+    definirCapaExemplo(galeriaId, itemId);
+    return;
+  }
+  const { error } = await sb.rpc('definir_capa_galeria', {
+    p_galeria: galeriaId,
+    p_item: itemId,
+  });
+  if (error) throw new FalhaDados(error.message);
 }
 
 export async function favoritarItem(itemId: string, ligadoAgora: boolean): Promise<void> {

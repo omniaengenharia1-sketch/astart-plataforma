@@ -1,18 +1,48 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+/**
+ * O álbum: a entrega como o cliente recebe.
+ *
+ * Refeito no formato que a dona pediu, olhando o Pixieset ao lado: capa grande
+ * com o nome em cima, e embaixo as fotos em fileiras justificadas — sem cartão
+ * branco, sem barra de "0 MB · BAIXAR" embaixo de cada uma. A moldura competia
+ * com a foto, que é a única coisa que importa aqui.
+ *
+ * Três defeitos morreram juntos nesta reescrita, todos visíveis na captura que
+ * ela mandou:
+ *
+ *   1. O peso saía "0 MB" em toda foto de menos de meio mega, enquanto o topo
+ *      somava 97 MB. `Math.round(0,5)` é 0.
+ *   2. Todas as fotos entravam num quadrado 4:3 fixo, então retrato sobrava
+ *      branco e paisagem era cortada. Agora a fileira se ajusta à proporção de
+ *      cada uma — é o que o Pixieset faz, e é por isso que parece álbum.
+ *   3. A grade baixava 77 MB de "miniaturas" que eram PNG do tamanho do
+ *      original. Agora pede pelo tamanho em que mostra (ver `dados/imagem.ts`).
+ *
+ * As fileiras são calculadas aqui, com a largura e a altura que cada item já
+ * traz do banco. Sem biblioteca: é uma conta de divisão, e trazer um pacote
+ * para isso seria mais código do que a conta.
+ */
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Botao } from '../componentes/Botao';
-import { Marca } from '../componentes/Bloco';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
-import { albumDoCliente, favoritarItem, urlsDosOriginais } from '../dados/api';
+import { albumDoCliente, definirCapaGaleria, favoritarItem, urlsDosOriginais } from '../dados/api';
 import { albumPorToken, baixarItem, baixarTudo, favoritarPorToken } from '../dados/galeria';
 import type { FonteAlbum } from '../dados/galeria';
+import { LARGURA, noTamanho } from '../dados/imagem';
 import { diaMes, plural } from '../formato';
 import type { Album as Alb, ItemGaleria } from '../dados/tipos';
 
+/**
+ * O peso do arquivo em palavra de gente.
+ *
+ * Era `Math.round(bytes / 1e6) + ' MB'`, e uma foto de 500 KB virava "0 MB" na
+ * cara do cliente — em 185 fotos de uma vez, na captura que a dona mandou.
+ * Abaixo de um mega a unidade é KB; acima, uma casa decimal.
+ */
 const peso = (bytes: number | null): string => {
   if (!bytes) return '';
-  const giga = bytes / 1_000_000_000;
-  if (giga >= 1) return `${giga.toFixed(1).replace('.', ',')} GB`;
-  return `${Math.round(bytes / 1_000_000)} MB`;
+  if (bytes >= 1_000_000_000) return `${(bytes / 1e9).toFixed(1).replace('.', ',')} GB`;
+  if (bytes >= 1_000_000) return `${(bytes / 1e6).toFixed(1).replace('.', ',')} MB`;
+  return `${Math.max(1, Math.round(bytes / 1000))} KB`;
 };
 
 const duracao = (s: number | null): string => {
@@ -20,6 +50,46 @@ const duracao = (s: number | null): string => {
   const m = Math.floor(s / 60);
   return `${m}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 };
+
+/** Proporção do item. 3:2 quando o banco não sabe — é o retrato médio de câmera. */
+const proporcao = (i: ItemGaleria): number =>
+  i.largura && i.altura && i.altura > 0 ? i.largura / i.altura : 3 / 2;
+
+/**
+ * Quebra a lista em fileiras que preenchem a largura, como o Pixieset.
+ *
+ * Enche a fileira até passar da largura, e então acha a altura exata em que
+ * aquelas fotos cabem: `altura = (largura - vãos) / soma das proporções`. A
+ * última fileira não é esticada — uma foto sozinha ocupando a tela inteira
+ * ficaria estranha.
+ */
+function emFileiras(
+  itens: ItemGaleria[],
+  largura: number,
+  alvo: number,
+  vao: number,
+): { itens: ItemGaleria[]; altura: number }[] {
+  if (largura <= 0) return [];
+  const fileiras: { itens: ItemGaleria[]; altura: number }[] = [];
+  let atual: ItemGaleria[] = [];
+  let soma = 0;
+
+  for (const item of itens) {
+    atual.push(item);
+    soma += proporcao(item);
+    const disponivel = largura - vao * (atual.length - 1);
+    if (soma * alvo >= disponivel) {
+      fileiras.push({ itens: atual, altura: disponivel / soma });
+      atual = [];
+      soma = 0;
+    }
+  }
+  if (atual.length > 0) {
+    const disponivel = largura - vao * (atual.length - 1);
+    fileiras.push({ itens: atual, altura: Math.min(alvo, disponivel / soma) });
+  }
+  return fileiras;
+}
 
 function Coracao({ cheio }: { cheio: boolean }) {
   return (
@@ -43,7 +113,9 @@ function Lente({
   aoAndar,
   aoFavoritar,
   aoBaixar,
+  aoUsarDeCapa,
   podeBaixar,
+  ehCapa,
 }: {
   itens: ItemGaleria[];
   indice: number;
@@ -52,7 +124,10 @@ function Lente({
   aoAndar: (passo: number) => void;
   aoFavoritar: (item: ItemGaleria) => void;
   aoBaixar: (item: ItemGaleria) => void;
+  /** Só a equipe recebe isto. Pelo link do cliente, vem `null`. */
+  aoUsarDeCapa: ((item: ItemGaleria) => void) | null;
   podeBaixar: boolean;
+  ehCapa: (item: ItemGaleria) => boolean;
 }) {
   const item = itens[indice];
 
@@ -74,19 +149,31 @@ function Lente({
 
   if (!item) return null;
   const cheio = favoritos.has(item.id);
+  const capa = ehCapa(item);
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={item.nome}
-      className="fixed inset-0 z-50 flex flex-col bg-[rgb(3_3_8/0.86)] backdrop-blur-2xl"
+      className="fixed inset-0 z-50 flex flex-col bg-[rgb(3_3_8/0.92)] backdrop-blur-2xl"
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <span className="rotulo truncate">
-          {item.nome} · {indice + 1} de {itens.length}
+          {indice + 1} de {itens.length}
+          {item.bytes ? ` · ${peso(item.bytes)}` : ''}
         </span>
         <div className="flex items-center gap-2">
+          {aoUsarDeCapa && (
+            <Botao
+              tamanho="pequeno"
+              disabled={capa}
+              onClick={() => aoUsarDeCapa(item)}
+              title="A primeira coisa que o cliente vê ao abrir o link"
+            >
+              {capa ? 'É a capa' : 'Usar de capa'}
+            </Botao>
+          )}
           <Botao
             tamanho="pequeno"
             aria-pressed={cheio}
@@ -127,7 +214,7 @@ function Lente({
           />
         ) : (
           <img
-            src={item.miniatura ?? ''}
+            src={noTamanho(item.miniatura, LARGURA.lente) ?? ''}
             alt={item.nome}
             className="max-h-full max-w-full rounded-[var(--raio)] object-contain"
           />
@@ -160,6 +247,22 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
   const [aberto, setAberto] = useState<number | null>(null);
   const [baixando, setBaixando] = useState<string | null>(null);
   const [erroBaixa, setErroBaixa] = useState<string | null>(null);
+  const [recado, setRecado] = useState<string | null>(null);
+
+  // A largura real da grade, para calcular as fileiras. Vem do elemento, não
+  // da janela: a página tem margem lateral e ela muda com o tamanho da tela.
+  const grade = useRef<HTMLDivElement>(null);
+  const [larguraGrade, setLarguraGrade] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = grade.current;
+    if (!el) return;
+    const medir = () => setLarguraGrade(el.clientWidth);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [album]);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -179,6 +282,14 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
   const mostrados = useMemo(
     () => (album ? album.itens.filter((i) => !soFavoritas || favoritos.has(i.id)) : []),
     [album, soFavoritas, favoritos],
+  );
+
+  // Fileira mais baixa no celular: com 160px de alvo cabem duas ou três fotos
+  // por linha em vez de uma gigante.
+  const alvo = larguraGrade < 560 ? 160 : larguraGrade < 1000 ? 230 : 300;
+  const fileiras = useMemo(
+    () => emFileiras(mostrados, larguraGrade, alvo, 10),
+    [mostrados, larguraGrade, alvo],
   );
 
   async function favoritar(item: ItemGaleria) {
@@ -202,6 +313,17 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
         return n;
       });
       setErroBaixa('Não salvou a escolha. Tente de novo.');
+    }
+  }
+
+  async function usarDeCapa(item: ItemGaleria) {
+    setErroBaixa(null);
+    try {
+      await definirCapaGaleria(galeriaId, item.id);
+      setRecado('Capa trocada. É o que o cliente vê ao abrir o link.');
+      await carregar();
+    } catch (x) {
+      setErroBaixa(x instanceof Error ? x.message : 'Não consegui trocar a capa.');
     }
   }
 
@@ -259,135 +381,195 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
   const nFav = favoritos.size;
   const emLote = baixando?.startsWith('tudo') ?? false;
   const progresso = baixando?.includes('/') ? baixando.split(':')[1] : null;
+  const nFotos = album.itens.filter((i) => i.tipo === 'foto').length;
+  const nVideos = album.itens.length - nFotos;
+  const total = album.itens.reduce((a, i) => a + (i.bytes ?? 0), 0);
+
+  // A capa escolhida, ou a primeira foto. Nunca nada: uma entrega que abre
+  // numa parede branca não parece entrega.
+  const capa = album.capa ?? album.itens.find((i) => i.tipo === 'foto')?.miniatura ?? null;
 
   return (
-    <div className="px-5 pb-20 sm:px-8 lg:px-12">
-      <header className="pt-9">
-        <div className="rotulo">
-          {album.cliente}
-          {album.quando ? ` · ${diaMes(album.quando)}` : ''}
+    <div className="pb-20">
+      {/* ---- A capa ------------------------------------------------------ */}
+      <header className="relative isolate flex min-h-[58vh] items-end overflow-hidden sm:min-h-[72vh]">
+        {capa ? (
+          <img
+            src={noTamanho(capa, LARGURA.capa) ?? ''}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 -z-10 size-full object-cover"
+          />
+        ) : (
+          <div className="aurora absolute inset-0 -z-10" />
+        )}
+        {/* O véu existe para o nome ser legível sobre qualquer foto — clara,
+            escura, com céu branco atrás. Sem ele, metade das capas some. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgb(3_3_8/0.82)_0%,rgb(3_3_8/0.45)_38%,rgb(3_3_8/0.12)_72%)]"
+        />
+
+        <div className="w-full px-5 pb-10 sm:px-8 sm:pb-14 lg:px-12">
+          <div className="rotulo text-[rgb(255_255_255/0.78)]">
+            {album.cliente}
+            {album.quando ? ` · ${diaMes(album.quando)}` : ''}
+          </div>
+          <h1 className="titulao mt-3 max-w-4xl text-[clamp(2.1rem,7vw,4.4rem)] text-white">
+            {album.titulo}
+          </h1>
+          <p className="rotulo mt-3 text-[rgb(255_255_255/0.72)]">
+            {plural(nFotos, 'foto', 'fotos')}
+            {nVideos > 0 ? ` · ${plural(nVideos, 'vídeo', 'vídeos')}` : ''}
+            {total > 0 ? ` · ${peso(total)}` : ''}
+          </p>
+          {album.recado && (
+            <p className="mt-4 max-w-xl text-[15px] text-[rgb(255_255_255/0.88)]">{album.recado}</p>
+          )}
         </div>
-        <h1 className="titulao mt-3 text-[clamp(1.9rem,6vw,3.2rem)]">{album.titulo}</h1>
-        {album.recado && <p className="mt-3 max-w-xl text-tinta-2">{album.recado}</p>}
       </header>
 
-      <div className="mt-7 flex flex-wrap items-center gap-3">
-        <Marca>{plural(album.itens.filter((i) => i.tipo === 'foto').length, 'foto', 'fotos')}</Marca>
-        {album.itens.some((i) => i.tipo === 'video') && (
-          <Marca>
-            {plural(album.itens.filter((i) => i.tipo === 'video').length, 'vídeo', 'vídeos')}
-          </Marca>
-        )}
-        <Marca>{peso(album.itens.reduce((a, i) => a + (i.bytes ?? 0), 0))}</Marca>
-
-        {nFav > 0 && (
-          <Botao
-            tamanho="pequeno"
-            aria-pressed={soFavoritas}
-            onClick={() => setSoFavoritas((v) => !v)}
-          >
-            <Coracao cheio />
-            {soFavoritas ? `Vendo as ${nFav} escolhidas` : `Ver só as ${nFav} escolhidas`}
-          </Botao>
-        )}
-
-        {album.permiteDownload && (
-          <Botao
-            variante="primario"
-            className="ml-auto"
-            disabled={emLote}
-            onClick={() => void baixarTudoAgora()}
-          >
-            {emLote ? `Baixando ${progresso ?? ''}…` : 'Baixar tudo em alta'}
-          </Botao>
-        )}
+      {/* ---- A barra de ações -------------------------------------------- */}
+      <div className="sticky top-0 z-20 border-b border-linha-fraca bg-[rgb(var(--fundo-rgb,3_3_8)/0.72)] px-5 py-3 backdrop-blur-xl sm:px-8 lg:px-12">
+        <div className="flex flex-wrap items-center gap-3">
+          {nFav > 0 && (
+            <Botao
+              tamanho="pequeno"
+              aria-pressed={soFavoritas}
+              onClick={() => setSoFavoritas((v) => !v)}
+            >
+              <Coracao cheio />
+              {soFavoritas ? `Vendo as ${nFav} escolhidas` : `Ver só as ${nFav} escolhidas`}
+            </Botao>
+          )}
+          {!porToken && (
+            <span className="rotulo normal-case">
+              abra uma foto para escolher a capa
+            </span>
+          )}
+          {album.permiteDownload && (
+            <Botao
+              variante="primario"
+              className="ml-auto"
+              disabled={emLote}
+              onClick={() => void baixarTudoAgora()}
+            >
+              {emLote ? `Baixando ${progresso ?? ''}…` : 'Baixar tudo em alta'}
+            </Botao>
+          )}
+        </div>
       </div>
 
-      {erroBaixa && (
-        <div role="alert" className="bloco mt-5 bg-alerta-fundo p-3.5">
-          <span className="rotulo-forte text-pink-texto">atenção</span>
-          <p className="mt-1 text-[13.5px]">{erroBaixa}</p>
-        </div>
-      )}
+      <div className="px-5 sm:px-8 lg:px-12">
+        {(erroBaixa || recado) && (
+          <div
+            role={erroBaixa ? 'alert' : 'status'}
+            className={`bloco mt-5 p-3.5 ${erroBaixa ? 'bg-alerta-fundo' : ''}`}
+          >
+            <span className="rotulo-forte text-pink-texto">{erroBaixa ? 'atenção' : 'pronto'}</span>
+            <p className="mt-1 text-[13.5px]">{erroBaixa ?? recado}</p>
+          </div>
+        )}
 
-      {mostrados.length === 0 ? (
-        <Vazio
-          titulo={soFavoritas ? 'Nenhuma escolhida.' : 'Galeria vazia.'}
-          explica={
-            soFavoritas
-              ? 'Marque o coração nas que quiser separar.'
-              : 'A gente avisa quando o material subir.'
-          }
-        />
-      ) : (
-        <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {mostrados.map((item, i) => {
-            const cheio = favoritos.has(item.id);
-            return (
-              <li key={item.id} className="group bloco erguer relative overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setAberto(i)}
-                  className="block w-full"
-                  aria-label={`Abrir ${item.nome}`}
-                >
-                  <span className="block aspect-[4/3] w-full overflow-hidden">
-                    {item.miniatura ? (
-                      <img
-                        src={item.miniatura}
-                        alt={item.nome}
-                        loading="lazy"
-                        decoding="async"
-                        className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                      />
-                    ) : (
-                      <span className="aurora flex size-full items-center justify-center">
-                        <span className="rotulo">{item.nome}</span>
-                      </span>
-                    )}
-                  </span>
-                </button>
-
-                {item.tipo === 'video' && (
-                  <span className="rotulo-forte pointer-events-none absolute top-2 left-2 rounded-full bg-[rgb(3_3_8/0.6)] px-2.5 py-1 text-tinta backdrop-blur-md">
-                    vídeo {duracao(item.duracao)}
-                  </span>
-                )}
-
-                <button
-                  type="button"
-                  aria-pressed={cheio}
-                  aria-label={`${cheio ? 'Tirar' : 'Escolher'} ${item.nome}`}
-                  onClick={() => void favoritar(item)}
-                  className={
-                    'absolute top-2 right-2 grid size-10 place-items-center rounded-full ' +
-                    'backdrop-blur-md transition-colors ' +
-                    (cheio
-                      ? 'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink'
-                      : 'bg-[rgb(3_3_8/0.5)] text-tinta hover:text-pink-texto')
-                  }
-                >
-                  <Coracao cheio={cheio} />
-                </button>
-
-                {album.permiteDownload && (
-                  <span className="flex items-center justify-between gap-2 px-3 py-2">
-                    <span className="rotulo truncate">{peso(item.bytes)}</span>
-                    <Botao
-                      variante="texto"
-                      tamanho="pequeno"
-                      disabled={baixando === item.id}
-                      onClick={() => void baixarUm(item)}
+        {mostrados.length === 0 ? (
+          <Vazio
+            titulo={soFavoritas ? 'Nenhuma escolhida.' : 'Galeria vazia.'}
+            explica={
+              soFavoritas
+                ? 'Marque o coração nas que quiser separar.'
+                : 'A gente avisa quando o material subir.'
+            }
+          />
+        ) : (
+          // A grade mede a si mesma; as fileiras só aparecem depois da medida.
+          <div ref={grade} className="mt-6 flex flex-col gap-2.5">
+            {fileiras.map((fileira, nf) => (
+              <div key={nf} className="flex gap-2.5">
+                {fileira.itens.map((item) => {
+                  const cheio = favoritos.has(item.id);
+                  const i = mostrados.indexOf(item);
+                  return (
+                    <figure
+                      key={item.id}
+                      className="group relative overflow-hidden rounded-[10px] bg-superficie-2"
+                      style={{
+                        height: `${fileira.altura}px`,
+                        width: `${fileira.altura * proporcao(item)}px`,
+                      }}
                     >
-                      {baixando === item.id ? 'baixando…' : 'baixar'}
-                    </Botao>
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                      <button
+                        type="button"
+                        onClick={() => setAberto(i)}
+                        aria-label={`Abrir ${item.nome}`}
+                        className="block size-full"
+                      >
+                        {item.miniatura ? (
+                          <img
+                            // Pede pelo tamanho em que aparece. Era o arquivo
+                            // inteiro, e a grade pesava 77 MB.
+                            src={noTamanho(item.miniatura, LARGURA.grade) ?? ''}
+                            alt={item.nome}
+                            loading="lazy"
+                            decoding="async"
+                            width={item.largura ?? undefined}
+                            height={item.altura ?? undefined}
+                            className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                          />
+                        ) : (
+                          <span className="aurora flex size-full items-center justify-center">
+                            <span className="rotulo">{item.nome}</span>
+                          </span>
+                        )}
+                      </button>
+
+                      {item.tipo === 'video' && (
+                        <span className="rotulo-forte pointer-events-none absolute top-2 left-2 rounded-full bg-[rgb(3_3_8/0.6)] px-2.5 py-1 text-white backdrop-blur-md">
+                          vídeo {duracao(item.duracao)}
+                        </span>
+                      )}
+
+                      {/* O coração só aparece no hover — menos no que já está
+                          escolhido, que precisa se ver de longe. Em tela de
+                          toque não há hover, e o `focus-within` cobre teclado. */}
+                      <button
+                        type="button"
+                        aria-pressed={cheio}
+                        aria-label={`${cheio ? 'Tirar' : 'Escolher'} ${item.nome}`}
+                        onClick={() => void favoritar(item)}
+                        className={
+                          'absolute top-2 right-2 grid size-9 place-items-center rounded-full ' +
+                          'backdrop-blur-md transition-all duration-200 ' +
+                          (cheio
+                            ? 'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink'
+                            : 'bg-[rgb(3_3_8/0.45)] text-white opacity-0 group-hover:opacity-100 ' +
+                              'focus-visible:opacity-100 max-[768px]:opacity-100')
+                        }
+                      >
+                        <Coracao cheio={cheio} />
+                      </button>
+
+                      {album.permiteDownload && (
+                        <button
+                          type="button"
+                          disabled={baixando === item.id}
+                          onClick={() => void baixarUm(item)}
+                          className={
+                            'rotulo-forte absolute right-2 bottom-2 rounded-full bg-[rgb(3_3_8/0.45)] ' +
+                            'px-3 py-1.5 text-white backdrop-blur-md transition-opacity duration-200 ' +
+                            'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+                          }
+                        >
+                          {baixando === item.id ? 'baixando…' : 'baixar'}
+                        </button>
+                      )}
+                    </figure>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {aberto !== null && (
         <Lente
@@ -395,6 +577,8 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
           indice={Math.min(aberto, mostrados.length - 1)}
           favoritos={favoritos}
           podeBaixar={album.permiteDownload}
+          ehCapa={(item) => album.capaItemId === item.id}
+          aoUsarDeCapa={porToken ? null : (item) => void usarDeCapa(item)}
           aoFechar={() => setAberto(null)}
           aoAndar={(passo) =>
             setAberto((a) => {

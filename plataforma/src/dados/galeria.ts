@@ -63,9 +63,14 @@ export async function subirItem(
   let miniatura: string | null = null;
   let poster: string | null = null;
   if (derivadas) {
-    miniatura = `${galeriaId}/mini/${id}.webp`;
+    // A extensão e o content-type saem do BLOB, não de uma constante. Eram
+    // `.webp` e `'image/webp'` escritos à mão enquanto o navegador entregava
+    // PNG — o arquivo subia mentindo sobre o que era, e nada acusava. Ver o
+    // cabeçalho de `paraBlob`, em `derivadas.ts`.
+    const tipoMini = derivadas.miniatura.type || 'image/jpeg';
+    miniatura = `${galeriaId}/mini/${id}.${tipoMini === 'image/webp' ? 'webp' : 'jpg'}`;
     const { error } = await sb.storage.from(BALDE).upload(miniatura, derivadas.miniatura, {
-      contentType: 'image/webp',
+      contentType: tipoMini,
       upsert: true,
     });
     if (error) miniatura = null;

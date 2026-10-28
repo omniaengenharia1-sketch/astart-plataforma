@@ -610,6 +610,10 @@ export interface Album {
   cliente: string | null;
   quando: string | null;
   permiteDownload: boolean;
+  /** URL assinada da capa escolhida (0057). Nula cai na primeira foto. */
+  capa: string | null;
+  /** Para a equipe saber qual foto está marcada como capa hoje. */
+  capaItemId: string | null;
   favoritos: string[];
   itens: ItemGaleria[];
 }

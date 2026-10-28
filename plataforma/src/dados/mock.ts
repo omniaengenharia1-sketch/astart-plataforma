@@ -1335,15 +1335,31 @@ export function galeriasExemplo(clienteId: string): GaleriaNaLista[] {
   }));
 }
 
+/** A capa escolhida no modo exemplo. Chave = id da galeria. */
+const CAPAS = new Map<string, string>();
+
+export function definirCapaExemplo(galeriaId: string, itemId: string | null): void {
+  if (itemId) CAPAS.set(galeriaId, itemId);
+  else CAPAS.delete(galeriaId);
+}
+
 export function albumExemplo(chave: string): Album {
   const g = GALERIAS.find((x) => x.id === chave || x.links.some((l) => l.id === chave))
     ?? GALERIAS[0]!;
+  // A mesma regra do banco: capa escolhida, senao a primeira foto. O roteiro de
+  // tela percorre os dois caminhos.
+  const capaId = CAPAS.get(g.id) ?? null;
+  const capa = capaId
+    ? (g.itens.find((i) => i.id === capaId)?.miniatura ?? null)
+    : (g.itens.find((i) => i.tipo === 'foto')?.miniatura ?? null);
   return {
     titulo: g.titulo,
     recado: 'Marque as suas preferidas. O download sai em alta.',
     cliente: CLIENTES.find((c) => c.cliente.id === g.clienteId)?.cliente.nome ?? null,
     quando: g.quando,
     permiteDownload: g.permiteDownload,
+    capa,
+    capaItemId: capaId,
     favoritos: g.itens.filter((i) => FAVORITOS.has(i.id)).map((i) => i.id),
     itens: g.itens,
   };

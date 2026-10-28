@@ -96,7 +96,26 @@ begin
    where sessao_id = '5e550000-0000-0000-0000-00000000000a';
 
   select link_id, token into v_link, v_token from public.criar_link_galeria(v_gal);
-  perform public.afirma(length(v_token) = 64, 'o token sai com 32 bytes em hex');
+
+  -- O token mudou de forma na 0057, e esta verificacao mudou junto. Era
+  -- `length(v_token) = 64` — 32 bytes em hex — que chegava no cliente assim:
+  --
+  --   /g/cda055ce12840f4f780862a249b6fb5a124970d2a31c03783edc1b07d7333519
+  --
+  -- Agora e o nome da galeria mais 12 bytes em base64url. O que se cobra nao e
+  -- o comprimento: e que o link DIGA de que galeria e, e que o segredo
+  -- continue grande o bastante para ninguem chutar.
+  perform public.afirma(
+    v_token like 'captacao-na-padaria-outubro-%',
+    format('o link diz de que galeria e (veio "%s")', v_token));
+  perform public.afirma(
+    v_token ~ '^captacao-na-padaria-outubro-[A-Za-z0-9_-]{16}$',
+    format('e termina em 16 caracteres de segredo, sem + nem / (veio "%s")', v_token));
+  -- 12 bytes = 96 bits. Dois links da mesma galeria nao podem coincidir, senao
+  -- o segredo nao e segredo.
+  perform public.afirma(
+    v_token <> (select token from public.criar_link_galeria(v_gal)),
+    'dois links da mesma galeria saem diferentes');
   perform public.afirma(
     not exists (select 1 from public.links_galeria where token_hash = v_token),
     'e o que fica guardado e o hash, nunca o token');
