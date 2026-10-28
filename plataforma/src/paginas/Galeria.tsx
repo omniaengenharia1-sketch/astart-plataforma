@@ -4,10 +4,12 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
-  criarGaleria, criarLinkGaleria, galeriasDoCliente, itensDaGaleria, revogarLinkGaleria,
+  arquivarGaleria, criarGaleria, criarLinkGaleria, excluirGaleria,
+  galeriasDoCliente, itensDaGaleria, revogarLinkGaleria,
 } from '../dados/api';
 import { naFila, subirItem } from '../dados/galeria';
 import { Album } from './Album';
+import { useSessao } from '../sessao';
 import { diaMes, haQuanto, plural } from '../formato';
 import type { EnvioEmCurso, GaleriaNaLista, ItemGaleria } from '../dados/tipos';
 
@@ -70,6 +72,9 @@ function Cartao({
         {g.favoritos > 0 && <Marca forte>{g.favoritos} escolhidas</Marca>}
         {equipe && g.baixou && <Marca>já baixou</Marca>}
         {equipe && g.links.length === 0 && g.publicadaEm === null && <Marca>sem link</Marca>}
+        {/* Fora do ar precisa gritar: a equipe pode estar olhando a galeria e
+            achando que a cliente ve a mesma coisa. */}
+        {g.arquivadaEm && <Marca forte>fora do ar</Marca>}
       </div>
 
       {aberta && (
@@ -129,6 +134,55 @@ export function Galeria({
   const [recado, setRecado] = useState<string | null>(null);
   const [tokens, setTokens] = useState<Record<string, string>>({});
   const entrada = useRef<HTMLInputElement>(null);
+
+  // Tirar do ar / apagar (0058). `confirmando` guarda qual galeria esta com a
+  // confirmacao aberta, e `digitado` o nome que a pessoa esta escrevendo.
+  const [mexendo, setMexendo] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+  const [digitado, setDigitado] = useState('');
+
+  const { sessao } = useSessao();
+  // Excluir e da direcao. O portao de verdade e o `usuario_admin()` da funcao
+  // no banco — isto aqui so evita mostrar um botao que seria recusado.
+  const ehDirecao = equipe && sessao.tipo === 'equipe' && sessao.perfil.papel === 'admin';
+
+  async function arquivar(g: GaleriaNaLista, arquivarAgora: boolean) {
+    setErro(null);
+    setMexendo(g.id);
+    try {
+      await arquivarGaleria(g.id, arquivarAgora);
+      setRecado(
+        arquivarAgora
+          ? `"${g.titulo}" saiu do ar. O link parou de abrir; os arquivos continuam aqui.`
+          : `"${g.titulo}" voltou ao ar, com o mesmo link de antes.`,
+      );
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui arquivar.');
+    } finally {
+      setMexendo(null);
+    }
+  }
+
+  async function excluir(g: GaleriaNaLista) {
+    setErro(null);
+    setMexendo(g.id);
+    try {
+      const r = await excluirGaleria(g.id);
+      setConfirmando(null);
+      setDigitado('');
+      setAberta(null);
+      setRecado(
+        `"${r.titulo}" foi apagada: ${plural(r.itens, 'mídia', 'mídias')}, ` +
+          `${r.arquivosApagados} ${r.arquivosApagados === 1 ? 'arquivo saiu' : 'arquivos saíram'} do servidor.`,
+      );
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui apagar.');
+    } finally {
+      setMexendo(null);
+    }
+  }
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -405,6 +459,76 @@ export function Galeria({
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {/* ---- tirar do ar / apagar ---------------------------- */}
+                  <div className="mt-6" />
+                  <Fita>Tirar do ar</Fita>
+                  <p className="rotulo mt-2 normal-case">
+                    {g.arquivadaEm
+                      ? 'está fora do ar: o link não abre e a cliente não vê esta entrega'
+                      : 'arquivar tira do ar sem apagar nada — o mesmo link volta a abrir se você reativar'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Botao
+                      tamanho="pequeno"
+                      disabled={mexendo === g.id}
+                      onClick={() => void arquivar(g, !g.arquivadaEm)}
+                    >
+                      {g.arquivadaEm ? 'Reativar' : 'Arquivar'}
+                    </Botao>
+
+                    {/* Excluir é da direção, e pede o nome digitado. Apagar a
+                        captação de um cliente não tem desfazer — confirmação de
+                        um clique é a diferença entre engano e catástrofe. */}
+                    {ehDirecao &&
+                      (confirmando === g.id ? (
+                        <>
+                          <Entrada
+                            aria-label="Digite o nome da galeria para confirmar"
+                            placeholder={g.titulo}
+                            value={digitado}
+                            onChange={(e) => setDigitado(e.target.value)}
+                            className="w-56"
+                          />
+                          <Botao
+                            tamanho="pequeno"
+                            variante="primario"
+                            disabled={digitado.trim() !== g.titulo.trim() || mexendo === g.id}
+                            onClick={() => void excluir(g)}
+                          >
+                            {mexendo === g.id ? 'Apagando…' : 'Apagar de vez'}
+                          </Botao>
+                          <Botao
+                            tamanho="pequeno"
+                            variante="texto"
+                            onClick={() => {
+                              setConfirmando(null);
+                              setDigitado('');
+                            }}
+                          >
+                            Cancelar
+                          </Botao>
+                        </>
+                      ) : (
+                        <Botao
+                          tamanho="pequeno"
+                          variante="texto"
+                          onClick={() => {
+                            setConfirmando(g.id);
+                            setDigitado('');
+                          }}
+                        >
+                          Apagar de vez
+                        </Botao>
+                      ))}
+                  </div>
+                  {confirmando === g.id && (
+                    <p className="mt-2 rounded-[var(--raio-p)] border border-linha bg-alerta-fundo px-3 py-2 text-[12.5px]">
+                      Isto apaga as {g.fotos + g.videos} mídias do servidor e{' '}
+                      <strong>não tem volta</strong>. Digite <strong>{g.titulo}</strong> para
+                      confirmar.
+                    </p>
                   )}
                 </div>
               )}

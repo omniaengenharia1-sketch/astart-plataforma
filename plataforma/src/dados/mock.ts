@@ -1325,9 +1325,34 @@ const GALERIAS: GaleriaExemplo[] = [
 
 const FAVORITOS = new Set<string>(['g-foto-2', 'g-foto-5']);
 
+/** Arquivadas no modo exemplo. A equipe ve; o cliente nao (0058). */
+const ARQUIVADAS = new Map<string, string>();
+
+export function arquivarGaleriaExemplo(galeriaId: string, arquivar: boolean): void {
+  if (arquivar) ARQUIVADAS.set(galeriaId, new Date().toISOString());
+  else ARQUIVADAS.delete(galeriaId);
+}
+
+export function excluirGaleriaExemplo(
+  galeriaId: string,
+): { titulo: string; itens: number; arquivosApagados: number } {
+  const i = GALERIAS.findIndex((g) => g.id === galeriaId);
+  if (i < 0) throw new Error('Galeria nao encontrada.');
+  const [fora] = GALERIAS.splice(i, 1);
+  ARQUIVADAS.delete(galeriaId);
+  CAPAS.delete(galeriaId);
+  return {
+    titulo: fora?.titulo ?? 'Galeria',
+    itens: fora?.itens.length ?? 0,
+    arquivosApagados: fora?.itens.length ?? 0,
+  };
+}
+
 export function galeriasExemplo(clienteId: string): GaleriaNaLista[] {
   return GALERIAS.filter((g) => g.clienteId === clienteId).map((g) => ({
     ...g,
+    arquivadaEm: ARQUIVADAS.get(g.id) ?? null,
+    capaItemId: CAPAS.get(g.id) ?? null,
     fotos: g.itens.filter((i) => i.tipo === 'foto').length,
     videos: g.itens.filter((i) => i.tipo === 'video').length,
     bytes: g.itens.reduce((a, i) => a + (i.bytes ?? 0), 0),

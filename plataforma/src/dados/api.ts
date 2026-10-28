@@ -997,6 +997,64 @@ export async function albumDoCliente(galeriaId: string): Promise<Album> {
 }
 
 /**
+ * Tira a galeria do ar, ou devolve (0058).
+ *
+ * Arquivar e gaveta, nao revogacao: o link para de abrir porque
+ * `galeria_por_token` recusa galeria arquivada, e desarquivar devolve o MESMO
+ * link. Os arquivos ficam no balde.
+ */
+export async function arquivarGaleria(galeriaId: string, arquivar: boolean): Promise<void> {
+  if (!sb) {
+    const { arquivarGaleriaExemplo } = await import('./mock');
+    arquivarGaleriaExemplo(galeriaId, arquivar);
+    return;
+  }
+  const { error } = await sb.rpc('arquivar_galeria', {
+    p_galeria: galeriaId,
+    p_arquivar: arquivar,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * Apaga a galeria de vez: as linhas E os arquivos (0058). Nao tem volta.
+ *
+ * A ORDEM importa, e e a mesma do resto do projeto: a linha primeiro, o
+ * arquivo depois. Ao contrario, uma falha no meio deixaria a galeria apontando
+ * para arquivo que nao existe — miniatura quebrada na cara do cliente. Do jeito
+ * certo, uma falha no meio deixa arquivo orfao no balde: desperdicio, nao
+ * defeito.
+ *
+ * Quem tira do balde e este navegador, com o JWT de quem clicou, porque e ele
+ * que tem permissao no bucket — funcao SQL nao alcanca o storage.
+ */
+export async function excluirGaleria(
+  galeriaId: string,
+): Promise<{ titulo: string; itens: number; arquivosApagados: number }> {
+  if (!sb) {
+    const { excluirGaleriaExemplo } = await import('./mock');
+    return excluirGaleriaExemplo(galeriaId);
+  }
+
+  const { data, error } = await sb.rpc('excluir_galeria', { p_galeria: galeriaId });
+  if (error) throw new FalhaDados(error.message);
+
+  const r = data as { titulo: string; itens: number; caminhos: string[] };
+  let apagados = 0;
+  if (r.caminhos.length > 0) {
+    // Em lotes: `remove` com milhares de caminhos de uma vez estoura o pedido.
+    for (let i = 0; i < r.caminhos.length; i += 100) {
+      const lote = r.caminhos.slice(i, i + 100);
+      const { error: e } = await sb.storage.from('galerias').remove(lote);
+      // Arquivo que nao sai nao desfaz a exclusao — a linha ja foi. Conta o que
+      // saiu e segue: o resto e lixo no balde, nao defeito na tela.
+      if (!e) apagados += lote.length;
+    }
+  }
+  return { titulo: r.titulo, itens: r.itens, arquivosApagados: apagados };
+}
+
+/**
  * Troca a capa da galeria (0057).
  *
  * A capa e a primeira coisa que o cliente ve ao abrir o link. A coluna

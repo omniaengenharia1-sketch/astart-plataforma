@@ -47,8 +47,68 @@ await p.getByRole('button', { name: /Criar (outro )?link/ }).click();
 await p.waitForTimeout(400);
 const comLink = await limpo();
 if (!comLink.includes('/g/')) problemas.push('o endereco do cliente nao apareceu');
+// O link encolheu na 0057: era 64 caracteres de hexadecimal, agora e o nome da
+// galeria mais 16 de segredo. No modo exemplo o token e fixo, entao o que se
+// cobra aqui e que o endereco nao volte a ser uma parede de hex.
+if (/\/g\/[0-9a-f]{64}\b/.test(comLink)) problemas.push('o link voltou a ser 64 caracteres de hex');
 await p.screenshot({ path: `${SAIDA}/20-galeria-link.png`, fullPage: true });
+
+// --- tirar do ar (0058), como OPERACAO
+// Layana e 'operacao': arquiva, mas nao apaga. O portao de verdade e o
+// `usuario_admin()` no banco; isto cobra que a tela nao OFERECA o que seria
+// recusado — botao que so falha ensina a pessoa a desconfiar da tela.
+if (!(await p.getByRole('button', { name: 'Arquivar' }).count())) {
+  problemas.push('a equipe nao tem como arquivar a galeria');
+}
+if (await p.getByRole('button', { name: /Apagar de vez/ }).count()) {
+  problemas.push('quem nao e direcao esta vendo o botao de apagar');
+}
+
+await p.getByRole('button', { name: 'Arquivar' }).first().click();
+await p.waitForTimeout(600);
+const arquivada = await limpo();
+if (!arquivada.includes('fora do ar')) problemas.push('arquivar nao marcou a galeria como fora do ar');
+if (!(await p.getByRole('button', { name: 'Reativar' }).count())) {
+  problemas.push('nao da para reativar o que foi arquivado');
+}
+await p.getByRole('button', { name: 'Reativar' }).first().click();
+await p.waitForTimeout(600);
+if ((await limpo()).includes('fora do ar')) problemas.push('reativar nao devolveu a galeria ao ar');
 await ctx.close();
+
+// --- e a direcao, que apaga, mas tem de digitar o nome
+const ctxD = await b.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'dark' });
+const d = await ctxD.newPage();
+d.on('pageerror', (e) => problemas.push('erro(direcao): ' + e.message));
+await d.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
+await d.fill('input[type="email"]', 'viviane@astartstudio.com.br');
+await d.fill('input[type="password"]', 'x');
+await d.click('button[type="submit"]');
+await d.waitForLoadState('networkidle');
+await d.getByRole('link', { name: 'Clientes', exact: true }).click();
+await d.locator('.font-bold:has-text("Chopp do Barbudo"):visible').first().click();
+await d.waitForTimeout(300);
+await d.getByRole('link', { name: 'Galeria' }).first().click();
+await d.waitForLoadState('networkidle');
+await d.getByRole('button', { name: /Captação na fábrica/ }).first().click();
+await d.waitForTimeout(500);
+
+if (!(await d.getByRole('button', { name: /Apagar de vez/ }).count())) {
+  problemas.push('a direcao nao ve o botao de apagar');
+}
+await d.getByRole('button', { name: /Apagar de vez/ }).first().click();
+await d.waitForTimeout(400);
+// Apagar a captacao de um cliente nao tem desfazer. O botao so libera depois
+// do nome digitado — confirmacao de um clique e a diferenca entre engano e
+// catastrofe.
+const confirmar = d.getByRole('button', { name: /Apagar de vez/ }).last();
+if (!(await confirmar.isDisabled())) {
+  problemas.push('apagar liberou antes de digitar o nome da galeria');
+}
+await d.getByLabel('Digite o nome da galeria para confirmar').fill('nome errado');
+await d.waitForTimeout(250);
+if (!(await confirmar.isDisabled())) problemas.push('apagar liberou com o nome errado');
+await ctxD.close();
 
 // --- o link, sem conta nenhuma
 const ctx2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'dark', deviceScaleFactor: 2 });

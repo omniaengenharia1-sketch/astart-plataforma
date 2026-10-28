@@ -635,7 +635,10 @@ export interface GaleriaNaLista {
   url: string | null;
   permiteDownload: boolean;
   publicadaEm: string | null;
+  /** Preenchido = fora do ar: o link não abre e o cliente não vê (0058). */
+  arquivadaEm: string | null;
   capa: string | null;
+  capaItemId: string | null;
   fotos: number;
   videos: number;
   bytes: number;
