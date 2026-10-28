@@ -65,6 +65,8 @@ export function FichaCliente() {
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
   const [recado, setRecado] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState<'ar' | 'apagar' | null>(null);
+  /** O nome que a pessoa digita para liberar o apagar (0060). */
+  const [nomeDigitado, setNomeDigitado] = useState('');
   const { sessao } = useSessao();
   const admin = souAdmin(sessao);
   const dinheiro = veDinheiro(sessao);
@@ -118,12 +120,14 @@ export function FichaCliente() {
   }
 
   /** Tirar do ar, devolver e apagar: as três do admin, com a mesma plumbing. */
-  async function mexerNoCliente(oQue: () => Promise<void>, feito: string) {
+  // `oQue` pode devolver a frase do recado quando ela só se sabe DEPOIS da
+  // chamada — é o caso de apagar, que volta contando o que saiu junto.
+  async function mexerNoCliente(oQue: () => Promise<void | string>, feito: string) {
     setErroAcesso(null);
     setRecado(null);
     try {
-      await oQue();
-      setRecado(feito);
+      const dito = await oQue();
+      setRecado(typeof dito === 'string' ? dito : feito);
       setConfirmando(null);
       await carregar();
     } catch (x) {
@@ -215,15 +219,40 @@ export function FichaCliente() {
         {confirmando === 'apagar' && (
           <div className="bloco brilho-p mt-4 max-w-xl bg-alerta-fundo p-4">
             <p className="text-[14.5px] font-medium">
-              Apagar some com {ficha.cliente.nome} para sempre. Só funciona se não houver
-              nada registrado nele.
+              Apagar some com {ficha.cliente.nome} <strong>e com tudo que está nele</strong>:
+              publicações, aprovações, lançamentos, galerias e os arquivos no servidor. Não
+              tem volta.
             </p>
+            {/* O nome digitado, e não um clique. Até a 0060 isto recusava
+                cliente com histórico, então o clique só apagava cadastro
+                vazio. Agora ele apaga anos de cliente — a confirmação sobe
+                junto com a consequência. */}
+            <p className="rotulo mt-3 normal-case">
+              digite <strong>{ficha.cliente.nome}</strong> para liberar
+            </p>
+            <Entrada
+              aria-label="Digite o nome do cliente para confirmar"
+              placeholder={ficha.cliente.nome}
+              value={nomeDigitado}
+              onChange={(e) => setNomeDigitado(e.target.value)}
+              className="mt-2 max-w-sm"
+            />
             <div className="mt-3 flex flex-wrap gap-2">
               <Botao
                 variante="primario"
                 tamanho="pequeno"
+                disabled={nomeDigitado.trim() !== ficha.cliente.nome.trim()}
                 onClick={() =>
-                  void mexerNoCliente(() => removerCliente(clienteId), 'Cliente apagado.')
+                  void mexerNoCliente(async () => {
+                    const r = await removerCliente(clienteId);
+                    // O que saiu, com número: "apagado" sem contagem não dá
+                    // para conferir, e isto não tem desfazer.
+                    return (
+                      `${r.nome} foi apagado: ${r.publicacoes} publicações, ${r.aprovacoes} aprovações, ` +
+                      `${r.lancamentos} lançamentos, ${r.captacoes} captações · ` +
+                      `${r.arquivosApagados} arquivos saíram do servidor.`
+                    );
+                  }, 'Cliente apagado.')
                 }
               >
                 Apagar

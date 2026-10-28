@@ -1368,17 +1368,72 @@ export async function reativarCliente(clienteId: string): Promise<void> {
  * Apaga de verdade. Existe para o cliente cadastrado errado: com qualquer
  * histórico, a função do banco recusa e manda tirar do ar.
  */
-export async function removerCliente(clienteId: string): Promise<void> {
+/**
+ * Apaga o cliente de verdade — as linhas E os arquivos (0060).
+ *
+ * Ate a 0060 isto recusava cliente com qualquer historico e mandava desativar.
+ * A dona decidiu o contrario: "pode apagar, nao deixa em historico que
+ * sobrecarrega a memoria. apagou apagou".
+ *
+ * O cascade do banco leva as linhas; os ARQUIVOS nao, porque funcao SQL nao
+ * alcanca o Storage. Sem este segundo passo, apagar um cliente deixaria as
+ * fotos das galerias e as midias dos posts orfas no balde — a mesma sobrecarga,
+ * agora invisivel. Por isso a funcao devolve os caminhos agrupados por balde e
+ * quem remove e este navegador, com o JWT de quem clicou.
+ *
+ * A ordem e linha primeiro, arquivo depois, igual ao resto do projeto: ao
+ * contrario, uma falha no meio deixaria tela apontando para arquivo que nao
+ * existe. Do jeito certo, deixa arquivo orfao — desperdicio, nao defeito.
+ */
+export async function removerCliente(clienteId: string): Promise<ResumoDaRemocao> {
   if (!sb) {
     try {
-      removerClienteExemplo(clienteId);
-      return;
+      return removerClienteExemplo(clienteId);
     } catch (x) {
       throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui remover.');
     }
   }
-  const { error } = await sb.rpc('remover_cliente', { p_cliente: clienteId });
+
+  const { data, error } = await sb.rpc('remover_cliente', { p_cliente: clienteId });
   if (error) throw new FalhaDados(error.message);
+
+  const r = data as {
+    nome: string;
+    publicacoes: number;
+    aprovacoes: number;
+    lancamentos: number;
+    captacoes: number;
+    contas: number;
+    documentos: number;
+    arquivos: { galerias: string[]; midias: string[]; documentos: string[] };
+  };
+
+  let apagados = 0;
+  for (const [balde, caminhos] of [
+    ['galerias', r.arquivos.galerias],
+    ['midias-posts', r.arquivos.midias],
+    ['documentos', r.arquivos.documentos],
+  ] as const) {
+    // Em lotes: `remove` com milhares de caminhos de uma vez estoura o pedido.
+    for (let i = 0; i < caminhos.length; i += 100) {
+      const lote = caminhos.slice(i, i + 100);
+      const { error: e } = await sb.storage.from(balde).remove(lote);
+      // Arquivo que nao sai nao desfaz a remocao — a linha ja foi. Conta o que
+      // saiu e segue: o resto e lixo no balde, nao defeito na tela.
+      if (!e) apagados += lote.length;
+    }
+  }
+
+  return {
+    nome: r.nome,
+    publicacoes: r.publicacoes,
+    aprovacoes: r.aprovacoes,
+    lancamentos: r.lancamentos,
+    captacoes: r.captacoes,
+    contas: r.contas,
+    documentos: r.documentos,
+    arquivosApagados: apagados,
+  };
 }
 
 // ---------------------------------------------------------------------------

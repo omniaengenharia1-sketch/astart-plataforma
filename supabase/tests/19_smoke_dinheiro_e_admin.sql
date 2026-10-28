@@ -248,22 +248,47 @@ do $$ begin
 end $$;
 
 do $$
-declare ok boolean;
+declare r jsonb;
 begin
-  -- Com historico, apagar recusa e manda desativar.
   insert into public.itens_aprovacao (cliente_id, tipo, titulo)
   values ('a0000000-0000-0000-0000-00000000000a', 'peca', 'Post de teste');
 
-  begin
-    perform public.remover_cliente('a0000000-0000-0000-0000-00000000000a');
-    raise exception 'FALHOU: apagou cliente com historico';
-  exception when others then
-    if position('Tire do ar' in sqlerrm) = 0 then raise; end if;
-    ok := true;
-  end;
-  perform public.afirma(ok, 'cliente com historico nao se apaga');
+  -- A REGRA MUDOU NA 0060, e este teste acompanha a decisao.
+  --
+  -- Ate entao, cliente com historico era recusado com "Tire do ar em vez de
+  -- apagar", e aqui se cobrava a recusa. A dona decidiu o contrario: *"pode
+  -- apagar, nao deixa em historico que sobrecarrega a memoria. apagou
+  -- apagou"*.
+  --
+  -- O que passa a importar nao e mais SE apaga, e sim o que volta junto: os
+  -- caminhos dos arquivos. Sem eles, apagar o cliente deixaria as fotos das
+  -- galerias e as midias dos posts orfas no balde — ocupando espaco e sem
+  -- nenhuma linha que as aponte para alguem limpar depois. Seria exatamente a
+  -- sobrecarga que ela quis evitar, agora invisivel.
+  r := public.remover_cliente('a0000000-0000-0000-0000-00000000000a');
 
-  -- O cadastrado errado, sem nada, sai.
+  perform public.afirma(
+    not exists (select 1 from public.clientes where id = 'a0000000-0000-0000-0000-00000000000a'),
+    'cliente com historico agora e apagado de verdade');
+  perform public.afirma(r->>'nome' is not null, 'a resposta diz quem foi apagado');
+  perform public.afirma(
+    (r->>'aprovacoes')::int >= 1,
+    'e conta o que foi junto, para a tela confirmar com numero');
+  perform public.afirma(
+    r ? 'arquivos'
+      and r->'arquivos' ? 'galerias'
+      and r->'arquivos' ? 'midias'
+      and r->'arquivos' ? 'documentos',
+    'e devolve os caminhos por balde, senao os arquivos ficam orfaos');
+
+  -- E o cascade levou o historico junto, em vez de deixar linha apontando para
+  -- cliente que nao existe mais.
+  perform public.afirma(
+    not exists (select 1 from public.itens_aprovacao
+                 where cliente_id = 'a0000000-0000-0000-0000-00000000000a'),
+    'o historico foi junto no cascade');
+
+  -- O cadastrado errado, sem nada, continua saindo.
   perform public.remover_cliente('f0000000-0000-0000-0000-00000000000f');
   perform public.afirma(
     not exists (select 1 from public.clientes where id = 'f0000000-0000-0000-0000-00000000000f'),
@@ -273,13 +298,22 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- 6. e por fora da funcao tambem nao
 -- ---------------------------------------------------------------------------
+-- Um cliente novo: o da secao 5 foi apagado de verdade pela 0060, e a trava de
+-- RLS precisa de alguem vivo para tentar apagar. Antes esta secao se apoiava no
+-- cliente que a recusa anterior deixava de pe — quando a regra mudou, ela
+-- passou a falhar por falta de alvo, nao por falha da trava.
+reset role;
+insert into public.clientes (id, nome, slug, fuso_horario)
+values ('a0000000-0000-0000-0000-0000000000aa', 'Alvo da trava', 'alvo-da-trava', 'America/Sao_Paulo');
+
+set role authenticated;
 set "teste.uid" = '10000000-0000-0000-0000-000000000002';   -- hoje financeiro, nao admin
 do $$ begin
-  delete from public.clientes where id = 'a0000000-0000-0000-0000-00000000000a';
+  delete from public.clientes where id = 'a0000000-0000-0000-0000-0000000000aa';
   -- A politica da 0006 era `for all`, e `all` inclui delete: qualquer pessoa
   -- de operacao apagava um cliente e o cascade levava oito meses de historico.
   perform public.afirma(
-    exists (select 1 from public.clientes where id = 'a0000000-0000-0000-0000-00000000000a'),
+    exists (select 1 from public.clientes where id = 'a0000000-0000-0000-0000-0000000000aa'),
     'quem nao administra nao apaga cliente nem por SQL direto');
 end $$;
 

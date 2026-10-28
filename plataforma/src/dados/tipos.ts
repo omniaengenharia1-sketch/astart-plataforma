@@ -475,6 +475,24 @@ export interface Canal {
   natureza: 'imagem' | 'video' | 'imagem_ou_video';
 }
 
+/**
+ * O que saiu junto quando um cliente é apagado (0060).
+ *
+ * Serve para a tela confirmar com número. "Cliente apagado" sem contagem não
+ * dá para conferir — e apagar cliente não tem desfazer.
+ */
+export interface ResumoDaRemocao {
+  nome: string;
+  publicacoes: number;
+  aprovacoes: number;
+  lancamentos: number;
+  captacoes: number;
+  contas: number;
+  documentos: number;
+  /** Arquivos que saíram dos baldes, não linhas do banco. */
+  arquivosApagados: number;
+}
+
 /** O que a Meta devolve quando perguntamos o que o token alcança. */
 export interface ContaDescoberta {
   pageId: string;

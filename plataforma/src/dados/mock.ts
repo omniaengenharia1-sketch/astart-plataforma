@@ -2232,20 +2232,52 @@ export function reativarClienteExemplo(clienteId: string): void {
   // contrato novo é decisão de alguém, não de um clique.
 }
 
-export function removerClienteExemplo(clienteId: string): void {
+/**
+ * Apaga o cliente de verdade, como a 0060 — inclusive com historico.
+ *
+ * Antes recusava com "ja tem N registros. Tire do ar em vez de apagar", e o
+ * modo exemplo tinha de recusar junto, senao a demonstracao ensinaria o
+ * contrario do que a producao faz. A dona mudou a regra; o exemplo muda junto,
+ * pelo mesmo motivo.
+ */
+export function removerClienteExemplo(clienteId: string): ResumoDaRemocao {
   if (papelDaVez !== 'admin') {
     throw new Error('Só quem administra a plataforma remove um cliente.');
   }
   const i = CLIENTES.findIndex((x) => x.cliente.id === clienteId);
   if (i < 0) throw new Error('Cliente não encontrado.');
-  const quanto = ITENS.filter((x) => x.clienteId === clienteId).length
-    + PECAS.filter((x) => x.clienteId === clienteId).length
-    + LANCAMENTOS.filter((x) => x.clienteId === clienteId).length
-    + GALERIAS.filter((x) => x.clienteId === clienteId).length;
-  if (quanto > 0) {
-    throw new Error(`Este cliente já tem ${quanto} registros. Tire do ar em vez de apagar.`);
-  }
+
+  const aprovacoes = ITENS.filter((x) => x.clienteId === clienteId).length;
+  const publicacoes = PECAS.filter((x) => x.clienteId === clienteId).length;
+  const lancamentos = LANCAMENTOS.filter((x) => x.clienteId === clienteId).length;
+  const galerias = GALERIAS.filter((x) => x.clienteId === clienteId);
+  const arquivos = galerias.reduce((a, g) => a + g.itens.length, 0);
+
+  // O cascade do banco, imitado: o que pendura no cliente sai junto. Sem isto,
+  // a demonstracao mostraria peca orfa de cliente que nao existe mais.
+  const fora = (lista: { clienteId: string }[]) => {
+    for (let n = lista.length - 1; n >= 0; n -= 1) {
+      if (lista[n]?.clienteId === clienteId) lista.splice(n, 1);
+    }
+  };
+  fora(ITENS);
+  fora(PECAS);
+  fora(LANCAMENTOS);
+  fora(GALERIAS);
+
+  const nome = CLIENTES[i]?.cliente.nome ?? 'Cliente';
   CLIENTES.splice(i, 1);
+
+  return {
+    nome,
+    publicacoes,
+    aprovacoes,
+    lancamentos,
+    captacoes: galerias.length,
+    contas: 0,
+    documentos: 0,
+    arquivosApagados: arquivos,
+  };
 }
 
 // ---------------------------------------------------------------------------
