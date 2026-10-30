@@ -1056,7 +1056,7 @@ export async function arquivarGaleria(galeriaId: string, arquivar: boolean): Pro
  */
 export async function excluirGaleria(
   galeriaId: string,
-): Promise<{ titulo: string; itens: number; arquivosApagados: number }> {
+): Promise<{ titulo: string; itens: number; arquivosApagados: number; arquivosQueFicaram: number }> {
   if (!sb) {
     const { excluirGaleriaExemplo } = await import('./mock');
     return excluirGaleriaExemplo(galeriaId);
@@ -1072,12 +1072,72 @@ export async function excluirGaleria(
     for (let i = 0; i < r.caminhos.length; i += 100) {
       const lote = r.caminhos.slice(i, i + 100);
       const { error: e } = await sb.storage.from('galerias').remove(lote);
-      // Arquivo que nao sai nao desfaz a exclusao — a linha ja foi. Conta o que
-      // saiu e segue: o resto e lixo no balde, nao defeito na tela.
       if (!e) apagados += lote.length;
     }
   }
-  return { titulo: r.titulo, itens: r.itens, arquivosApagados: apagados };
+  // O que NAO saiu do balde volta junto, contado.
+  //
+  // Antes esta funcao contava o que saiu e seguia, com um comentario meu
+  // dizendo que o resto "e lixo no balde, nao defeito na tela". A primeira
+  // metade estava certa — arquivo que nao sai nao desfaz a exclusao, e deixar
+  // orfao e melhor que deixar galeria apontando para arquivo que sumiu. A
+  // segunda metade era falha silenciosa, que e proibida aqui.
+  //
+  // O preco: 175 MB parados no balde da Astart, 60% do total, de uma galeria
+  // apagada em 28/10 — e ninguem soube ate a dona perguntar onde as fotos
+  // ficavam guardadas.
+  return {
+    titulo: r.titulo,
+    itens: r.itens,
+    arquivosApagados: apagados,
+    arquivosQueFicaram: r.caminhos.length - apagados,
+  };
+}
+
+/**
+ * Arquivos no balde que nenhuma linha do banco referencia (0062).
+ *
+ * Existe porque 60% do balde da Astart era lixo e ninguem sabia: 369 arquivos,
+ * 175 MB, de uma galeria apagada em 28/10 cujos arquivos ficaram. Descobri
+ * medindo para responder "onde as fotos ficam guardadas?".
+ *
+ * `margemMinutos` nao e detalhe: o upload sobe o arquivo ANTES de gravar a
+ * linha, entao durante uma subida ha arquivos sem dono que sao identicos a um
+ * orfao. Sem a margem, uma faxina apagaria foto de cliente no meio do upload.
+ */
+export async function arquivosOrfaos(
+  margemMinutos = 60,
+): Promise<{ arquivos: number; bytes: number; caminhos: string[]; margemMinutos: number }> {
+  if (!sb) {
+    const { arquivosOrfaosExemplo } = await import('./mock');
+    return arquivosOrfaosExemplo();
+  }
+  const { data, error } = await sb.rpc('arquivos_orfaos', { p_minutos: margemMinutos });
+  if (error) throw new FalhaDados(error.message);
+  return data as { arquivos: number; bytes: number; caminhos: string[]; margemMinutos: number };
+}
+
+/**
+ * Tira do balde os arquivos que a funcao acima apontou.
+ *
+ * Quem apaga e o navegador de quem clicou, com o JWT dele — SQL nao alcanca o
+ * storage, e a politica do balde ja diz quem pode. Em lotes de cem, como no
+ * apagar galeria: `remove` com milhares de caminhos estoura o pedido.
+ *
+ * Devolve quantos sairam E quantos ficaram. Nunca so o primeiro: foi engolir o
+ * segundo que deixou 175 MB acumularem sem aviso.
+ */
+export async function apagarArquivosOrfaos(
+  caminhos: string[],
+): Promise<{ apagados: number; ficaram: number }> {
+  if (!sb) return { apagados: caminhos.length, ficaram: 0 };
+  let apagados = 0;
+  for (let i = 0; i < caminhos.length; i += 100) {
+    const lote = caminhos.slice(i, i + 100);
+    const { error } = await sb.storage.from('galerias').remove(lote);
+    if (!error) apagados += lote.length;
+  }
+  return { apagados, ficaram: caminhos.length - apagados };
 }
 
 /**

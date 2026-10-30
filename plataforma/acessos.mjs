@@ -97,6 +97,43 @@ if (!(await contato.innerText()).toLowerCase().includes('sem acesso')) {
   problemas.push('tirar o acesso do contato nao marcou nada');
 }
 
+// --- a faxina do balde (0062)
+//
+// Existe porque 60% do balde da Astart era lixo e ninguem sabia: 369 arquivos,
+// 175 MB, de uma galeria apagada cujos arquivos ficaram. O apagar galeria
+// engolia a falha em silencio — "o resto e lixo no balde, nao defeito na
+// tela", escrito por mim.
+//
+// LIMITE HONESTO: em modo exemplo nao ha balde, entao a procura devolve zero
+// sempre. O que se cobra aqui e que a tela EXISTA, que o botao responda e que
+// ela nao ofereca apagar quando nao ha o que apagar. Se o numero bate com o
+// balde de verdade, so o Supabase de verdade diz — e o teste de SQL 33 cobra
+// a regra que importa (arquivo recem-subido nao e orfao).
+await p.getByRole('link', { name: 'Ajustes' }).click();
+await p.waitForLoadState('networkidle');
+const comFaxina = await limpo();
+if (!comFaxina.includes('arquivos sem dono')) {
+  problemas.push('a tela de ajustes nao tem a faxina do balde');
+}
+const procurar = p.getByRole('button', { name: 'Procurar' });
+if (!(await procurar.count())) {
+  problemas.push('a faxina nao tem botao de procurar');
+} else {
+  await procurar.click();
+  await p.waitForTimeout(700);
+  const achou = await limpo();
+  if (!achou.includes('servidor está limpo') && !/\d+ arquivos? ·/.test(achou)) {
+    problemas.push('procurar nao disse o que achou');
+  }
+  // Sem nada sobrando, nao se oferece apagar: botao que so falha ensina a
+  // pessoa a desconfiar da tela.
+  if (achou.includes('servidor está limpo')
+      && (await p.getByRole('button', { name: 'Apagar do servidor' }).count())) {
+    problemas.push('oferece apagar mesmo sem nada para apagar');
+  }
+}
+await p.screenshot({ path: `${SAIDA}/acesso-05-faxina.png`, fullPage: true });
+
 await b.close();
 if (problemas.length) { console.log('PROBLEMAS:\n' + problemas.join('\n')); process.exit(1); }
 console.log('acessos: tudo o que foi checado passou');

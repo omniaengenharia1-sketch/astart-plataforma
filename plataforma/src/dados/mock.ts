@@ -1339,7 +1339,7 @@ export function arquivarGaleriaExemplo(galeriaId: string, arquivar: boolean): vo
 
 export function excluirGaleriaExemplo(
   galeriaId: string,
-): { titulo: string; itens: number; arquivosApagados: number } {
+): { titulo: string; itens: number; arquivosApagados: number; arquivosQueFicaram: number } {
   const i = GALERIAS.findIndex((g) => g.id === galeriaId);
   if (i < 0) throw new Error('Galeria nao encontrada.');
   const [fora] = GALERIAS.splice(i, 1);
@@ -1349,6 +1349,7 @@ export function excluirGaleriaExemplo(
     titulo: fora?.titulo ?? 'Galeria',
     itens: fora?.itens.length ?? 0,
     arquivosApagados: fora?.itens.length ?? 0,
+    arquivosQueFicaram: 0,
   };
 }
 
@@ -2416,4 +2417,14 @@ export function registrarEnvioExemplo(clienteId: string, itens: string[], mensag
     quando: new Date().toISOString(), itens, links: [],
   });
   return id;
+}
+
+/**
+ * No modo exemplo nao ha balde: nada sobra, porque nada foi para lugar nenhum.
+ * Devolver um numero inventado faria a tela mostrar faxina que nao existe.
+ */
+export function arquivosOrfaosExemplo(): {
+  arquivos: number; bytes: number; caminhos: string[]; margemMinutos: number;
+} {
+  return { arquivos: 0, bytes: 0, caminhos: [], margemMinutos: 60 };
 }

@@ -338,10 +338,22 @@ export function Galeria({
       setConfirmando(null);
       setDigitado('');
       setAberta(null);
-      setRecado(
+      const base =
         `"${r.titulo}" foi apagada: ${plural(r.itens, 'mídia', 'mídias')}, ` +
-          `${r.arquivosApagados} ${r.arquivosApagados === 1 ? 'arquivo saiu' : 'arquivos saíram'} do servidor.`,
-      );
+        `${r.arquivosApagados} ${r.arquivosApagados === 1 ? 'arquivo saiu' : 'arquivos saíram'} do servidor.`;
+      // Arquivo que NAO saiu vira aviso, nao silencio.
+      //
+      // A linha ja foi: a galeria sumiu e nao da para desfazer. Mas o arquivo
+      // ficou ocupando espaco, e antes isso era engolido — foi assim que 175 MB
+      // se acumularam sem ninguem saber. Agora a tela diz, e diz onde limpar.
+      if (r.arquivosQueFicaram > 0) {
+        setErro(
+          `${r.arquivosQueFicaram} ${r.arquivosQueFicaram === 1 ? 'arquivo não saiu' : 'arquivos não saíram'} ` +
+            'do servidor e estão ocupando espaço. A galeria foi apagada mesmo assim — isso não tem volta. ' +
+            'Para tirar os arquivos, vá em Ajustes › Arquivos sem dono.',
+        );
+      }
+      setRecado(base);
       await carregar();
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui apagar.');

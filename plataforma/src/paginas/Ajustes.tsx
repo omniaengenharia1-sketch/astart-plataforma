@@ -4,6 +4,7 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou } from '../componentes/Estado';
 import {
+  apagarArquivosOrfaos, arquivosOrfaos,
   conectores, conferirTokenDaMeta, convidar, equipeEConvites, FalhaDaMeta, mudarAcesso, mudarPapel,
   revogarConvite,
 } from '../dados/api';
@@ -65,6 +66,123 @@ function comandoParaCadastrar(chave: ChaveDeConector): string {
     return `select vault.update_secret((select id from vault.secrets where name = '${chave.chave}'), 'COLE_O_VALOR_AQUI');`;
   }
   return `select vault.create_secret('COLE_O_VALOR_AQUI', '${chave.chave}');`;
+}
+
+
+const peso = (bytes: number): string => {
+  if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1).replace('.', ',')} GB`;
+  if (bytes >= 1_000_000) return `${Math.round(bytes / 1_000_000)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1000))} KB`;
+};
+
+/**
+ * Arquivos sem dono — a faxina do balde (0062).
+ *
+ * Por que existe: apagar galeria apaga as linhas e manda o navegador tirar os
+ * arquivos do balde. Quando um lote falha, os arquivos ficam. Isso era
+ * engolido em silêncio, e 175 MB — 60% do balde — se acumularam de uma galeria
+ * apagada em 28/10 sem ninguém saber.
+ *
+ * Fica aqui, e não na tela da galeria, porque é manutenção do servidor e não
+ * do trabalho: pergunta do balde inteiro, não de uma entrega.
+ *
+ * Carrega sob demanda, com um botão, em vez de ao abrir a tela: é uma varredura
+ * de todos os arquivos de todos os clientes, e ninguém precisa dela toda vez
+ * que entra em Ajustes.
+ */
+function ArquivosSemDono() {
+  const [achado, setAchado] = useState<{ arquivos: number; bytes: number; caminhos: string[] } | null>(null);
+  const [procurando, setProcurando] = useState(false);
+  const [apagando, setApagando] = useState(false);
+  const [recado, setRecado] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+
+  async function procurar() {
+    setErro(null);
+    setRecado(null);
+    setConfirmando(false);
+    setProcurando(true);
+    try {
+      setAchado(await arquivosOrfaos(60));
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui procurar.');
+    } finally {
+      setProcurando(false);
+    }
+  }
+
+  async function apagar() {
+    if (!achado) return;
+    setErro(null);
+    setApagando(true);
+    try {
+      const r = await apagarArquivosOrfaos(achado.caminhos);
+      setRecado(
+        `${r.apagados} ${r.apagados === 1 ? 'arquivo saiu' : 'arquivos saíram'} do servidor.` +
+          (r.ficaram > 0 ? ` ${r.ficaram} não saiu — tente de novo em alguns minutos.` : ''),
+      );
+      setConfirmando(false);
+      await procurar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui apagar.');
+    } finally {
+      setApagando(false);
+    }
+  }
+
+  return (
+    <section className="bloco p-4 sm:p-5">
+      <Fita>Arquivos sem dono</Fita>
+      <p className="rotulo mt-2 normal-case">
+        Foto que ficou no servidor depois que a galeria foi apagada. Ocupa espaço e
+        não aparece para ninguém.
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Botao tamanho="pequeno" disabled={procurando} onClick={() => void procurar()}>
+          {procurando ? 'Procurando…' : 'Procurar'}
+        </Botao>
+        {achado && (
+          <span className="rotulo normal-case">
+            {achado.arquivos === 0
+              ? 'Nada sobrando — o servidor está limpo.'
+              : `${achado.arquivos} ${achado.arquivos === 1 ? 'arquivo' : 'arquivos'} · ${peso(achado.bytes)}`}
+          </span>
+        )}
+      </div>
+
+      {achado && achado.arquivos > 0 && (
+        <div className="mt-4">
+          {/* Só conta o que está parado há mais de uma hora. Durante um upload o
+              arquivo chega ao servidor ANTES da linha no banco, e nessa janela
+              ele é idêntico a um arquivo sem dono — apagar ali seria apagar
+              foto de cliente no meio da subida. */}
+          <p className="rotulo normal-case text-tinta-3">
+            Fotos que você está subindo agora não entram nesta conta.
+          </p>
+          {!confirmando ? (
+            <Botao tamanho="pequeno" className="mt-3 text-pink-texto" onClick={() => setConfirmando(true)}>
+              Apagar do servidor
+            </Botao>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="rotulo normal-case">Apagar não tem volta.</span>
+              <Botao tamanho="pequeno" variante="primario" disabled={apagando} onClick={() => void apagar()}>
+                {apagando ? 'Apagando…' : `Apagar ${achado.arquivos}`}
+              </Botao>
+              <Botao tamanho="pequeno" variante="texto" onClick={() => setConfirmando(false)}>
+                Cancelar
+              </Botao>
+            </div>
+          )}
+        </div>
+      )}
+
+      {recado && <p className="mt-3 text-[14px] text-tinta-2">{recado}</p>}
+      {erro && <p className="mt-3 text-[14px] text-pink-texto">{erro}</p>}
+    </section>
+  );
 }
 
 export function Ajustes() {
@@ -457,6 +575,8 @@ export function Ajustes() {
           </div>
         </section>
       )}
+
+      <ArquivosSemDono />
     </div>
   );
 }
