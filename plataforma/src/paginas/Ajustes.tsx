@@ -9,6 +9,7 @@ import {
   revogarConvite,
 } from '../dados/api';
 import { haQuanto } from '../formato';
+import { useSessao } from '../sessao';
 import { PainelSaudeDoToken } from '../componentes/SaudeDoTokenMeta';
 import type {
   ChaveDeConector, Conector, EquipeEConvites, PapelEquipe, SaudeDoToken,
@@ -91,6 +92,15 @@ const peso = (bytes: number): string => {
  * que entra em Ajustes.
  */
 function ArquivosSemDono() {
+  // Direcao, nao equipe. O portao de verdade e o `usuario_admin()` da funcao no
+  // banco; isto aqui so evita MOSTRAR um botao que seria recusado.
+  //
+  // Eu tinha deixado este painel visivel para todo mundo, e a Astart tem duas
+  // pessoas em operacao: elas veriam "Procurar" e levariam um erro na cara.
+  // Botao que so falha ensina a pessoa a desconfiar da tela inteira.
+  const { sessao } = useSessao();
+  const ehDirecao = sessao.tipo === 'equipe' && sessao.perfil.papel === 'admin';
+
   const [achado, setAchado] = useState<{ arquivos: number; bytes: number; caminhos: string[] } | null>(null);
   const [procurando, setProcurando] = useState(false);
   const [apagando, setApagando] = useState(false);
@@ -130,6 +140,8 @@ function ArquivosSemDono() {
       setApagando(false);
     }
   }
+
+  if (!ehDirecao) return null;
 
   return (
     <section className="bloco p-4 sm:p-5">

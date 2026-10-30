@@ -104,35 +104,59 @@ if (!(await contato.innerText()).toLowerCase().includes('sem acesso')) {
 // engolia a falha em silencio — "o resto e lixo no balde, nao defeito na
 // tela", escrito por mim.
 //
-// LIMITE HONESTO: em modo exemplo nao ha balde, entao a procura devolve zero
-// sempre. O que se cobra aqui e que a tela EXISTA, que o botao responda e que
-// ela nao ofereca apagar quando nao ha o que apagar. Se o numero bate com o
-// balde de verdade, so o Supabase de verdade diz — e o teste de SQL 33 cobra
-// a regra que importa (arquivo recem-subido nao e orfao).
+// CUIDADO COM OS PAPEIS DO CENARIO DE EXEMPLO. Aqui a "Layana" e OPERACAO e a
+// "Viviane" e DIRECAO — o contrario da agencia de verdade, onde a Layana e a
+// direcao e nao existe Viviane nenhuma. Este roteiro roda como Layana, entao
+// ate aqui a faxina tem de estar ESCONDIDA. Escrevi isto ao contrario na
+// primeira versao, por confundir a dona com a persona.
 await p.getByRole('link', { name: 'Ajustes' }).click();
 await p.waitForLoadState('networkidle');
-const comFaxina = await limpo();
-if (!comFaxina.includes('arquivos sem dono')) {
-  problemas.push('a tela de ajustes nao tem a faxina do balde');
+if ((await limpo()).includes('arquivos sem dono')) {
+  problemas.push('operacao ve a faxina do balde, que so a direcao pode usar');
 }
-const procurar = p.getByRole('button', { name: 'Procurar' });
-if (!(await procurar.count())) {
-  problemas.push('a faxina nao tem botao de procurar');
-} else {
-  await procurar.click();
-  await p.waitForTimeout(700);
-  const achou = await limpo();
-  if (!achou.includes('servidor está limpo') && !/\d+ arquivos? ·/.test(achou)) {
-    problemas.push('procurar nao disse o que achou');
+await p.screenshot({ path: `${SAIDA}/acesso-05-sem-faxina.png`, fullPage: true });
+
+// Como DIRECAO, a faxina aparece e responde. Aba NOVA em vez de sair e entrar:
+// trocar de conta na mesma aba depende de a tela de sair existir e se chamar
+// sempre a mesma coisa, e isso ja quebrou este roteiro uma vez.
+//
+// LIMITE HONESTO: em modo exemplo nao ha balde, entao a procura devolve zero
+// sempre. Cobra-se que a tela exista, que o botao responda, e que ela nao
+// ofereca apagar quando nao ha o que apagar. A regra que importa de verdade
+// (arquivo recem-subido NAO e orfao) esta no teste de SQL 33.
+{
+  const ctxDir = await b.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'dark' });
+  const d = await ctxDir.newPage();
+  await d.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
+  await d.fill('input[type="email"]', 'viviane@astartstudio.com.br');
+  await d.fill('input[type="password"]', 'x');
+  await d.click('button[type="submit"]');
+  await d.waitForLoadState('networkidle');
+  await d.getByRole('link', { name: 'Ajustes' }).click();
+  await d.waitForLoadState('networkidle');
+  const texto = (await d.locator('body').innerText()).toLowerCase();
+  if (!texto.includes('arquivos sem dono')) {
+    problemas.push('a direcao nao ve a faxina do balde');
+  } else {
+    const procurar = d.getByRole('button', { name: 'Procurar' });
+    if (!(await procurar.count())) {
+      problemas.push('a faxina nao tem botao de procurar');
+    } else {
+      await procurar.click();
+      await d.waitForTimeout(700);
+      const achou = (await d.locator('body').innerText()).toLowerCase();
+      if (!achou.includes('servidor está limpo') && !/\d+ arquivos? ·/.test(achou)) {
+        problemas.push('procurar nao disse o que achou');
+      }
+      if (achou.includes('servidor está limpo')
+          && (await d.getByRole('button', { name: 'Apagar do servidor' }).count())) {
+        problemas.push('oferece apagar mesmo sem nada para apagar');
+      }
+    }
+    await d.screenshot({ path: `${SAIDA}/acesso-06-faxina.png`, fullPage: true });
   }
-  // Sem nada sobrando, nao se oferece apagar: botao que so falha ensina a
-  // pessoa a desconfiar da tela.
-  if (achou.includes('servidor está limpo')
-      && (await p.getByRole('button', { name: 'Apagar do servidor' }).count())) {
-    problemas.push('oferece apagar mesmo sem nada para apagar');
-  }
+  await ctxDir.close();
 }
-await p.screenshot({ path: `${SAIDA}/acesso-05-faxina.png`, fullPage: true });
 
 await b.close();
 if (problemas.length) { console.log('PROBLEMAS:\n' + problemas.join('\n')); process.exit(1); }
