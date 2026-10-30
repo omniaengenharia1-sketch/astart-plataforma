@@ -1071,8 +1071,9 @@ export async function excluirGaleria(
     // Em lotes: `remove` com milhares de caminhos de uma vez estoura o pedido.
     for (let i = 0; i < r.caminhos.length; i += 100) {
       const lote = r.caminhos.slice(i, i + 100);
-      const { error: e } = await sb.storage.from('galerias').remove(lote);
-      if (!e) apagados += lote.length;
+      const { data: saiu, error: e } = await sb.storage.from('galerias').remove(lote);
+      // O que o servidor devolveu, nao o que foi pedido: ver `apagarArquivosOrfaos`.
+      if (!e) apagados += saiu?.length ?? 0;
     }
   }
   // O que NAO saiu do balde volta junto, contado.
@@ -1134,8 +1135,17 @@ export async function apagarArquivosOrfaos(
   let apagados = 0;
   for (let i = 0; i < caminhos.length; i += 100) {
     const lote = caminhos.slice(i, i + 100);
-    const { error } = await sb.storage.from('galerias').remove(lote);
-    if (!error) apagados += lote.length;
+    const { data, error } = await sb.storage.from('galerias').remove(lote);
+    // `data.length`, NUNCA `lote.length`.
+    //
+    // `remove` devolve a lista do que realmente saiu. Quando a politica do
+    // balde esconde o arquivo, ele nao acha nada, nao da erro, e devolve lista
+    // vazia — e contar o tamanho do lote nesse caso reporta 369 apagados
+    // tendo apagado zero. Foi o que aconteceu: a dona apertou apagar, a tela
+    // disse que saiu tudo, e os 175 MB continuaram la.
+    //
+    // Ausencia de erro nao e prova de trabalho feito.
+    if (!error) apagados += data?.length ?? 0;
   }
   return { apagados, ficaram: caminhos.length - apagados };
 }
