@@ -115,7 +115,10 @@ function temTransparencia(bitmap: ImageBitmap): boolean {
   try {
     const dados = ctx.getImageData(0, 0, l, a).data;
     for (let i = 3; i < dados.length; i += 4) {
-      if (dados[i] < 255) return true;
+      // `?? 255` porque o projeto compila com índice conferido: para o
+      // compilador, `dados[i]` pode não existir. 255 é o valor neutro — opaco,
+      // que é não avisar.
+      if ((dados[i] ?? 255) < 255) return true;
     }
     return false;
   } catch {

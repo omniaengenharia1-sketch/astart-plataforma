@@ -1,0 +1,79 @@
+# Constroi o site a cada envio para a main. So constroi — quem publica e a
+# Cloudflare Pages.
+#
+# POR QUE ESTA ESTEIRA EXISTE
+#
+# Hoje a dona pediu que o envio de arte aceitasse PNG. O conserto passou nos 38
+# testes de SQL e nos 16 roteiros de navegador, e mesmo assim o site NAO MUDOU:
+# o `npm run build` quebrava num erro de tipo, a build da Cloudflare falhava, e
+# o Pages seguiu servindo o pacote anterior. Sem erro em lugar nenhum. Eu
+# estava a um passo de dizer "pode subir o post" para uma tela que continuava
+# com o defeito.
+#
+# Dois buracos, e os dois sao deste arquivo:
+#
+#   1. NENHUMA ESTEIRA CONSTRUIA O FRONT. `migrations` cuida do banco,
+#      `funcoes` cuida das Edge Functions, e o site nao tinha dono. A unica
+#      build de verdade acontecia na Cloudflare, onde ninguem olha a nao ser
+#      que va procurar.
+#
+#   2. BUILD QUEBRADA NAO DERRUBA NADA. O Pages mantem no ar o ultimo deploy
+#      que deu certo — que e o comportamento certo dele, e e justamente o que
+#      torna a falha invisivel: o site responde 200, com a versao velha.
+#
+# O `npm run build` daqui e o MESMO comando que a Cloudflare roda (`tsc -b &&
+# vite build && node prerender.mjs`), e e de proposito. Um atalho mais leve
+# aqui — `vite build` sozinho, por exemplo — reproduz o buraco: foi exatamente
+# assim que o erro passou, porque o `build:exemplo` dos roteiros nao chamava o
+# `tsc`.
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'plataforma/**'
+      - '.github/workflows/site.yml'
+  pull_request:
+    paths:
+      - 'plataforma/**'
+  workflow_dispatch:
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plataforma
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar
+        run: npm ci
+
+      - name: Construir, com o mesmo comando da Cloudflare
+        # As duas variaveis ficam VAZIAS de proposito: aqui nao se publica
+        # nada, so se confere que o site compila e sai. Com elas vazias o
+        # pacote nasce em modo exemplo, o que nao importa para esta conferencia
+        # — e evita ter de guardar chave nenhuma nesta esteira.
+        env:
+          VITE_SUPABASE_URL: ''
+          VITE_SUPABASE_PUBLISHABLE_KEY: ''
+          VITE_SUPABASE_ANON_KEY: ''
+        run: npm run build
+
+      - name: Conferir que a build saiu de pe
+        # Build que termina verde e deixa o `dist` sem `index.html` ja
+        # aconteceu em projeto que usa prerender. Conferir o que saiu custa
+        # dois segundos.
+        run: |
+          test -f dist/index.html || { echo "A build terminou sem dist/index.html."; exit 1; }
+          test -f dist/_redirects || { echo "Faltou o dist/_redirects — recarregar fora da raiz daria tela branca."; exit 1; }
+          echo "dist/ de pe:"
+          ls -la dist | head -20
