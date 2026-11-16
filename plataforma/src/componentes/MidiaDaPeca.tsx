@@ -16,11 +16,23 @@ export interface PecaParaMidia {
   statusPublicacao: StatusPublicacao;
 }
 
-/** O `accept` do seletor de arquivos, por natureza. JPEG só, porque a Meta só. */
+/**
+ * O `accept` do seletor de arquivos, por natureza.
+ *
+ * Era `image/jpeg`, e foi aqui que a dona bateu: ela exporta a arte em PNG, e
+ * o seletor do sistema nem deixava CLICAR no arquivo — some, sem explicação.
+ * A recusa com frase legível, que estava escrita com cuidado em `formatos.ts`,
+ * nunca chegava a aparecer, porque o arquivo não passava do seletor.
+ *
+ * Agora é `image/*`, porque a plataforma converte para JPEG no envio
+ * (`paraJpegDaMeta`). O que o navegador não souber abrir vira recusa com
+ * motivo — o que é melhor do que um arquivo cinza que ninguém sabe por que
+ * está cinza.
+ */
 const ACEITA = {
-  imagem: 'image/jpeg',
+  imagem: 'image/*',
   video: 'video/*',
-  imagem_ou_video: 'image/jpeg,video/*',
+  imagem_ou_video: 'image/*,video/*',
 } as const;
 
 /**
@@ -43,6 +55,10 @@ export function MidiaDaPecaPainel({
 }) {
   const [midias, setMidias] = useState<MidiaDaPeca[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // O que aconteceu com o arquivo sem ter dado errado — hoje, a conversão para
+  // JPG. Não é erro e não pode usar a caixa de erro: quem vê vermelho procura
+  // o que consertar.
+  const [avisos, setAvisos] = useState<string[]>([]);
   const [subindo, setSubindo] = useState<number | null>(null);
   const [sobre, setSobre] = useState(false);
 
@@ -61,12 +77,16 @@ export function MidiaDaPecaPainel({
   async function receber(arquivos: FileList | null) {
     if (!arquivos || arquivos.length === 0) return;
     setErro(null);
+    // Dez PNGs de um carrossel dariam dez vezes a mesma frase. O conjunto
+    // mantém uma.
+    const novos = new Set<string>();
     // Um por vez, em ordem: o banco decide a `ordem` e recusa quando enche.
     // Mandar em paralelo daria duas linhas disputando a mesma posição.
     for (const arquivo of Array.from(arquivos)) {
       try {
         setSubindo(0);
-        await subirMidiaDaPeca(peca.id, clienteId, arquivo, setSubindo, peca.tipo);
+        const aviso = await subirMidiaDaPeca(peca.id, clienteId, arquivo, setSubindo, peca.tipo);
+        if (aviso) novos.add(aviso);
       } catch (x) {
         setErro(x instanceof Error ? x.message : `Não consegui subir ${arquivo.name}.`);
         break;
@@ -74,6 +94,7 @@ export function MidiaDaPecaPainel({
         setSubindo(null);
       }
     }
+    setAvisos([...novos]);
     await ler();
     aoMudar();
   }
@@ -186,6 +207,16 @@ export function MidiaDaPecaPainel({
           />
         </label>
       )}
+
+      {avisos.map((a) => (
+        <p
+          key={a}
+          role="status"
+          className="mt-2.5 rounded-[var(--raio-p)] border border-linha bg-superficie px-3 py-2 text-[12.5px] text-tinta-2"
+        >
+          {a}
+        </p>
+      ))}
 
       {erro && (
         <p

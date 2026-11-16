@@ -12,7 +12,7 @@
  * Caminho fora da convenção cria um arquivo que nem a equipe nem o cliente
  * conseguem ver — e a `registrar_midia_post` recusa por isso.
  */
-import { derivadasDe, ehVideo } from './derivadas';
+import { derivadasDe, ehVideo, paraJpegDaMeta } from './derivadas';
 import { FalhaDados } from './api';
 import { FORMATOS, recusaDoArquivo } from './formatos';
 import { anotarMidiaExemplo } from './mock';
@@ -98,25 +98,50 @@ export async function midiasDaPeca(postId: string): Promise<MidiaDaPeca[]> {
   return midias.map((m) => ({ ...m, url: mapa.get(m.caminho) ?? null }));
 }
 
+/** `image/png` → `PNG`. Para a frase dizer o formato que a pessoa reconhece. */
+function sigla(mime: string): string {
+  return (mime.split('/')[1] ?? mime).toUpperCase();
+}
+
 /**
  * Sobe o arquivo e registra a linha, nessa ordem.
  *
  * Registrar antes deixaria a peça mostrando um arquivo que não existe se o
  * upload falhasse no meio. Se o registro falhar depois do upload, o arquivo é
  * apagado aqui mesmo — fica caro deixar lixo num bucket que ninguém varre.
+ *
+ * Devolve o aviso que a tela tem de mostrar, ou `null`. Hoje é só um: o
+ * arquivo não era JPEG e foi convertido. Isso não cabia no `aoProgredir`, que
+ * só sabe falar em porcentagem, e não podia virar exceção — nada deu errado.
  */
 export async function subirMidiaDaPeca(
   postId: string,
   clienteId: string,
-  arquivo: File,
+  original: File,
   aoProgredir: (fracao: number) => void,
   tipo: TipoPeca = 'imagem',
-): Promise<void> {
+): Promise<string | null> {
+  // A CONVERSÃO VEM ANTES DO `if (!sb)`, de propósito: é o caminho real e o
+  // modo exemplo têm de passar pela mesma régua. Modo exemplo mais generoso
+  // que a produção já custou caro neste arquivo (ver o comentário do EXEMPLO).
+  const convertida = original.type.startsWith('image/')
+    ? await paraJpegDaMeta(original)
+    : { arquivo: original, achatou: false, converteu: false };
+
+  const arquivo = convertida.arquivo;
+  const aviso = !convertida.converteu
+    ? null
+    : `${sigla(original.type)} convertido para JPG — a Meta publica imagem só em JPEG.` +
+      (convertida.achatou
+        ? ' A arte tinha fundo transparente, e ele virou branco. Se era para ter outra cor,' +
+          ' exporte com o fundo e anexe de novo.'
+        : '');
+
   if (!sb) {
     aoProgredir(0.4);
     subirExemplo(postId, tipo, arquivo);
     aoProgredir(1);
-    return;
+    return aviso;
   }
 
   const id = crypto.randomUUID();
@@ -156,6 +181,7 @@ export async function subirMidiaDaPeca(
   }
 
   aoProgredir(1);
+  return aviso;
 }
 
 /** Tira o arquivo da peça: a linha primeiro, o arquivo depois. */

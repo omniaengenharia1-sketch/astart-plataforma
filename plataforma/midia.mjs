@@ -130,6 +130,115 @@ for (let i = 0; i < quantas; i += 1) {
 }
 cobrar(achouCarrossel, 'o exemplo tem carrossel para exercitar varios arquivos');
 
+// --- 4. PNG entra, virando JPG, e a tela diz que virou ----------------------
+//
+// A dona: "achei um erro, na hora de enviar a arte ele precisa aceitar png
+// tbm". Ela exporta a arte em PNG, e o `accept` do campo era `image/jpeg` — o
+// arquivo nem aparecia como clicavel no seletor do sistema.
+//
+// A Meta publica imagem so em JPEG (conferido na documentacao dela em 16/11),
+// entao aceitar e GUARDAR PNG so mudaria o lugar da falha: a peca pareceria
+// pronta e quebraria de madrugada, na conta do cliente. O envio converte.
+//
+// O QUE ESTE PEDACO COBRA, e por que cada um importa:
+//   a. o PNG ENTRA — se o `accept` voltar a `image/jpeg`, o arquivo nao entra;
+//   b. a tela DIZ que converteu — converter calado troca um problema visivel
+//      por um invisivel;
+//   c. a frase do fundo branco aparece QUANDO o PNG tem transparencia e NAO
+//      aparece quando nao tem. Sem a segunda metade, um detector quebrado que
+//      respondesse "sim" sempre passaria no teste.
+//
+// A conversao roda no canvas de um navegador de verdade — e por isso que isto
+// e roteiro de navegador, e nao teste de unidade.
+{
+  // Fecha o que ficou aberto: `imagens()` conta a pagina inteira, e a peca do
+  // carrossel ficou com um arquivo dentro.
+  for (const aberta of await p.locator('button[aria-expanded="true"]').all()) {
+    await aberta.click({ force: true });
+  }
+  await p.waitForTimeout(300);
+
+  const png = (nome, base64) => ({
+    name: nome,
+    mimeType: 'image/png',
+    buffer: Buffer.from(base64, 'base64'),
+  });
+  // 2x2 RGBA, com um pixel de alfa 0.
+  const COM_ALFA =
+    'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGElEQVR4nGO4I5f3/45cHgPD' +
+    '////QYz/AFXLCjNmGbC9AAAAAElFTkSuQmCC';
+  // O mesmo PNG, sem nenhum pixel transparente.
+  const OPACO =
+    'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGO4I5f3H4QZ/v//' +
+    'D2YAAF/BCzIgfQ6yAAAAAElFTkSuQmCC';
+
+  let achouFoto = false;
+  for (let i = 0; i < quantas; i += 1) {
+    if (/NO AR|SAINDO|PARCIAL/i.test(await pecas.nth(i).innerText())) continue;
+    const painel = await abrir(i);
+    if (!/PEDE 1 FOTO/i.test(painel)) {
+      await pecas.nth(i).click({ force: true });
+      continue;
+    }
+
+    const entrada = p.locator('input[type=file]').first();
+    const antes = await imagens();
+
+    // O `accept` E COBRADO A PARTE, e isto nao e redundancia.
+    //
+    // `setInputFiles` entrega o arquivo direto ao input: ele NAO respeita o
+    // `accept`. Ou seja, todo o resto deste pedaco passaria intacto com o
+    // `accept="image/jpeg"` de volta no lugar — que e exatamente o bug que a
+    // dona encontrou, porque e no seletor do sistema que o PNG sumia.
+    //
+    // Mais uma do padrao que este projeto ja pagou varias vezes: o caminho de
+    // teste e mais permissivo que o caminho da pessoa, e testa so o facil.
+    const aceita = (await entrada.getAttribute('accept')) ?? '';
+    cobrar(
+      aceita.includes('image/*'),
+      `o seletor de arquivos deixa escolher PNG (accept="${aceita}")`,
+    );
+    // E a etiqueta nao pode mandar exportar em JPG o que a plataforma converte.
+    cobrar(
+      !/FOTOS? JPG/i.test(painel),
+      'a peca nao pede "foto JPG" — quem le isso exporta de novo a toa',
+    );
+
+    await entrada.setInputFiles(png('arte-com-fundo-transparente.png', COM_ALFA));
+    await p.waitForTimeout(900);
+    cobrar((await imagens()) === antes + 1, 'o PNG entra na peca em vez de ser recusado');
+    const depoisDoAlfa = await corpo();
+    cobrar(
+      /PNG convertido para JPG/i.test(depoisDoAlfa),
+      'e a tela diz que converteu, em vez de converter calada',
+    );
+    cobrar(
+      /fundo transparente/i.test(depoisDoAlfa),
+      'avisa que o fundo transparente virou branco — JPEG nao tem transparencia',
+    );
+    await p.screenshot({ path: `${SAIDA}/midia-png-virou-jpg.png` });
+
+    await p.getByRole('button', { name: /Tirar arquivo/ }).first().click();
+    await p.waitForTimeout(700);
+
+    await entrada.setInputFiles(png('arte-sem-transparencia.png', OPACO));
+    await p.waitForTimeout(900);
+    const depoisDoOpaco = await corpo();
+    cobrar(
+      /PNG convertido para JPG/i.test(depoisDoOpaco),
+      'PNG opaco tambem e convertido',
+    );
+    cobrar(
+      !/fundo transparente/i.test(depoisDoOpaco),
+      'mas sem a frase do fundo branco, que aqui nao aconteceu',
+    );
+
+    achouFoto = true;
+    break;
+  }
+  cobrar(achouFoto, 'o exemplo tem peca de foto para exercitar a conversao de PNG');
+}
+
 cobrar(problemas.length === 0, `nenhum erro de pagina (${problemas.length})`);
 if (problemas.length) console.log(problemas.map((x) => `    ${x}`).join('\n'));
 

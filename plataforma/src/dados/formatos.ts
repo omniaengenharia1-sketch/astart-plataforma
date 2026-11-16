@@ -113,10 +113,13 @@ export const CANAIS: {
 ];
 
 /** Como se escreve o que o formato pede. Uma frase, não um número solto. */
+// Dizia "fotos JPG" enquanto o seletor só aceitava JPG. Agora a plataforma
+// converte no envio, então exigir JPG na frase mandaria a pessoa exportar de
+// novo à toa — foi esse "JPG" que a dona leu no campo do carrossel.
 const SUBSTANTIVO: Record<Natureza, { um: string; varios: string }> = {
-  imagem: { um: 'foto JPG', varios: 'fotos JPG' },
+  imagem: { um: 'foto', varios: 'fotos' },
   video: { um: 'vídeo', varios: 'vídeos' },
-  imagem_ou_video: { um: 'foto JPG ou vídeo', varios: 'fotos JPG ou vídeos' },
+  imagem_ou_video: { um: 'foto ou vídeo', varios: 'fotos ou vídeos' },
 };
 
 /**
@@ -158,7 +161,7 @@ export function recusaDoArquivo(tipo: TipoPeca, mime: string): string | null {
       'Carrossel com video ainda nao sai por aqui — e limitacao nossa, nao da Meta. ' +
       'Cada video de um carrossel precisa terminar de processar antes de o carrossel ser ' +
       'montado, e o agendador ainda nao sabe esperar por isso. Ja esta na fila. ' +
-      'Por enquanto: carrossel de fotos JPG, ou um Reel para o video.'
+      'Por enquanto: carrossel de fotos, ou um Reel para o video.'
     );
   }
   if (r.natureza === 'imagem' && !ehImagem) return `Peca de imagem aceita foto, nao ${mime}.`;
@@ -166,12 +169,18 @@ export function recusaDoArquivo(tipo: TipoPeca, mime: string): string | null {
   if (r.natureza === 'imagem_ou_video' && !(ehImagem || ehVideo)) {
     return `Esta peca aceita foto ou video, nao ${mime}.`;
   }
-  // A Meta publica imagem só em JPEG (0047).
+  // A Meta publica imagem só em JPEG (0047, 0068).
+  //
+  // Esta regra NÃO afrouxou quando o envio passou a aceitar PNG: ela é a
+  // última linha antes da conta do cliente, e a Meta continua aceitando só
+  // JPEG. O que mudou é quem chega aqui — o arquivo já vem convertido
+  // (`paraJpegDaMeta`), então esta recusa agora significa "a conversão não
+  // rodou", e a frase diz isso em vez de mandar exportar de novo.
   if (ehImagem && mime !== 'image/jpeg' && mime !== 'image/jpg') {
     return (
       `A Meta publica imagem so em JPEG, e este arquivo e ${mime}. ` +
-      'Exporte como JPG e anexe de novo — nao converto sozinho porque fundo ' +
-      'transparente viraria preto sem voce ver.'
+      'A plataforma converte sozinha no envio — PNG e afins viram JPG com fundo ' +
+      'branco. Este chegou sem passar por essa conversao: anexe pela tela da peca.'
     );
   }
   return null;

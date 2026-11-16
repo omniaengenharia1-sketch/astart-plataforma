@@ -192,9 +192,21 @@ begin
     ok := false;
   exception when others then
     -- A mensagem tem de dizer O QUE FAZER, nao so o que esta errado.
-    ok := position('so em JPEG' in sqlerrm) > 0 and position('Exporte como JPG' in sqlerrm) > 0;
+    --
+    -- Cobrava 'Exporte como JPG', e a 0068 mudou essa frase de proposito: o
+    -- envio passou a converter PNG em JPG sozinho, entao mandar a pessoa
+    -- exportar de novo virou mentira — trabalho que a plataforma ja faz.
+    --
+    -- A REGRA nao afrouxou e este teste continua aqui: a Meta so publica JPEG,
+    -- e este e o ultimo ponto antes da conta do cliente. O que mudou e o
+    -- sentido da recusa. Antes dizia "voce mandou o formato errado"; agora diz
+    -- "este arquivo chegou sem passar pela conversao" — que e o unico jeito de
+    -- um PNG chegar ate aqui depois da 0068.
+    ok := position('so em JPEG' in sqlerrm) > 0
+      and position('converte sozinha no envio' in sqlerrm) > 0;
   end;
-  perform public.afirma(ok, 'PNG e recusado, dizendo para exportar como JPG');
+  perform public.afirma(ok,
+    'PNG continua recusado NO BANCO, dizendo que a conversao do envio nao rodou');
 
   perform public.registrar_midia_post(
     v_post,
