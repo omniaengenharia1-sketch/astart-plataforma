@@ -78,26 +78,65 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: node scripts/provar-canais.mjs --producao
 
-      # `--yes` em todo deploy, e o motivo fica escrito porque custou uma
-      # esteira vermelha: a CLI passou a PEDIR CONFIRMACAO antes de publicar,
-      # e num runner nao ha terminal para responder. A mensagem dela e clara
-      # ("Nothing was changed"), mas so aparece depois de quebrar.
+      # VERSAO FIXA, nao `latest`.
       #
-      # A causa de fundo e o `version: latest` logo abaixo: a ferramenta muda
-      # sozinha debaixo da esteira. Fica assim de proposito — segurar uma
-      # versao velha de CLI tem seu proprio custo — mas quando esta esteira
-      # ficar vermelha de um dia para o outro sem ninguem ter mexido nela, e
-      # aqui que se olha primeiro.
+      # Esta esteira ficou vermelha sem ninguem ter mexido nela: a CLI passou a
+      # PEDIR CONFIRMACAO antes de publicar, e num runner nao ha terminal para
+      # responder ("Nothing was changed. Re-run with --yes"). O `--yes` abaixo
+      # resolve ESSA mudanca; fixar a versao resolve a classe.
+      #
+      # Eu tinha deixado `latest` com um comentario dizendo que era de
+      # proposito. Nao era: era a mesma falha de sempre deste projeto — um
+      # caminho que muda sozinho debaixo da verificacao. `latest` significa que
+      # a esteira pode quebrar num dia em que ninguem encostou no codigo, e o
+      # tempo gasto procurando a causa e sempre maior que o de subir a versao
+      # a mao.
+      #
+      # Para atualizar: troque o numero, deixe a esteira rodar, e so entao
+      # confie. Uma versao nova que quebra aqui quebra ANTES de producao.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.2.0
 
-      # Cada funcao e publicada pelo nome, com a flag do JWT explicita, em vez
-      # de um `deploy` sem nome que deixaria a decisao para a leitura do
-      # config.toml. Quem autoriza estas quatro nao e o JWT:
+      # NENHUMA FUNCAO FICA DE FORA EM SILENCIO.
+      #
+      # As listas abaixo continuam escritas a mao, e isso e de proposito: se
+      # uma funcao exige JWT ou nao e decisao de seguranca, e decisao de
+      # seguranca nao se deduz de nome de pasta. O que NAO pode e uma funcao
+      # existir no disco e nao estar em lista nenhuma — foi o que quase
+      # aconteceu com a `avisar-tarefa`, que o `deno check` tambem pulava
+      # porque ele listava por nome.
+      #
+      # Entao este passo compara o disco com as listas e PARA se sobrar
+      # alguma. Esquecer de declarar vira esteira vermelha com instrucao, em
+      # vez de funcao que nunca sobe e ninguem percebe.
+      - name: Conferir que toda funcao esta declarada
+        working-directory: supabase/functions
+        run: |
+          SEM_JWT="publicar-tick renovar-tokens avisar-tarefa galeria aprovar"
+          COM_JWT="convidar conectar-conta"
+          faltam=""
+          for d in */; do
+            f="${d%/}"
+            [ "$f" = "_shared" ] && continue
+            case " $SEM_JWT $COM_JWT " in
+              *" $f "*) ;;
+              *) faltam="$faltam $f" ;;
+            esac
+          done
+          if [ -n "$faltam" ]; then
+            echo "Estas funcoes existem e nao estao declaradas no deploy:$faltam"
+            echo "Acrescente cada uma a SEM_JWT ou a COM_JWT em .github/workflows/funcoes.yml."
+            echo "A escolha e de seguranca: SEM_JWT so para quem confere quem pediu por"
+            echo "outro meio (x-tick-secret do cron, ou token de link conferido no banco)."
+            exit 1
+          fi
+          echo "Todas as funcoes do disco estao declaradas."
+
+      # Quem autoriza estas cinco nao e o JWT:
       #   publicar-tick, renovar-tokens
-      #   e avisar-tarefa                 — o header x-tick-secret, que o cron manda
-      #   galeria e aprovar               — o token do link, conferido no banco
+      #   e avisar-tarefa      — o header x-tick-secret, que o cron manda
+      #   galeria e aprovar    — o token do link, conferido no banco
       - name: Publicar as que nao usam JWT
         run: |
           for f in publicar-tick renovar-tokens avisar-tarefa galeria aprovar; do
