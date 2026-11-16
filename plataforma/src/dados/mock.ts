@@ -21,6 +21,7 @@ import type {
   SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
+  ColunaDeTarefa, QuadroDeTarefas, Tarefa, TarefaNova,
 } from './tipos';
 
 import { CANAIS, FORMATOS, ORDEM_FORMATOS } from './formatos';
@@ -2427,4 +2428,153 @@ export function arquivosOrfaosExemplo(): {
   arquivos: number; bytes: number; caminhos: string[]; margemMinutos: number;
 } {
   return { arquivos: 0, bytes: 0, caminhos: [], margemMinutos: 60 };
+}
+
+// ---------------------------------------------------------------------------
+// O quadro de tarefas, em modo exemplo (0065)
+//
+// Estado em memoria, como o resto deste arquivo: a tela precisa poder arrastar
+// cartao e ver a coluna mudar, senao o roteiro nao prova nada.
+// ---------------------------------------------------------------------------
+
+const COLUNAS_EXEMPLO: ColunaDeTarefa[] = [
+  { id: 'col-1', nome: 'A fazer', ordem: 1, final: false },
+  { id: 'col-2', nome: 'Fazendo', ordem: 2, final: false },
+  { id: 'col-3', nome: 'Em aprovação', ordem: 3, final: false },
+  { id: 'col-4', nome: 'Feito', ordem: 4, final: true },
+];
+
+const TAREFAS_EXEMPLO: Tarefa[] = [
+  {
+    id: 'tar-1', titulo: 'Fazer criativo do lançamento', detalhe: 'Três opções de arte',
+    colunaId: 'col-1', ordem: 1, prazo: emDias(3), concluidoEm: null,
+    responsavelId: 'exemplo-layana', responsavel: 'Layana',
+    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [],
+  },
+  {
+    id: 'tar-2', titulo: 'Escrever legendas da semana', detalhe: null,
+    colunaId: 'col-2', ordem: 1, prazo: emDias(1), concluidoEm: null,
+    responsavelId: 'exemplo-layana', responsavel: 'Layana',
+    criadoPor: 'exemplo-viviane', criadoPorNome: 'Viviane',
+    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo',
+    mencionados: [{ id: 'exemplo-viviane', nome: 'Viviane' }],
+  },
+  {
+    id: 'tar-3', titulo: 'Revisar contrato da Padaria', detalhe: null,
+    colunaId: 'col-3', ordem: 1, prazo: null, concluidoEm: null,
+    responsavelId: 'exemplo-layana', responsavel: 'Layana',
+    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    clienteId: null, cliente: null, mencionados: [],
+  },
+  {
+    id: 'tar-4', titulo: 'Entregar galeria da Confraria', detalhe: null,
+    colunaId: 'col-4', ordem: 1, prazo: emDias(-2), concluidoEm: new Date().toISOString(),
+    responsavelId: 'exemplo-layana', responsavel: 'Layana',
+    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [],
+  },
+];
+
+export function quadroExemplo(de: string | null, ate: string | null): QuadroDeTarefas {
+  // Cartao SEM prazo entra sempre: "sem data" nao e "fora do periodo", e
+  // some-lo faria tarefa desaparecer sem ninguem entender por que.
+  const dentro = (t: Tarefa) =>
+    !t.prazo || ((!de || t.prazo >= de) && (!ate || t.prazo <= ate));
+  return {
+    colunas: [...COLUNAS_EXEMPLO].sort((a, b) => a.ordem - b.ordem),
+    tarefas: TAREFAS_EXEMPLO.filter(dentro).sort((a, b) => a.ordem - b.ordem),
+  };
+}
+
+export function criarTarefaExemplo(t: TarefaNova): string {
+  const id = `tar-${TAREFAS_EXEMPLO.length + 1}`;
+  const col = t.colunaId ?? COLUNAS_EXEMPLO[0]?.id ?? 'col-1';
+  TAREFAS_EXEMPLO.push({
+    id, titulo: t.titulo, detalhe: t.detalhe ?? null, colunaId: col,
+    ordem: TAREFAS_EXEMPLO.filter((x) => x.colunaId === col).length + 1,
+    prazo: t.prazo ?? null, concluidoEm: null,
+    responsavelId: t.responsavelId ?? null,
+    responsavel: t.responsavelId === 'exemplo-viviane' ? 'Viviane'
+      : t.responsavelId ? 'Layana' : null,
+    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    clienteId: t.clienteId ?? null,
+    cliente: t.clienteId ? 'Chopp do Barbudo' : null,
+    mencionados: [],
+  });
+  return id;
+}
+
+export function moverTarefaExemplo(id: string, colunaId: string, para: number | null): void {
+  const t = TAREFAS_EXEMPLO.find((x) => x.id === id);
+  if (!t) throw new Error('Tarefa nao encontrada.');
+  t.colunaId = colunaId;
+  t.ordem = para ?? TAREFAS_EXEMPLO.filter((x) => x.colunaId === colunaId).length;
+  const final = COLUNAS_EXEMPLO.find((c) => c.id === colunaId)?.final ?? false;
+  t.concluidoEm = final ? (t.concluidoEm ?? new Date().toISOString()) : null;
+}
+
+export function editarTarefaExemplo(
+  id: string,
+  m: Partial<TarefaNova>,
+  limpar: string[],
+): void {
+  const t = TAREFAS_EXEMPLO.find((x) => x.id === id);
+  if (!t) throw new Error('Tarefa nao encontrada.');
+  if (m.titulo) t.titulo = m.titulo;
+  if (limpar.includes('detalhe')) t.detalhe = null;
+  else if (m.detalhe) t.detalhe = m.detalhe;
+  if (limpar.includes('prazo')) t.prazo = null;
+  else if (m.prazo) t.prazo = m.prazo;
+  if (limpar.includes('responsavel')) { t.responsavelId = null; t.responsavel = null; }
+  else if (m.responsavelId) {
+    t.responsavelId = m.responsavelId;
+    t.responsavel = m.responsavelId === 'exemplo-viviane' ? 'Viviane' : 'Layana';
+  }
+  if (limpar.includes('cliente')) { t.clienteId = null; t.cliente = null; }
+  else if (m.clienteId) { t.clienteId = m.clienteId; t.cliente = 'Chopp do Barbudo'; }
+}
+
+export function apagarTarefaExemplo(id: string): void {
+  const i = TAREFAS_EXEMPLO.findIndex((x) => x.id === id);
+  if (i < 0) throw new Error('Tarefa nao encontrada.');
+  TAREFAS_EXEMPLO.splice(i, 1);
+}
+
+export function mencionarExemplo(id: string, perfilId: string, ligar: boolean): void {
+  const t = TAREFAS_EXEMPLO.find((x) => x.id === id);
+  if (!t) throw new Error('Tarefa nao encontrada.');
+  const nome = perfilId === 'exemplo-viviane' ? 'Viviane' : 'Layana';
+  t.mencionados = ligar
+    ? [...t.mencionados.filter((m) => m.id !== perfilId), { id: perfilId, nome }]
+    : t.mencionados.filter((m) => m.id !== perfilId);
+}
+
+export function colunaExemplo(
+  acao: 'criar' | 'renomear' | 'mover' | 'apagar',
+  valor: string,
+  id?: string,
+): string {
+  if (acao === 'criar') {
+    const nova = `col-${COLUNAS_EXEMPLO.length + 1}`;
+    const finalEm = COLUNAS_EXEMPLO.find((c) => c.final)?.ordem ?? COLUNAS_EXEMPLO.length + 1;
+    COLUNAS_EXEMPLO.filter((c) => c.ordem >= finalEm).forEach((c) => (c.ordem += 1));
+    COLUNAS_EXEMPLO.push({ id: nova, nome: valor, ordem: finalEm, final: false });
+    return nova;
+  }
+  const c = COLUNAS_EXEMPLO.find((x) => x.id === id);
+  if (!c) throw new Error('Coluna nao encontrada.');
+  if (acao === 'renomear') c.nome = valor;
+  if (acao === 'mover') c.ordem = Number(valor);
+  if (acao === 'apagar') {
+    const cheia = TAREFAS_EXEMPLO.filter((t) => t.colunaId === c.id).length;
+    if (cheia > 0) {
+      throw new Error(
+        `Esta coluna ainda tem ${cheia} tarefa(s). Mova para outra coluna antes de apagar — ` +
+        'apagar a coluna nao apaga o trabalho que esta nela.',
+      );
+    }
+    COLUNAS_EXEMPLO.splice(COLUNAS_EXEMPLO.indexOf(c), 1);
+  }
+  return c.id;
 }

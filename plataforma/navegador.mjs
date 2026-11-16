@@ -17,11 +17,18 @@ function acharChrome() {
   const raiz = process.env['PLAYWRIGHT_BROWSERS_PATH'] ?? '/opt/pw-browsers';
   if (!existsSync(raiz)) return undefined;
 
+  // `chrome-linux` E `chrome-linux64`: a pasta muda entre versoes da imagem.
+  //
+  // Estava fixo em `chrome-linux`, e um contêiner novo trouxe `chrome-linux64`
+  // — todos os roteiros morreram de uma vez com a mensagem do Playwright
+  // pedindo `npx playwright install`, que e o conselho errado aqui: o
+  // navegador existe, so nao esta onde este arquivo procurava.
+  const pastas = ['chrome-linux64', 'chrome-linux', 'chrome-headless-shell-linux64'];
   const candidatos = readdirSync(raiz)
     .filter((d) => d.startsWith('chromium') && !d.includes('headless'))
     .sort()
     .reverse()
-    .map((d) => join(raiz, d, 'chrome-linux', 'chrome'));
+    .flatMap((d) => pastas.map((sub) => join(raiz, d, sub, 'chrome')));
 
   return candidatos.find((c) => existsSync(c));
 }

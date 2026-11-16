@@ -36,8 +36,8 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
-  RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
-  TipoPeca,
+  QuadroDeTarefas, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
+  TarefaNova, TipoPeca,
 } from './tipos';
 
 export { ligado };
@@ -1568,5 +1568,164 @@ export async function revogarLinkAprovacao(linkId: string): Promise<void> {
     return;
   }
   const { error } = await sb.rpc('revogar_link_aprovacao', { p_link: linkId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// O quadro de tarefas (0065)
+//
+// Uma chamada para o quadro inteiro: o RLS ja decide quais cartoes entram, e
+// filtrar no navegador seria confiar no navegador.
+// ---------------------------------------------------------------------------
+
+export async function quadroDeTarefas(
+  de?: string | null,
+  ate?: string | null,
+): Promise<QuadroDeTarefas> {
+  if (!sb) {
+    const { quadroExemplo } = await import('./mock');
+    return quadroExemplo(de ?? null, ate ?? null);
+  }
+  const { data, error } = await sb.rpc('quadro_de_tarefas', {
+    p_de: de ?? null,
+    p_ate: ate ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as QuadroDeTarefas | null, 'O quadro');
+}
+
+export async function criarTarefa(t: TarefaNova): Promise<string> {
+  if (!sb) {
+    const { criarTarefaExemplo } = await import('./mock');
+    return criarTarefaExemplo(t);
+  }
+  const { data, error } = await sb.rpc('criar_tarefa', {
+    p_titulo: t.titulo,
+    p_coluna: t.colunaId ?? null,
+    p_responsavel: t.responsavelId ?? null,
+    p_cliente: t.clienteId ?? null,
+    p_prazo: t.prazo ?? null,
+    p_detalhe: t.detalhe ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as string | null, 'A tarefa');
+}
+
+/**
+ * O arrastar do kanban.
+ *
+ * `para` e a posicao 1-based dentro da coluna de destino. Quem renumera e o
+ * banco: duas pessoas arrastando ao mesmo tempo com a tela decidindo os
+ * numeros dariam duas ordens diferentes para o mesmo quadro.
+ */
+export async function moverTarefa(id: string, colunaId: string, para?: number): Promise<void> {
+  if (!sb) {
+    const { moverTarefaExemplo } = await import('./mock');
+    moverTarefaExemplo(id, colunaId, para ?? null);
+    return;
+  }
+  const { error } = await sb.rpc('mover_tarefa', {
+    p_tarefa: id,
+    p_coluna: colunaId,
+    p_para: para ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * `limpar` existe porque nulo quer dizer "nao mexe neste campo". Sem ele nao
+ * haveria como TIRAR o responsavel, o cliente ou o prazo de uma tarefa.
+ */
+export async function editarTarefa(
+  id: string,
+  mudanca: Partial<TarefaNova>,
+  limpar: ('responsavel' | 'cliente' | 'prazo' | 'detalhe')[] = [],
+): Promise<void> {
+  if (!sb) {
+    const { editarTarefaExemplo } = await import('./mock');
+    editarTarefaExemplo(id, mudanca, limpar);
+    return;
+  }
+  const { error } = await sb.rpc('editar_tarefa', {
+    p_tarefa: id,
+    p_titulo: mudanca.titulo ?? null,
+    p_detalhe: mudanca.detalhe ?? null,
+    p_responsavel: mudanca.responsavelId ?? null,
+    p_cliente: mudanca.clienteId ?? null,
+    p_prazo: mudanca.prazo ?? null,
+    p_limpar: limpar,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function apagarTarefa(id: string): Promise<void> {
+  if (!sb) {
+    const { apagarTarefaExemplo } = await import('./mock');
+    apagarTarefaExemplo(id);
+    return;
+  }
+  const { error } = await sb.rpc('apagar_tarefa', { p_tarefa: id });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function mencionarNaTarefa(id: string, perfilId: string): Promise<void> {
+  if (!sb) {
+    const { mencionarExemplo } = await import('./mock');
+    mencionarExemplo(id, perfilId, true);
+    return;
+  }
+  const { error } = await sb.rpc('mencionar_na_tarefa', { p_tarefa: id, p_perfil: perfilId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function tirarMencaoDaTarefa(id: string, perfilId: string): Promise<void> {
+  if (!sb) {
+    const { mencionarExemplo } = await import('./mock');
+    mencionarExemplo(id, perfilId, false);
+    return;
+  }
+  const { error } = await sb.rpc('tirar_mencao_da_tarefa', { p_tarefa: id, p_perfil: perfilId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// --- as colunas, que a dona pediu editaveis
+
+export async function criarColunaDeTarefa(nome: string): Promise<string> {
+  if (!sb) {
+    const { colunaExemplo } = await import('./mock');
+    return colunaExemplo('criar', nome);
+  }
+  const { data, error } = await sb.rpc('criar_coluna_de_tarefa', { p_nome: nome });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as string | null, 'A coluna');
+}
+
+export async function renomearColunaDeTarefa(id: string, nome: string): Promise<void> {
+  if (!sb) {
+    const { colunaExemplo } = await import('./mock');
+    colunaExemplo('renomear', nome, id);
+    return;
+  }
+  const { error } = await sb.rpc('renomear_coluna_de_tarefa', { p_coluna: id, p_nome: nome });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function moverColunaDeTarefa(id: string, para: number): Promise<void> {
+  if (!sb) {
+    const { colunaExemplo } = await import('./mock');
+    colunaExemplo('mover', String(para), id);
+    return;
+  }
+  const { error } = await sb.rpc('mover_coluna_de_tarefa', { p_coluna: id, p_para: para });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function apagarColunaDeTarefa(id: string): Promise<void> {
+  if (!sb) {
+    const { colunaExemplo } = await import('./mock');
+    colunaExemplo('apagar', '', id);
+    return;
+  }
+  const { error } = await sb.rpc('apagar_coluna_de_tarefa', { p_coluna: id });
   if (error) throw new FalhaDados(error.message);
 }

@@ -14,6 +14,7 @@ import { Comercial } from './paginas/Comercial';
 import { Feedbacks } from './paginas/Feedbacks';
 import { FichaCliente } from './paginas/FichaCliente';
 import { Fila } from './paginas/Fila';
+import { Tarefas } from './paginas/Tarefas';
 import { Financeiro } from './paginas/Financeiro';
 import { InicioEquipe } from './paginas/InicioEquipe';
 import { NovaSenha } from './paginas/NovaSenha';
@@ -99,6 +100,7 @@ export default function App() {
               <Route path="/aprovacoes" element={<Aprovacoes />} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/fila" element={<Fila />} />
+              <Route path="/tarefas" element={<Tarefas />} />
               {/* Quem digitou o endereço na barra recebe uma lâmina que
                   explica, não a mensagem crua de uma função que devolveu null. */}
               <Route

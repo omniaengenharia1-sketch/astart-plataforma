@@ -873,3 +873,52 @@ export interface EnvioNaFicha {
   respondidos: number;
   links: LinkDeAprovacao[];
 }
+
+// ---------------------------------------------------------------------------
+// O quadro de tarefas (0065)
+// ---------------------------------------------------------------------------
+
+export interface ColunaDeTarefa {
+  id: string;
+  nome: string;
+  ordem: number;
+  /** A coluna que significa "acabou". É dela que sai o `concluidoEm`. */
+  final: boolean;
+}
+
+export interface Mencionado {
+  id: string;
+  nome: string;
+}
+
+export interface Tarefa {
+  id: string;
+  titulo: string;
+  detalhe: string | null;
+  colunaId: string;
+  ordem: number;
+  prazo: string | null;
+  concluidoEm: string | null;
+  responsavelId: string | null;
+  responsavel: string | null;
+  criadoPor: string;
+  criadoPorNome: string | null;
+  clienteId: string | null;
+  cliente: string | null;
+  mencionados: Mencionado[];
+}
+
+export interface QuadroDeTarefas {
+  colunas: ColunaDeTarefa[];
+  tarefas: Tarefa[];
+}
+
+/** O que a tela manda ao criar ou editar um cartão. */
+export interface TarefaNova {
+  titulo: string;
+  colunaId?: string | null;
+  responsavelId?: string | null;
+  clienteId?: string | null;
+  prazo?: string | null;
+  detalhe?: string | null;
+}
