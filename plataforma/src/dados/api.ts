@@ -1664,8 +1664,16 @@ export async function apagarTarefa(id: string): Promise<void> {
     apagarTarefaExemplo(id);
     return;
   }
-  const { error } = await sb.rpc('apagar_tarefa', { p_tarefa: id });
+  const { data, error } = await sb.rpc('apagar_tarefa', { p_tarefa: id });
   if (error) throw new FalhaDados(error.message);
+
+  // Os anexos saem do balde JUNTO. SQL nao alcanca o storage, entao a funcao
+  // devolve os caminhos e quem apaga e o navegador. Sem este trecho, apagar
+  // cartao com anexo repetiria exatamente o vazamento das galerias.
+  const caminhos = (data as { caminhos?: string[] } | null)?.caminhos ?? [];
+  if (caminhos.length > 0) {
+    await sb.storage.from('tarefas').remove(caminhos);
+  }
 }
 
 export async function mencionarNaTarefa(id: string, perfilId: string): Promise<void> {
@@ -1728,4 +1736,71 @@ export async function apagarColunaDeTarefa(id: string): Promise<void> {
   }
   const { error } = await sb.rpc('apagar_coluna_de_tarefa', { p_coluna: id });
   if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Anexo no cartao (0066)
+//
+// O arquivo vai DIRETO do navegador para o balde, com o JWT de quem esta
+// logado — a politica do balde e quem autoriza. Depois a linha. A ordem
+// importa: registrar antes deixaria o cartao mostrando anexo cujo arquivo nao
+// existe se a subida falhar no meio.
+// ---------------------------------------------------------------------------
+
+const BALDE_TAREFAS = 'tarefas';
+
+export async function anexarNaTarefa(
+  tarefaId: string,
+  arquivo: File,
+): Promise<void> {
+  if (!sb) {
+    const { anexarExemplo } = await import('./mock');
+    anexarExemplo(tarefaId, arquivo.name, arquivo.type, arquivo.size);
+    return;
+  }
+
+  const ponto = arquivo.name.lastIndexOf('.');
+  const ext = ponto > 0 ? arquivo.name.slice(ponto + 1).toLowerCase() : 'bin';
+  const caminho = `${tarefaId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error: eSubida } = await sb.storage
+    .from(BALDE_TAREFAS)
+    .upload(caminho, arquivo, { contentType: arquivo.type || undefined });
+  if (eSubida) throw new FalhaDados(eSubida.message);
+
+  const { error } = await sb.rpc('registrar_arquivo_da_tarefa', {
+    p_tarefa: tarefaId,
+    p_nome: arquivo.name,
+    p_caminho: caminho,
+    p_tipo: arquivo.type || null,
+    p_bytes: arquivo.size,
+  });
+  if (error) {
+    // A linha nao entrou: tira o arquivo, senao fica orfao no balde. E a
+    // licao dos 175 MB das galerias, no caminho de ida desta vez.
+    await sb.storage.from(BALDE_TAREFAS).remove([caminho]);
+    throw new FalhaDados(error.message);
+  }
+}
+
+/** URL de vida curta para abrir o anexo. Balde privado: nada fica solto. */
+export async function urlDoAnexo(caminho: string): Promise<string> {
+  if (!sb) return caminho;
+  const { data, error } = await sb.storage
+    .from(BALDE_TAREFAS)
+    .createSignedUrl(caminho, 60 * 10);
+  if (error) throw new FalhaDados(error.message);
+  return exija(data?.signedUrl ?? null, 'O endereço do anexo');
+}
+
+export async function tirarAnexoDaTarefa(arquivoId: string): Promise<void> {
+  if (!sb) {
+    const { tirarAnexoExemplo } = await import('./mock');
+    tirarAnexoExemplo(arquivoId);
+    return;
+  }
+  const { data, error } = await sb.rpc('tirar_arquivo_da_tarefa', { p_arquivo: arquivoId });
+  if (error) throw new FalhaDados(error.message);
+  const caminho = data as string | null;
+  if (caminho) await sb.storage.from(BALDE_TAREFAS).remove([caminho]);
 }

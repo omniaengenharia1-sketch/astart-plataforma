@@ -891,6 +891,15 @@ export interface Mencionado {
   nome: string;
 }
 
+export interface ArquivoDaTarefa {
+  id: string;
+  nome: string;
+  /** CAMINHO no balde privado, não URL: quem assina é a tela, na hora de abrir. */
+  caminho: string;
+  tipo: string | null;
+  bytes: number | null;
+}
+
 export interface Tarefa {
   id: string;
   titulo: string;
@@ -906,6 +915,7 @@ export interface Tarefa {
   clienteId: string | null;
   cliente: string | null;
   mencionados: Mencionado[];
+  arquivos: ArquivoDaTarefa[];
 }
 
 export interface QuadroDeTarefas {

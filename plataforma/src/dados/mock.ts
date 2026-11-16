@@ -2450,7 +2450,7 @@ const TAREFAS_EXEMPLO: Tarefa[] = [
     colunaId: 'col-1', ordem: 1, prazo: emDias(3), concluidoEm: null,
     responsavelId: 'exemplo-layana', responsavel: 'Layana',
     criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
-    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [],
+    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [], arquivos: [],
   },
   {
     id: 'tar-2', titulo: 'Escrever legendas da semana', detalhe: null,
@@ -2458,21 +2458,21 @@ const TAREFAS_EXEMPLO: Tarefa[] = [
     responsavelId: 'exemplo-layana', responsavel: 'Layana',
     criadoPor: 'exemplo-viviane', criadoPorNome: 'Viviane',
     clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo',
-    mencionados: [{ id: 'exemplo-viviane', nome: 'Viviane' }],
+    mencionados: [{ id: 'exemplo-viviane', nome: 'Viviane' }], arquivos: [],
   },
   {
     id: 'tar-3', titulo: 'Revisar contrato da Padaria', detalhe: null,
     colunaId: 'col-3', ordem: 1, prazo: null, concluidoEm: null,
     responsavelId: 'exemplo-layana', responsavel: 'Layana',
     criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
-    clienteId: null, cliente: null, mencionados: [],
+    clienteId: null, cliente: null, mencionados: [], arquivos: [],
   },
   {
     id: 'tar-4', titulo: 'Entregar galeria da Confraria', detalhe: null,
     colunaId: 'col-4', ordem: 1, prazo: emDias(-2), concluidoEm: new Date().toISOString(),
     responsavelId: 'exemplo-layana', responsavel: 'Layana',
     criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
-    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [],
+    clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [], arquivos: [],
   },
 ];
 
@@ -2500,7 +2500,7 @@ export function criarTarefaExemplo(t: TarefaNova): string {
     criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
     clienteId: t.clienteId ?? null,
     cliente: t.clienteId ? 'Chopp do Barbudo' : null,
-    mencionados: [],
+    mencionados: [], arquivos: [],
   });
   return id;
 }
@@ -2577,4 +2577,21 @@ export function colunaExemplo(
     COLUNAS_EXEMPLO.splice(COLUNAS_EXEMPLO.indexOf(c), 1);
   }
   return c.id;
+}
+
+/** Anexos em modo exemplo: só o suficiente para a tela mostrar a lista. */
+export function anexarExemplo(tarefaId: string, nome: string, tipo: string, bytes: number): void {
+  const t = TAREFAS_EXEMPLO.find((x) => x.id === tarefaId);
+  if (!t) throw new Error('Tarefa nao encontrada.');
+  t.arquivos = [
+    ...t.arquivos,
+    { id: `arq-${t.arquivos.length + 1}-${tarefaId}`, nome, caminho: `${tarefaId}/${nome}`,
+      tipo: tipo || null, bytes },
+  ];
+}
+
+export function tirarAnexoExemplo(arquivoId: string): void {
+  for (const t of TAREFAS_EXEMPLO) {
+    t.arquivos = t.arquivos.filter((a) => a.id !== arquivoId);
+  }
 }

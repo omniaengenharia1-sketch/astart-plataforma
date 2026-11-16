@@ -49,6 +49,22 @@ for (const esperado of ['esta semana', 'este mês', 'tudo']) {
   if (!inicio.includes(esperado)) problemas.push(`falta o filtro "${esperado}"`);
 }
 if (problemas.length) { console.log('PROBLEMAS:\n' + problemas.join('\n')); process.exit(1); }
+// A MARGEM. A dona viu: "o a fazer ta bem perto da tela, precisa seguir uma
+// margem". Eu tinha esquecido o respiro lateral da pagina — cada tela aplica o
+// seu, e a casca nao aplica nenhum. O titulo da primeira coluna ficava colado
+// na borda esquerda, cortado.
+//
+// Cobra contra o respiro do RESTO da tela, nao contra um numero fixo: o que
+// importa e a primeira coluna comecar na mesma linha vertical do filtro acima
+// dela. Numero fixo quebraria na proxima troca de `px-5` para outro valor.
+{
+  const ref = await p.getByRole('button', { name: 'Esta semana' }).boundingBox();
+  const col = await p.locator('section header').first().boundingBox();
+  if (!ref || !col) problemas.push('nao consegui medir a margem do quadro');
+  else if (col.x < ref.x - 2) {
+    problemas.push(`a primeira coluna comeca antes da margem da pagina: ${Math.round(col.x)}px contra ${Math.round(ref.x)}px`);
+  }
+}
 await p.screenshot({ path: `${SAIDA}/tarefas-01-quadro.png`, fullPage: true });
 
 // --- criar tarefa com responsavel
@@ -136,6 +152,32 @@ if (!(await limpo()).includes('esperando cliente')) {
     const texto = (await dialogo.innerText()).toLowerCase();
     if (!texto.includes('mencionar')) problemas.push('o cartao aberto nao oferece mencionar');
     if (!texto.includes('descrição')) problemas.push('o cartao aberto nao tem descricao');
+    // ANEXO — "queria que no card desse pra colocar imagem, documento".
+    if (!texto.includes('imagens e documentos')) {
+      problemas.push('o cartao aberto nao oferece anexar arquivo');
+    }
+    const campo = dialogo.locator('input[type="file"]');
+    if (!(await campo.count())) {
+      problemas.push('nao ha campo de anexar no cartao');
+    } else {
+      await campo.setInputFiles({
+        name: 'referencia.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+      });
+      await p.waitForTimeout(1000);
+      // O CARTAO CONTINUA ABERTO. Na primeira versao qualquer acao fechava o
+      // cartao, e nao dava para anexar dois arquivos seguidos nem mencionar
+      // duas pessoas: o primeiro clique ja tinha fechado tudo.
+      if (!(await p.getByRole('dialog').count())) {
+        problemas.push('anexar fechou o cartao — nao da para anexar dois arquivos');
+      } else {
+        const depoisDeAnexar = (await p.getByRole('dialog').innerText()).toLowerCase();
+        if (!depoisDeAnexar.includes('referencia.png')) {
+          problemas.push('o anexo nao apareceu na lista do cartao');
+        }
+      }
+    }
     await p.screenshot({ path: `${SAIDA}/tarefas-03-cartao.png`, fullPage: false });
     await dialogo.getByRole('button', { name: 'Fechar' }).click();
     await p.waitForTimeout(300);

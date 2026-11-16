@@ -26,9 +26,10 @@ import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { Fita, Marca } from '../componentes/Bloco';
 import {
-  apagarColunaDeTarefa, apagarTarefa, criarColunaDeTarefa, criarTarefa, editarTarefa,
-  equipeEConvites, listaClientes, mencionarNaTarefa, moverTarefa, quadroDeTarefas,
-  renomearColunaDeTarefa, tirarMencaoDaTarefa,
+  anexarNaTarefa, apagarColunaDeTarefa, apagarTarefa, criarColunaDeTarefa, criarTarefa,
+  editarTarefa, equipeEConvites, listaClientes, mencionarNaTarefa, moverTarefa,
+  quadroDeTarefas, renomearColunaDeTarefa, tirarAnexoDaTarefa, tirarMencaoDaTarefa,
+  urlDoAnexo,
 } from '../dados/api';
 import { useSessao } from '../sessao';
 import { diaMes } from '../formato';
@@ -37,6 +38,12 @@ import type {
 } from '../dados/tipos';
 
 type Periodo = 'semana' | 'mes' | 'tudo';
+
+const peso = (bytes: number): string => {
+  if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1).replace('.', ',')} GB`;
+  if (bytes >= 1_000_000) return `${Math.round(bytes / 1_000_000)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1000))} KB`;
+};
 
 /** Segunda a domingo da semana corrente, e o mes corrente inteiro. */
 function janela(p: Periodo): { de: string | null; ate: string | null } {
@@ -102,6 +109,11 @@ function Cartao({
         {t.mencionados.map((m) => (
           <Marca key={m.id}>@{m.nome}</Marca>
         ))}
+        {/* O cartao fechado diz que TEM anexo, sem listar: saber que existe
+            muda a decisao de abrir; saber o nome do arquivo, não. */}
+        {t.arquivos.length > 0 && (
+          <Marca>{t.arquivos.length} anexo{t.arquivos.length > 1 ? 's' : ''}</Marca>
+        )}
       </div>
 
       {/* NO CELULAR não há arrastar. Este seletor é o mesmo gesto em forma de
@@ -153,7 +165,19 @@ export function Tarefas() {
    */
   const [abrindoForm, setAbrindoForm] = useState(false);
 
-  const [aberta, setAberta] = useState<Tarefa | null>(null);
+  /**
+   * Guarda o ID, não o cartão.
+   *
+   * Guardando o objeto, ele congela no estado do momento em que foi aberto: a
+   * tela recarrega por baixo e o cartão aberto continua mostrando a versão
+   * velha. A saída anterior era FECHAR o cartão a cada ação — e aí não dava
+   * para anexar dois arquivos seguidos nem mencionar duas pessoas, porque o
+   * primeiro clique já tinha fechado tudo.
+   *
+   * Com o ID, o cartão é sempre lido do quadro recém-carregado: muda sozinho e
+   * continua aberto.
+   */
+  const [abertaId, setAbertaId] = useState<string | null>(null);
   const [novaColuna, setNovaColuna] = useState('');
 
   const carregar = useCallback(async () => {
@@ -244,8 +268,12 @@ export function Tarefas() {
   if (erro && !quadro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!quadro) return <Carregando oQue="o quadro" />;
 
+  const aberta = quadro.tarefas.find((t) => t.id === abertaId) ?? null;
+
   return (
-    <div className="pt-7">
+    // A margem lateral e de cada tela: a casca nao aplica nenhuma. Sem isto o
+    // quadro encostava na borda esquerda e o "A fazer" aparecia cortado.
+    <div className="px-5 pb-16 pt-7 sm:px-8 lg:px-12">
       {/* ---- criar ------------------------------------------------------ */}
       <section className="bloco mb-6 p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
@@ -333,7 +361,18 @@ export function Tarefas() {
       {erro && <p className="mb-4 text-[14px] text-pink-texto">{erro}</p>}
 
       {/* ---- o quadro --------------------------------------------------- */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      {/* SANGRA ate a borda, mas COMECA alinhado.
+          A margem negativa cancela o respiro da pagina e o padding devolve: a
+          primeira coluna fica na mesma linha vertical do resto da tela, e as
+          outras deslizam ate a borda em vez de parar antes dela. Sem isso, ou
+          o quadro encosta na borda (como estava) ou perde largura util no
+          celular, que e onde ela mais falta. */}
+      <div
+        className={
+          'flex gap-4 overflow-x-auto pb-4 ' +
+          '-mx-5 px-5 sm:-mx-8 sm:px-8 lg:-mx-12 lg:px-12'
+        }
+      >
         {quadro.colunas.map((c, i) => {
           const cartoes = porColuna.get(c.id) ?? [];
           return (
@@ -390,7 +429,7 @@ export function Tarefas() {
                       colunas={quadro.colunas}
                       equipe={equipe}
                       aoMover={(col) => void mover(t.id, col)}
-                      aoAbrir={() => setAberta(t)}
+                      aoAbrir={() => setAbertaId(t.id)}
                     />
                   ))
                 )}
@@ -446,8 +485,11 @@ export function Tarefas() {
           t={aberta}
           equipe={equipe}
           euSou={sessao.tipo === 'equipe' ? sessao.perfil.userId : ''}
-          aoFechar={() => setAberta(null)}
-          aoMudar={async () => { await carregar(); setAberta(null); }}
+          aoFechar={() => setAbertaId(null)}
+          // Recarrega e CONTINUA ABERTO. Só o apagar fecha, porque aí o cartão
+          // deixou de existir.
+          aoMudar={carregar}
+          aoApagar={async () => { setAbertaId(null); await carregar(); }}
           aoFalhar={setErro}
         />
       )}
@@ -463,18 +505,47 @@ export function Tarefas() {
  * entrega.
  */
 function Detalhe({
-  t, equipe, euSou, aoFechar, aoMudar, aoFalhar,
+  t, equipe, euSou, aoFechar, aoMudar, aoApagar, aoFalhar,
 }: {
   t: Tarefa;
   equipe: PessoaDaEquipe[];
   euSou: string;
   aoFechar: () => void;
   aoMudar: () => Promise<void>;
+  aoApagar: () => Promise<void>;
   aoFalhar: (m: string) => void;
 }) {
   const [detalhe, setDetalhe] = useState(t.detalhe ?? '');
   const [salvando, setSalvando] = useState(false);
+  const [subindo, setSubindo] = useState(false);
   const podeApagar = t.criadoPor === euSou;
+
+  async function anexar(f: File) {
+    setSubindo(true);
+    try {
+      await anexarNaTarefa(t.id, f);
+      await aoMudar();
+    } catch (x) {
+      aoFalhar(x instanceof Error ? x.message : 'Não consegui anexar.');
+    } finally {
+      setSubindo(false);
+    }
+  }
+
+  /**
+   * Abre numa aba nova com URL assinada de dez minutos.
+   *
+   * O balde é privado: não existe endereço permanente de nenhum anexo. Assinar
+   * só na hora de abrir evita gerar dezenas de endereços que ninguém usa toda
+   * vez que o quadro carrega.
+   */
+  async function abrir(caminho: string) {
+    try {
+      window.open(await urlDoAnexo(caminho), '_blank', 'noopener');
+    } catch (x) {
+      aoFalhar(x instanceof Error ? x.message : 'Não consegui abrir o anexo.');
+    }
+  }
 
   async function tentar(fn: () => Promise<unknown>) {
     setSalvando(true);
@@ -573,6 +644,63 @@ function Detalhe({
           </div>
         </div>
 
+        {/* ANEXOS — "queria que no card desse pra colocar imagem, documento".
+            Briefing sem o arquivo junto vira troca de WhatsApp, que é o que
+            este quadro existe para tirar do WhatsApp. */}
+        <div className="mt-5">
+          <Fita>Imagens e documentos</Fita>
+
+          {t.arquivos.length > 0 && (
+            <ul className="mt-2.5 flex flex-col gap-2">
+              {t.arquivos.map((a) => (
+                <li key={a.id} className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={() => void abrir(a.caminho)}
+                    className="min-w-0 flex-1 truncate text-left text-[14px] text-tinta underline-offset-2 hover:underline"
+                  >
+                    {a.nome}
+                    {a.bytes ? (
+                      <span className="rotulo ml-2 normal-case text-tinta-3">{peso(a.bytes)}</span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Tirar ${a.nome}`}
+                    disabled={salvando}
+                    onClick={() => void tentar(() => tirarAnexoDaTarefa(a.id))}
+                    className="rotulo shrink-0 text-tinta-3 hover:text-pink-texto"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <label className="mt-3 block">
+            <span className="rotulo normal-case">
+              {subindo ? 'Subindo…' : 'Anexar imagem ou documento'}
+            </span>
+            <input
+              type="file"
+              disabled={subindo || salvando}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (f) void anexar(f);
+              }}
+              className="mt-1.5 block w-full text-[13px] text-tinta-2 file:mr-3 file:border file:border-linha file:bg-superficie-2 file:px-3 file:py-2 file:text-tinta"
+            />
+          </label>
+          {/* Dizer o limite ANTES, não depois de a pessoa esperar a subida de
+              um arquivo de 300 MB para receber uma recusa. */}
+          <p className="rotulo mt-1.5 normal-case text-tinta-3">
+            até 200 MB · imagem, PDF, Word, Excel, PowerPoint, CSV ou vídeo
+          </p>
+        </div>
+
         {/* Apagar é de quem criou. Quem recebeu move e conclui; sumir com o
             pedido de outra pessoa, não. */}
         {podeApagar && (
@@ -581,7 +709,14 @@ function Detalhe({
               tamanho="pequeno"
               className="text-pink-texto"
               disabled={salvando}
-              onClick={() => void tentar(() => apagarTarefa(t.id))}
+              onClick={() => {
+                setSalvando(true);
+                void apagarTarefa(t.id)
+                  .then(aoApagar)
+                  .catch((x: unknown) =>
+                    aoFalhar(x instanceof Error ? x.message : 'Não consegui apagar.'))
+                  .finally(() => setSalvando(false));
+              }}
             >
               Apagar esta tarefa
             </Botao>
