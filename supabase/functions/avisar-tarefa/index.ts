@@ -43,21 +43,25 @@ const REMETENTE = Deno.env.get('AVISOS_REMETENTE') ?? 'Astart Studio <projetos@a
 /**
  * Onde o quadro mora, para o aviso ter um link em vez de so um texto.
  *
- * `pages.dev` e nao `app.astartstudio.com.br`, de propósito e por enquanto: o
- * endereco bonito responde 522. Ele e um CNAME PROXIADO para o Pages, mas o
- * projeto do Pages nao tem esse dominio registrado como custom domain — entao
- * a Cloudflare aceita a requisicao, tenta entregar, e o Pages nao reconhece o
- * Host. Medido: pages.dev devolve 200, app devolve 522.
+ * O endereco da Astart, e nao `pages.dev`: quem recebe o aviso reconhece o
+ * dominio da propria agencia, e link de servico de hospedagem num e-mail
+ * interno parece phishing.
  *
- * Nao foi nada do aviso que quebrou isso: o endereco nunca chegou a servir. O
- * botao do e-mail so foi a primeira coisa a usa-lo de verdade.
+ * Esteve em `pages.dev` por algumas horas, porque `app.` respondia 522: o
+ * CNAME para o Pages existia e estava certo, mas o dominio estava INATIVO na
+ * aba de dominios personalizados do projeto — a verificacao nunca tinha sido
+ * concluida. A Cloudflare aceitava a requisicao e o Pages nao reconhecia o
+ * Host.
  *
- * Volta para o endereco proprio assim que o custom domain estiver de pe —
- * e por isso que isto e variavel de ambiente e nao texto fixo: da para trocar
- * sem novo deploy, por `AVISOS_URL_QUADRO`.
+ * Isso estava assim havia semanas. O botao deste e-mail foi a primeira coisa
+ * a usar o endereco de verdade, e por isso foi ele que revelou.
+ *
+ * Medido depois do conserto: 200 em `/` e em `/tarefas`, com certificado
+ * proprio. Continua em variavel de ambiente (`AVISOS_URL_QUADRO`) para trocar
+ * sem novo deploy, que foi o que permitiu contornar isso em um commit.
  */
 const ENDERECO_DO_QUADRO =
-  Deno.env.get('AVISOS_URL_QUADRO') ?? 'https://astart-plataforma.pages.dev/tarefas';
+  Deno.env.get('AVISOS_URL_QUADRO') ?? 'https://app.astartstudio.com.br/tarefas';
 
 interface AvisoNaFila {
   id: string;
