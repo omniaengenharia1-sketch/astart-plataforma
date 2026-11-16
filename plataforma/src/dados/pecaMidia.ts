@@ -184,6 +184,46 @@ export async function subirMidiaDaPeca(
   return aviso;
 }
 
+/**
+ * Muda a posição do arquivo no carrossel.
+ *
+ * Pedido da dona depois de subir um carrossel da Mor: "falta eu poder
+ * movimentar o carrossel, tipo: colocar uma imagem em segundo outra em
+ * terceiro". Até a 0069 a ordem era a ordem em que os arquivos subiram, e
+ * mudar exigia tirar tudo e subir de novo na ordem certa.
+ *
+ * `para` é a posição de destino contada do zero. Fora da faixa é PRESO, e não
+ * recusado — a tela manda "um para trás" no primeiro arquivo o tempo todo, e
+ * isso não é erro de ninguém.
+ */
+export async function moverMidiaDaPeca(midiaId: string, para: number): Promise<void> {
+  if (!sb) {
+    for (const [post, lista] of EXEMPLO) {
+      const de = lista.findIndex((m) => m.id === midiaId);
+      if (de < 0) continue;
+      // O MESMO limite do banco, de propósito. Modo exemplo que se comporta
+      // diferente da produção faz o roteiro aprovar o que a produção reprova
+      // — já aconteceu neste arquivo, e está escrito no topo dele.
+      const destino = Math.min(Math.max(para, 0), lista.length - 1);
+      const item = lista[de];
+      if (!item || de === destino) return;
+      lista.splice(de, 1);
+      lista.splice(destino, 0, item);
+      lista.forEach((m, n) => { m.ordem = n; });
+      EXEMPLO.set(post, lista);
+      anotarMidiaExemplo(post, lista);
+      return;
+    }
+    return;
+  }
+
+  const { error } = await sb.rpc('mover_midia_do_post', {
+    p_midia: midiaId,
+    p_para: para,
+  });
+  if (error) throw new FalhaDeMidia(error.message);
+}
+
 /** Tira o arquivo da peça: a linha primeiro, o arquivo depois. */
 export async function removerMidiaDaPeca(midiaId: string): Promise<void> {
   if (!sb) {

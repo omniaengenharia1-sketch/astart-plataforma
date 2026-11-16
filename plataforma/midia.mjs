@@ -121,6 +121,62 @@ for (let i = 0; i < quantas; i += 1) {
 
   await p.screenshot({ path: `${SAIDA}/midia-carrossel.png` });
 
+  // --- a ORDEM do carrossel ------------------------------------------------
+  //
+  // A dona, depois de subir um carrossel da Mor: "falta eu poder movimentar o
+  // carrossel, tipo: colocar uma imagem em segundo outra em terceiro".
+  //
+  // Num carrossel a ordem E o conteudo: a primeira imagem e a capa do post no
+  // feed. Errar a ordem e refazer o post.
+  //
+  // O QUE ESTE PEDACO COBRA
+  //   a. as setas existem e a primeira nao tem "para antes" (nem a ultima
+  //      "para depois") — botao que nao leva a lugar nenhum e armadilha;
+  //   b. mover TROCA mesmo: confere a ordem dos NOMES dos arquivos, nao so o
+  //      numero embaixo. O numero sozinho passaria com a lista inteira errada
+  //      atras dele — foi esse o furo que o teste 39 fechou no banco.
+  {
+    const nomes = async () =>
+      (await p.locator('img[alt*="Arquivo"]').evaluateAll((fotos) =>
+        fotos.map((f) => f.getAttribute('src') ?? ''),
+      ));
+
+    const antes = await nomes();
+    if (antes.length !== 2) {
+      problemas.push(`esperava dois arquivos para ordenar, tem ${antes.length}`);
+    } else {
+      const primeira = p.getByRole('button', { name: 'Mover o arquivo 1 para antes' });
+      const segunda = p.getByRole('button', { name: 'Mover o arquivo 2 para antes' });
+
+      if (!(await primeira.count())) {
+        problemas.push('nao ha como mudar a ordem do carrossel');
+      } else {
+        cobrar(
+          await primeira.isDisabled(),
+          'o primeiro arquivo nao oferece "para antes" — nao ha para onde ir',
+        );
+        cobrar(
+          await p.getByRole('button', { name: 'Mover o arquivo 2 para depois' }).isDisabled(),
+          'nem o ultimo oferece "para depois"',
+        );
+
+        await segunda.click();
+        await p.waitForTimeout(900);
+        const depois = await nomes();
+        cobrar(
+          depois.length === 2 && depois[0] === antes[1] && depois[1] === antes[0],
+          'mover o segundo para antes troca os dois de lugar de verdade',
+        );
+        // E o aviso que diz o que a ordem significa.
+        cobrar(
+          /a 1 é a capa do post|1 é a capa/i.test(await corpo()),
+          'a tela diz que a primeira e a capa do post no feed',
+        );
+        await p.screenshot({ path: `${SAIDA}/midia-ordem.png` });
+      }
+    }
+  }
+
   await p.getByRole('button', { name: /Tirar arquivo/ }).first().click();
   await p.waitForTimeout(700);
   cobrar((await imagens()) === 1, 'tirar um arquivo deixa o outro');

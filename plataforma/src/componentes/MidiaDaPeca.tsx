@@ -6,7 +6,12 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { FORMATOS, PEDE } from '../dados/formatos';
-import { midiasDaPeca, removerMidiaDaPeca, subirMidiaDaPeca } from '../dados/pecaMidia';
+import {
+  midiasDaPeca,
+  moverMidiaDaPeca,
+  removerMidiaDaPeca,
+  subirMidiaDaPeca,
+} from '../dados/pecaMidia';
 import type { MidiaDaPeca, StatusPublicacao, TipoPeca } from '../dados/tipos';
 
 /** Só o que o painel precisa saber da peça: o compositor não tem uma inteira. */
@@ -60,6 +65,7 @@ export function MidiaDaPecaPainel({
   // o que consertar.
   const [avisos, setAvisos] = useState<string[]>([]);
   const [subindo, setSubindo] = useState<number | null>(null);
+  const [mexendo, setMexendo] = useState<string | null>(null);
   const [sobre, setSobre] = useState(false);
 
   const ler = useCallback(async () => {
@@ -97,6 +103,28 @@ export function MidiaDaPecaPainel({
     setAvisos([...novos]);
     await ler();
     aoMudar();
+  }
+
+  /**
+   * Muda a posição do arquivo.
+   *
+   * `mexendo` trava os botões durante a troca. Sem isso, dois cliques rápidos
+   * no mesmo botão mandam as duas chamadas com a posição ANTIGA — a segunda
+   * desfaz o efeito da primeira e a pessoa vê o arquivo "não sair do lugar".
+   */
+  async function mover(id: string, para: number) {
+    if (mexendo) return;
+    setErro(null);
+    setMexendo(id);
+    try {
+      await moverMidiaDaPeca(id, para);
+      await ler();
+      aoMudar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui mudar a ordem.');
+    } finally {
+      setMexendo(null);
+    }
   }
 
   async function tirar(id: string) {
@@ -166,9 +194,64 @@ export function MidiaDaPecaPainel({
                   ×
                 </button>
               )}
+
+              {/* A ORDEM, que num carrossel é conteúdo.
+                  "falta eu poder movimentar o carrossel, tipo: colocar uma
+                  imagem em segundo outra em terceiro".
+
+                  Setas e não arrastar, pela mesma razão do quadro de tarefas:
+                  `draggable` não existe em telefone, e ela trabalha do
+                  telefone. Um carrossel que só se ordena no computador não
+                  serve.
+
+                  O número aparece mesmo com a peça congelada — ali ele deixa
+                  de ser controle e vira informação: é a ordem que foi
+                  publicada. */}
+              {midias.length > 1 && (
+                <div className="mt-1 flex items-center justify-between">
+                  {equipe && !congelada ? (
+                    <button
+                      type="button"
+                      onClick={() => void mover(m.id, m.ordem - 1)}
+                      disabled={m.ordem === 0 || mexendo !== null}
+                      aria-label={`Mover o arquivo ${m.ordem + 1} para antes`}
+                      className="grid size-7 place-items-center rounded-[8px] text-[15px] text-tinta-2 hover:text-pink-texto disabled:opacity-25"
+                    >
+                      ‹
+                    </button>
+                  ) : (
+                    <span className="size-7" />
+                  )}
+
+                  <span className="numeros text-[12px] text-tinta-2">{m.ordem + 1}</span>
+
+                  {equipe && !congelada ? (
+                    <button
+                      type="button"
+                      onClick={() => void mover(m.id, m.ordem + 1)}
+                      disabled={m.ordem === midias.length - 1 || mexendo !== null}
+                      aria-label={`Mover o arquivo ${m.ordem + 1} para depois`}
+                      className="grid size-7 place-items-center rounded-[8px] text-[15px] text-tinta-2 hover:text-pink-texto disabled:opacity-25"
+                    >
+                      ›
+                    </button>
+                  ) : (
+                    <span className="size-7" />
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>
+      )}
+
+      {/* A primeira é a capa, e isso não é óbvio para quem está olhando uma
+          fileira de quadradinhos: no feed o carrossel aparece pela primeira
+          imagem. Dizer custa uma linha e evita refazer o post. */}
+      {midias.length > 1 && equipe && !congelada && (
+        <p className="mt-1.5 text-[12.5px] text-tinta-3">
+          A ordem é a do carrossel no Instagram — a <strong>1</strong> é a capa do post.
+        </p>
       )}
 
       {equipe && !congelada && (
