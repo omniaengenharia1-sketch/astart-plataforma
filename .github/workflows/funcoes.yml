@@ -48,7 +48,11 @@ jobs:
       # do deploy, custa uma funcao quebrada em producao esperando o cron.
       - name: Conferir os tipos antes de publicar
         working-directory: supabase/functions
-        run: deno check aprovar/index.ts conectar-conta/index.ts convidar/index.ts galeria/index.ts publicar-tick/index.ts renovar-tokens/index.ts
+        # VARRE, nao lista. A lista por nome era um alcapao: funcao nova
+        # nao entrava nela, e passava sem nenhuma conferencia de tipo ate
+        # quebrar em producao. Percebi ao escrever a `avisar-tarefa` — ela
+        # nao estava na lista e teria ido ao ar sem `deno check`.
+        run: deno check */index.ts
 
       # `deno check` prova tipo; isto prova COMPORTAMENTO. Entrou porque os dois
       # piores erros deste modulo passariam pelos tipos sem reclamar: o
@@ -81,11 +85,12 @@ jobs:
       # Cada funcao e publicada pelo nome, com a flag do JWT explicita, em vez
       # de um `deploy` sem nome que deixaria a decisao para a leitura do
       # config.toml. Quem autoriza estas quatro nao e o JWT:
-      #   publicar-tick e renovar-tokens  — o header x-tick-secret, que o cron manda
+      #   publicar-tick, renovar-tokens
+      #   e avisar-tarefa                 — o header x-tick-secret, que o cron manda
       #   galeria e aprovar               — o token do link, conferido no banco
-      - name: Publicar as quatro que nao usam JWT
+      - name: Publicar as que nao usam JWT
         run: |
-          for f in publicar-tick renovar-tokens galeria aprovar; do
+          for f in publicar-tick renovar-tokens avisar-tarefa galeria aprovar; do
             echo "::group::$f"
             supabase functions deploy "$f" --project-ref "$REF" --no-verify-jwt
             echo "::endgroup::"
