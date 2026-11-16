@@ -40,9 +40,24 @@ const LOTE = Number(Deno.env.get('AVISOS_LOTE_MAX') ?? '20');
  */
 const REMETENTE = Deno.env.get('AVISOS_REMETENTE') ?? 'Astart Studio <projetos@astartstudio.com.br>';
 
-/** Onde o quadro mora, para o aviso ter um link em vez de so um texto. */
+/**
+ * Onde o quadro mora, para o aviso ter um link em vez de so um texto.
+ *
+ * `pages.dev` e nao `app.astartstudio.com.br`, de propósito e por enquanto: o
+ * endereco bonito responde 522. Ele e um CNAME PROXIADO para o Pages, mas o
+ * projeto do Pages nao tem esse dominio registrado como custom domain — entao
+ * a Cloudflare aceita a requisicao, tenta entregar, e o Pages nao reconhece o
+ * Host. Medido: pages.dev devolve 200, app devolve 522.
+ *
+ * Nao foi nada do aviso que quebrou isso: o endereco nunca chegou a servir. O
+ * botao do e-mail so foi a primeira coisa a usa-lo de verdade.
+ *
+ * Volta para o endereco proprio assim que o custom domain estiver de pe —
+ * e por isso que isto e variavel de ambiente e nao texto fixo: da para trocar
+ * sem novo deploy, por `AVISOS_URL_QUADRO`.
+ */
 const ENDERECO_DO_QUADRO =
-  Deno.env.get('AVISOS_URL_QUADRO') ?? 'https://app.astartstudio.com.br/tarefas';
+  Deno.env.get('AVISOS_URL_QUADRO') ?? 'https://astart-plataforma.pages.dev/tarefas';
 
 interface AvisoNaFila {
   id: string;
