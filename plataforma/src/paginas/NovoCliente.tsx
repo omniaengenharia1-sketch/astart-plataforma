@@ -37,7 +37,18 @@ function formatosDe(s: ServicoCatalogo): { valor: FormatoContrato; rotulo: strin
   ];
 }
 
-const DIAS_VENCIMENTO = Array.from({ length: 28 }, (_, i) => i + 1);
+/**
+ * Ate 31, nao ate 28.
+ *
+ * O limite antigo nao era uma regra de negocio: era o `make_date(ano, mes, 30)`
+ * da geracao de cobranca, que ESTOURA em fevereiro em vez de cair para o
+ * ultimo dia. Travar a tela em 28 fazia o estouro nunca acontecer, ao preco de
+ * nao conseguir registrar o cliente que paga dia 30 — que e a maioria deles.
+ *
+ * Agora quem se ajusta e a data (`dia_do_mes`, 0064): dia 30 em fevereiro
+ * vence em 28, dia 31 em abril vence em 30.
+ */
+const DIAS_VENCIMENTO = Array.from({ length: 31 }, (_, i) => i + 1);
 
 const FUSOS = [
   'America/Sao_Paulo', 'America/Manaus', 'America/Cuiaba',
@@ -103,7 +114,7 @@ function LinhaServico({
         </Campo>
 
         {recorrente ? (
-          <Campo id={`${id}-dia`} rotulo="Vence todo dia" dica="do 1 ao 28">
+          <Campo id={`${id}-dia`} rotulo="Vence todo dia" dica="mes mais curto cobra no ultimo dia">
             <Escolha
               id={`${id}-dia`}
               value={escolha.diaVencimento ?? 10}

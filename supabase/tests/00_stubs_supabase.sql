@@ -26,8 +26,18 @@ create table storage.buckets (
   id text primary key, name text, public boolean,
   file_size_limit bigint, allowed_mime_types text[]
 );
+-- `metadata` e `created_at` existem no Supabase de verdade e faltavam aqui.
+--
+-- O stub mais POBRE que a realidade tem o mesmo problema do stub mais generoso,
+-- so que ao contrario: em vez de esconder bug, esconde TESTE. Os testes 33 e 34
+-- (arquivos sem dono) quebravam aqui, e como a CI nunca rodou a suite, nem o
+-- erro aparecia — eu relatei os dois como passando sem nunca os ter visto
+-- rodar. `metadata` guarda o tamanho do arquivo e `created_at` e o que separa
+-- arquivo orfao de arquivo que esta subindo agora.
 create table storage.objects (
-  id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid
+  id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid,
+  metadata jsonb, created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 alter table storage.objects enable row level security;
 

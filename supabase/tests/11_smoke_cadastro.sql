@@ -189,14 +189,28 @@ begin
     if position('dia de vencimento' in sqlerrm) = 0 then raise; end if;
   end;
 
-  -- Dia 31 nao existe em todo mes.
+  -- Dia 31 PASSA (0064). Esta afirmacao dizia o contrario, e travava o defeito:
+  -- o limite de 28 nunca foi regra de negocio, era o `make_date(ano, mes, 30)`
+  -- da geracao de cobranca estourando em fevereiro. A dona nao conseguia
+  -- cadastrar o cliente que paga dia 30, que e a maioria deles.
+  --
+  -- Quem se ajusta agora e a DATA: dia 31 em fevereiro cobra em 28.
+  declare v_31 jsonb;
+  begin
+    v_31 := public.criar_cliente('Bar do 31',
+      jsonb_build_array(jsonb_build_object('servico','gestao_digital',
+        'valorCentavos',100000,'diaVencimento',31)));
+    perform public.afirma(v_31->>'id' is not null, 'da para contratar com vencimento dia 31');
+  end;
+
+  -- 32 continua recusado, e a mensagem diz o intervalo certo.
   begin
     perform public.criar_cliente('Bar do Zé',
       jsonb_build_array(jsonb_build_object('servico','gestao_digital',
-        'valorCentavos',100000,'diaVencimento',31)));
-    raise exception 'FALHOU: aceitou vencimento dia 31';
+        'valorCentavos',100000,'diaVencimento',32)));
+    raise exception 'FALHOU: aceitou vencimento dia 32';
   exception when others then
-    if position('entre 1 e 28' in sqlerrm) = 0 then raise; end if;
+    if position('entre 1 e 31' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- Sem servico nenhum.

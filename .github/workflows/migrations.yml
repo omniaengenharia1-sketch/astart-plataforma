@@ -26,6 +26,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/tests/**'
       - 'scripts/aplicar-migrations.mjs'
       - '.github/workflows/migrations.yml'
   workflow_dispatch:
@@ -35,7 +36,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # OS TESTES RODAM ANTES DE PRODUCAO, E ATE HOJE NAO RODAVAM EM LUGAR NENHUM.
+  #
+  # Esta esteira so APLICAVA. Os 35 arquivos de `supabase/tests` dependiam de
+  # alguem lembrar de rodar `rodar.sh` na mao, e como a esteira ficava verde
+  # aplicando, eu vinha relatando "os testes passaram" olhando para o verde
+  # errado. Dois testes que escrevi nesta semana (33 e 34, arquivos sem dono)
+  # NUNCA tinham rodado: quebravam no stub, e ninguem via.
+  #
+  # Teste que nao roda e pior que teste que nao existe, porque da a sensacao
+  # de cobertura. Agora e um job proprio, e `aplicar` depende dele: vermelho
+  # aqui, nada encosta em producao.
+  testar:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+        ports: ['5444:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar o psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # Aplica as migrations num banco vazio e roda cada teste numa copia.
+      # Nao encosta em producao: e um Postgres descartavel do proprio job.
+      - name: Rodar os testes de SQL
+        env:
+          PGHOST: localhost
+          PGPORT: '5444'
+          PGUSER: postgres
+        run: bash supabase/tests/rodar.sh
+
   aplicar:
+    needs: testar
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
