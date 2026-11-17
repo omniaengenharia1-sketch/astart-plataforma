@@ -249,22 +249,71 @@ body::before {
 
 /* --- utilitários ---------------------------------------------------------- */
 
-/** Rótulo: mono, caixa alta, espaçado. A voz estrutural da interface. */
+/* ---------------------------------------------------------------------------
+   A VOZ DO TEXTO PEQUENO
+   ---------------------------------------------------------------------------
+   A dona: "essa tipografia pequena e em caixa alta e separada" — e apontou o
+   painel da Cloudflare como contraponto: caixa normal, peso normal, ícone como
+   âncora, títulos de grupo discretos. Nada lá é caixa alta espaçada.
+
+   Ela tem razão, e o motivo é mecânico, não de gosto. O `rotulo` somava quatro
+   penalidades no mesmo texto:
+
+     1. 10,5px, abaixo do piso prático — ainda mais no celular;
+     2. caixa alta, que apaga a silhueta da palavra (a gente reconhece palavras
+        pelo formato das letras que sobem e descem; em maiúsculas toda palavra
+        vira um retângulo);
+     3. 0,15em de espaçamento, que afasta as letras quase tanto quanto o espaço
+        entre palavras — o olho precisa remontar onde cada palavra começa;
+     4. monoespaçada: ótima para número e código, cara para ler.
+
+   E havia prova de que o padrão já incomodava antes de alguém reclamar: de 232
+   usos de `rotulo`, 56 desfaziam a caixa alta na mão, com `normal-case`. Um
+   quarto das vezes quem escrevia a tela anulava o estilo.
+
+   O QUE MUDA, E O QUE NÃO MUDA
+
+   `rotulo` continua sendo etiqueta — a palavrinha acima de um valor. Ganha
+   tamanho, perde espaçamento e troca a monoespaçada pela de texto. Segue em
+   caixa alta porque é o que a distingue do conteúdo, e porque as frases que
+   NÃO são etiqueta ganharam utilitário próprio (`legenda`) em vez de
+   continuarem pedindo `normal-case` emprestado.
+
+   Caixa alta espaçada é tempero, não fonte: serve para uma ou duas palavras.
+--------------------------------------------------------------------------- */
+
+/** Etiqueta: a palavrinha acima de um valor. Uma ou duas palavras, no máximo. */
 @utility rotulo {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.15em;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
   text-transform: uppercase;
   color: var(--tinta-3);
 }
 
 @utility rotulo-forte {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.15em;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
   text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+/**
+ * Legenda: a frase pequena. Explicação, metadado, estado — o que se LÊ.
+ *
+ * Existe porque 56 lugares usavam `rotulo normal-case`: eram frases vestidas
+ * de etiqueta. Frase se lê em caixa normal, espaçamento normal, num tamanho
+ * que não force a vista.
+ */
+@utility legenda {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--tinta-2);
 }
 
@@ -351,10 +400,10 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.15em;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--tinta);
   padding: 0.35rem 0;

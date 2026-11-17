@@ -10,8 +10,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const BASE =
-  'relative inline-flex items-center justify-center gap-2 rounded-full font-mono font-semibold ' +
-  'uppercase tracking-[0.14em] select-none transition-[transform,box-shadow,background-color] ' +
+  'relative inline-flex items-center justify-center gap-2 rounded-full font-semibold ' +
+  'uppercase tracking-[0.05em] select-none transition-[transform,box-shadow,background-color] ' +
   'duration-200 ease-out disabled:opacity-40 disabled:pointer-events-none ' +
   'active:translate-y-px';
 
@@ -33,8 +33,8 @@ const VARIANTES: Record<Variante, string> = {
 };
 
 const TAMANHOS: Record<Tamanho, string> = {
-  normal: 'min-h-11 text-[10.5px]',
-  pequeno: 'min-h-9 text-[10px]',
+  normal: 'min-h-11 text-[12.5px]',
+  pequeno: 'min-h-9 text-[11.5px]',
 };
 
 const LADOS: Record<Variante, Record<Tamanho, string>> = {

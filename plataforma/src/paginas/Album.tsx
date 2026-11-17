@@ -674,7 +674,7 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
             </Botao>
           )}
           {!porToken && (
-            <span className="rotulo normal-case">
+            <span className="legenda">
               abra uma foto para escolher a capa
             </span>
           )}

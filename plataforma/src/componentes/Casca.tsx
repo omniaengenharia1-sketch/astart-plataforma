@@ -87,12 +87,12 @@ function Menu({ itens, modulos }: { itens: ItemMenu[]; modulos?: ChaveModulo[] }
             to={i.para}
             aria-current={ativo ? 'page' : undefined}
             className={
-              'risca flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 font-mono ' +
-              'text-[10.5px] font-semibold tracking-[0.14em] whitespace-nowrap uppercase ' +
+              'risca flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 ' +
+              'text-[14px] whitespace-nowrap ' +
               'transition-colors duration-150 ' +
               (ativo
-                ? 'bg-superficie-3 text-tinta shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]'
-                : 'text-tinta-3 hover:text-tinta')
+                ? 'bg-superficie-3 font-semibold text-tinta shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]'
+                : 'font-medium text-tinta-2 hover:text-tinta')
             }
           >
             {i.rotulo}
@@ -132,7 +132,7 @@ function Nameplate({ marca, sub, quem }: { marca: string | null; sub: string; qu
           entrasse pelo telefone nao tinha como sair da propria conta. */}
       <button
         onClick={() => void sair()}
-        className="rotulo risca shrink-0 rounded-full px-1 hover:text-pink-texto"
+        className="legenda risca shrink-0 rounded-full px-1 hover:text-pink-texto"
       >
         <span className="hidden sm:inline">{quem} · </span>sair
       </button>

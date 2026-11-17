@@ -26,7 +26,7 @@ export function Campo({
         {rotulo}
       </label>
       <div className="mt-2">{children}</div>
-      {dica && <p className="rotulo mt-2 normal-case">{dica}</p>}
+      {dica && <p className="legenda mt-2">{dica}</p>}
     </div>
   );
 }

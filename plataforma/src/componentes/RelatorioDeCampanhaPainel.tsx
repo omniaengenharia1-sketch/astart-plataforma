@@ -109,7 +109,7 @@ export function RelatorioDeCampanhaPainel({
   return (
     <section className="bloco mt-9 p-4 sm:p-5">
       <div className="rotulo-forte">anexar relatório</div>
-      <p className="rotulo mt-1 normal-case">
+      <p className="legenda mt-1">
         um relatório por período · o cliente vê assim que você sobe
       </p>
 
@@ -162,7 +162,7 @@ export function RelatorioDeCampanhaPainel({
         />
       </label>
 
-      <p className="rotulo mt-2 normal-case">
+      <p className="legenda mt-2">
         reenviar o mesmo período troca o arquivo — o antigo sai, e não fica duplicado
       </p>
 

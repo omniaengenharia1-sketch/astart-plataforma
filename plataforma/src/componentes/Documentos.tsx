@@ -92,7 +92,7 @@ export function Documentos({ clienteId, equipe }: { clienteId: string; equipe: b
     }
   }
 
-  if (docs === null) return <p className="rotulo mt-3 normal-case">lendo os documentos…</p>;
+  if (docs === null) return <p className="legenda mt-3">lendo os documentos…</p>;
 
   const escolhido = TIPOS_DE_DOCUMENTO.find((t) => t.valor === tipo);
 
@@ -101,7 +101,7 @@ export function Documentos({ clienteId, equipe }: { clienteId: string; equipe: b
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-linha-fraca pb-2">
         <div>
           <span className="rotulo-forte">documentos</span>
-          <p className="rotulo mt-1 normal-case">
+          <p className="legenda mt-1">
             {equipe
               ? 'contrato assinado, proposta, NPS — o arquivo, não o formulário'
               : 'os documentos que a Astart liberou para você'}
@@ -182,7 +182,7 @@ export function Documentos({ clienteId, equipe }: { clienteId: string; equipe: b
               </button>
             ))}
           </div>
-          <p className="rotulo mt-1.5 normal-case">{escolhido?.dica}</p>
+          <p className="legenda mt-1.5">{escolhido?.dica}</p>
 
           <label
             onDragOver={(e) => {

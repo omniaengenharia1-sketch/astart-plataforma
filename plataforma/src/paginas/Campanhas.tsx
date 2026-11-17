@@ -124,7 +124,7 @@ export function Campanhas({ clienteId, equipe }: { clienteId: string; equipe: bo
                     className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
                   >
                     <span className="w-36 shrink-0 font-bold uppercase">{periodo(r)}</span>
-                    <span className="rotulo min-w-48 flex-1 break-words normal-case">
+                    <span className="legenda min-w-48 flex-1 break-words">
                       {r.arquivo ??
                         r.metricas.map((m) => `${m.rotulo}: ${comoNumero(m.valor)}`).join(' · ')}
                     </span>

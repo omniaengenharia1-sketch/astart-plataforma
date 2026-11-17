@@ -56,8 +56,8 @@ export function Marca({ children, forte }: { children: ReactNode; forte?: boolea
   return (
     <span
       className={
-        'inline-block rounded-full border px-2.5 py-[3px] font-mono text-[10px] font-semibold ' +
-        'tracking-[0.12em] uppercase whitespace-nowrap ' +
+        'inline-block rounded-full border px-2.5 py-[3px] text-[11px] font-semibold ' +
+        'tracking-[0.05em] uppercase whitespace-nowrap ' +
         (forte
           ? 'border-transparent bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink shadow-[0_6px_18px_-8px_rgb(255_61_154/0.9)]'
           : 'border-linha bg-superficie text-tinta-2')

@@ -96,7 +96,7 @@ function Cartao({
     >
       <p className="text-[14.5px] leading-snug font-bold text-tinta">{t.titulo}</p>
 
-      {t.cliente && <p className="rotulo mt-1.5 normal-case">{t.cliente}</p>}
+      {t.cliente && <p className="legenda mt-1.5">{t.cliente}</p>}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         {t.responsavel && <Marca forte>{t.responsavel}</Marca>}
@@ -351,7 +351,7 @@ export function Tarefas() {
         {/* Tarefa SEM prazo aparece em qualquer filtro. "Sem data" não é "fora
             do período", e escondê-la faria sumir sem explicação. */}
         {periodo !== 'tudo' && (
-          <span className="rotulo normal-case text-tinta-3">
+          <span className="legenda text-tinta-3">
             tarefa sem prazo aparece sempre
           </span>
         )}
@@ -420,7 +420,7 @@ export function Tarefas() {
 
               <div className="flex flex-col gap-2.5">
                 {cartoes.length === 0 ? (
-                  <p className="rotulo normal-case text-tinta-3">nada aqui</p>
+                  <p className="legenda text-tinta-3">nada aqui</p>
                 ) : (
                   cartoes.map((t) => (
                     <Cartao
@@ -580,7 +580,7 @@ function Detalhe({
           <Botao tamanho="pequeno" variante="texto" onClick={aoFechar}>Fechar</Botao>
         </div>
 
-        <p className="rotulo mt-1.5 normal-case">
+        <p className="legenda mt-1.5">
           criada por {t.criadoPorNome ?? '—'}
           {t.cliente ? ` · ${t.cliente}` : ''}
           {t.prazo ? ` · vence ${diaMes(t.prazo)}` : ''}
@@ -614,7 +614,7 @@ function Detalhe({
             É aqui que uma tarefa deixa de ser só sua. */}
         <div className="mt-5">
           <Fita>Mencionar alguém</Fita>
-          <p className="rotulo mt-1.5 normal-case">
+          <p className="legenda mt-1.5">
             quem for mencionado passa a ver esta tarefa no quadro dele
           </p>
 
@@ -662,7 +662,7 @@ function Detalhe({
                   >
                     {a.nome}
                     {a.bytes ? (
-                      <span className="rotulo ml-2 normal-case text-tinta-3">{peso(a.bytes)}</span>
+                      <span className="legenda ml-2 text-tinta-3">{peso(a.bytes)}</span>
                     ) : null}
                   </button>
                   <button
@@ -680,7 +680,7 @@ function Detalhe({
           )}
 
           <label className="mt-3 block">
-            <span className="rotulo normal-case">
+            <span className="legenda">
               {subindo ? 'Subindo…' : 'Anexar imagem ou documento'}
             </span>
             <input
@@ -696,7 +696,7 @@ function Detalhe({
           </label>
           {/* Dizer o limite ANTES, não depois de a pessoa esperar a subida de
               um arquivo de 300 MB para receber uma recusa. */}
-          <p className="rotulo mt-1.5 normal-case text-tinta-3">
+          <p className="legenda mt-1.5 text-tinta-3">
             até 200 MB · imagem, PDF, Word, Excel, PowerPoint, CSV ou vídeo
           </p>
         </div>

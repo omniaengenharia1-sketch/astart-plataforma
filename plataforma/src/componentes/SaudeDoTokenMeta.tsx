@@ -77,7 +77,7 @@ export function PainelSaudeDoToken({ saude }: { saude: SaudeDoToken }) {
       )}
 
       {saude.escopos.length > 0 && (
-        <p className="rotulo mt-2.5 break-words normal-case">
+        <p className="legenda mt-2.5 break-words">
           escopos: {saude.escopos.join(', ')}
         </p>
       )}
@@ -87,7 +87,7 @@ export function PainelSaudeDoToken({ saude }: { saude: SaudeDoToken }) {
           colado incompleto. Serve para separar "o texto está quebrado" de "o
           token está morto": dois problemas, dois consertos. */}
       {saude.formato?.cadastrada && (
-        <p className="rotulo mt-2 break-words normal-case">
+        <p className="legenda mt-2 break-words">
           texto guardado: {saude.formato.tamanho} caracteres
           {saude.formato.comecaComEAA === false && ' · não começa com EAA'}
           {saude.formato.pontasSujas && ' · com espaço ou quebra de linha nas pontas'}

@@ -85,7 +85,7 @@ export function LinksDeAprovacao({ clienteId }: { clienteId: string }) {
         <div role="status" className="bloco brilho-p mt-3 p-4">
           <div className="rotulo-forte text-pink-texto">link copiado · mande agora</div>
           <p className="mt-2 font-mono text-[12px] break-all select-all">{copiado}</p>
-          <p className="rotulo mt-2 normal-case">
+          <p className="legenda mt-2">
             ele não vence e não pede senha. aparece uma vez só — se perder, crie outro.
           </p>
         </div>
@@ -137,7 +137,7 @@ export function LinksDeAprovacao({ clienteId }: { clienteId: string }) {
                   </span>
                 </div>
 
-                {e.mensagem && <p className="rotulo mt-1 normal-case">“{e.mensagem}”</p>}
+                {e.mensagem && <p className="legenda mt-1">“{e.mensagem}”</p>}
 
                 {link && (
                   <div className="rotulo mt-1.5">

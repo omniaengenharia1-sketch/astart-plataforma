@@ -73,7 +73,7 @@ export function Aprovar() {
           // tenta adivinhar endereço não descobre nada aqui.
           <div className="mx-auto max-w-lg pt-16">
             <Falhou mensagem={erro} />
-            <p className="rotulo mt-4 normal-case">
+            <p className="legenda mt-4">
               Se você recebeu este link da Astart, peça um novo para quem te mandou.
             </p>
           </div>

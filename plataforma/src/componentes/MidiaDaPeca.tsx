@@ -138,7 +138,7 @@ export function MidiaDaPecaPainel({
     }
   }
 
-  if (midias === null) return <p className="rotulo mt-3 normal-case">lendo os arquivos…</p>;
+  if (midias === null) return <p className="legenda mt-3">lendo os arquivos…</p>;
 
   // Peça no ar é histórico: o banco recusa trocar a mídia, e a tela não pode
   // oferecer o que vai ser recusado. Formulário que não pode funcionar não

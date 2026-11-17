@@ -146,7 +146,7 @@ function ArquivosSemDono() {
   return (
     <section className="bloco p-4 sm:p-5">
       <Fita>Arquivos sem dono</Fita>
-      <p className="rotulo mt-2 normal-case">
+      <p className="legenda mt-2">
         Foto que ficou no servidor depois que a galeria foi apagada. Ocupa espaço e
         não aparece para ninguém.
       </p>
@@ -156,7 +156,7 @@ function ArquivosSemDono() {
           {procurando ? 'Procurando…' : 'Procurar'}
         </Botao>
         {achado && (
-          <span className="rotulo normal-case">
+          <span className="legenda">
             {achado.arquivos === 0
               ? 'Nada sobrando — o servidor está limpo.'
               : `${achado.arquivos} ${achado.arquivos === 1 ? 'arquivo' : 'arquivos'} · ${peso(achado.bytes)}`}
@@ -170,7 +170,7 @@ function ArquivosSemDono() {
               arquivo chega ao servidor ANTES da linha no banco, e nessa janela
               ele é idêntico a um arquivo sem dono — apagar ali seria apagar
               foto de cliente no meio da subida. */}
-          <p className="rotulo normal-case text-tinta-3">
+          <p className="legenda text-tinta-3">
             Fotos que você está subindo agora não entram nesta conta.
           </p>
           {!confirmando ? (
@@ -179,7 +179,7 @@ function ArquivosSemDono() {
             </Botao>
           ) : (
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="rotulo normal-case">Apagar não tem volta.</span>
+              <span className="legenda">Apagar não tem volta.</span>
               <Botao tamanho="pequeno" variante="primario" disabled={apagando} onClick={() => void apagar()}>
                 {apagando ? 'Apagando…' : `Apagar ${achado.arquivos}`}
               </Botao>
@@ -309,7 +309,7 @@ export function Ajustes() {
       {abrindo && dados.souAdmin && (
         <div className="bloco mt-7 p-4 sm:p-5">
           <div className="rotulo-forte">convidar para a equipe</div>
-          <p className="rotulo mt-1.5 normal-case">
+          <p className="legenda mt-1.5">
             ela recebe um e-mail para criar a senha.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -402,7 +402,7 @@ export function Ajustes() {
               </li>
             ))}
           </ul>
-          <p className="rotulo mt-2 normal-case">o convite não vence.</p>
+          <p className="legenda mt-2">o convite não vence.</p>
         </section>
       )}
 
@@ -469,7 +469,7 @@ export function Ajustes() {
             </li>
           ))}
         </ul>
-        <p className="rotulo mt-2 normal-case">
+        <p className="legenda mt-2">
           tirar o acesso não apaga o histórico.
           {dados.souAdmin && ' direção e financeiro veem o dinheiro da agência.'}
         </p>
@@ -479,7 +479,7 @@ export function Ajustes() {
         <section className="mt-10">
           <div className="rotulo">integrações</div>
           <h2 className="titulao mt-1 text-[clamp(1.3rem,3.6vw,1.7rem)]">O que está ligado</h2>
-          <p className="rotulo mt-1.5 normal-case">
+          <p className="legenda mt-1.5">
             chave nenhuma passa por esta tela. aqui você vê o estado e o comando para cadastrar.
           </p>
 
@@ -492,7 +492,7 @@ export function Ajustes() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="font-bold uppercase">{c.nome}</div>
-                      <p className="rotulo mt-1 normal-case">{c.paraQue}</p>
+                      <p className="legenda mt-1">{c.paraQue}</p>
                     </div>
                     {!c.construida ? (
                       <Marca>em construção</Marca>
@@ -567,7 +567,7 @@ export function Ajustes() {
                             <span className="rotulo">desde {desdeQuando(k.atualizadaEm)}</span>
                           )}
                         </div>
-                        <p className="rotulo mt-0.5 ml-5 normal-case">{k.paraQue}</p>
+                        <p className="legenda mt-0.5 ml-5">{k.paraQue}</p>
                         {/* O comando aparece TAMBÉM com a chave cadastrada: a
                             operação mais comum depois do primeiro dia não é
                             cadastrar, é trocar — token vence, segredo roda. */}
@@ -578,7 +578,7 @@ export function Ajustes() {
                     ))}
                   </ul>
 
-                  <p className="rotulo mt-3 normal-case">
+                  <p className="legenda mt-3">
                     ● cadastrada · ○ falta · — vive na função, não dá para conferir daqui
                   </p>
                 </article>

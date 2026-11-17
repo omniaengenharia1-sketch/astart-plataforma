@@ -498,7 +498,7 @@ export function NovoCliente() {
               </div>
 
               {semFormato.length > 0 && (
-                <p className="rotulo mt-4 normal-case text-tinta">
+                <p className="legenda mt-4 text-tinta">
                   falta o formato de{' '}
                   {semFormato
                     .map((e) => cat.servicos.find((s) => s.chave === e.servico)?.nome)

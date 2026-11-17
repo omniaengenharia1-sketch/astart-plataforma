@@ -149,7 +149,7 @@ export function Financeiro() {
 
       <div className="escada mt-7 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Bloco rotulo="Entrou" destaque={reais(painel.recebidoCentavos)}>
-          <p className="rotulo mt-1 normal-case">
+          <p className="legenda mt-1">
             de {reais(painel.receitaCentavos)} faturados
           </p>
         </Bloco>
@@ -161,7 +161,7 @@ export function Financeiro() {
         />
         <Bloco rotulo="A receber" destaque={reais(aReceber)} />
         <Bloco rotulo="Sobra do mês" destaque={reais(sobra)}>
-          <p className="rotulo mt-1 normal-case">custo de {reais(painel.custoCentavos)}</p>
+          <p className="legenda mt-1">custo de {reais(painel.custoCentavos)}</p>
         </Bloco>
       </div>
 

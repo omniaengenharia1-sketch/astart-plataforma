@@ -55,7 +55,7 @@ function Pagina({ titulo, children }: { titulo: string; children: React.ReactNod
       <main className="bloco mx-auto w-full max-w-[46rem] p-7 sm:p-10">
         <Logo altura={34} />
         <h1 className="titulao mt-7 text-[clamp(1.6rem,5vw,2.2rem)]">{titulo}</h1>
-        <p className="rotulo mt-2 normal-case">atualizado em {ATUALIZADO}</p>
+        <p className="legenda mt-2">atualizado em {ATUALIZADO}</p>
         <div className="mt-7 flex flex-col gap-4 text-[14.5px] leading-relaxed text-tinta-2">
           {children}
         </div>

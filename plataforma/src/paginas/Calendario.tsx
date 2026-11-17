@@ -197,7 +197,7 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
               );
             })}
           </ul>
-          <p className="rotulo mt-2.5 normal-case">
+          <p className="legenda mt-2.5">
             confira o @ antes de ligar. conta errada publica o post deste cliente no perfil de outro.
           </p>
         </div>

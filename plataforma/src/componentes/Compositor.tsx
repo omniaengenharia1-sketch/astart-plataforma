@@ -224,7 +224,7 @@ export function Compositor({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="rotulo-forte">nova publicação</div>
-          <p className="rotulo mt-1 normal-case">
+          <p className="legenda mt-1">
             {postId ? 'rascunho criado — anexe o arquivo e agende' : 'o rascunho nasce primeiro, o arquivo depois'}
           </p>
         </div>
@@ -253,12 +253,12 @@ export function Compositor({
 
           <div>
             <span className="rotulo-forte">Onde e em que formato</span>
-            <p className="rotulo mt-1 normal-case">
+            <p className="legenda mt-1">
               a rede e o formato num clique só · um canal por publicação
             </p>
 
             {canais === null ? (
-              <p className="rotulo mt-2 normal-case">lendo os canais…</p>
+              <p className="legenda mt-2">lendo os canais…</p>
             ) : fileiras.length === 0 ? (
               // Sem conta conectada não há canal, e sem canal não haveria como
               // escolher formato nenhum — a publicação nasceria sempre "Post".
@@ -321,7 +321,7 @@ export function Compositor({
                       })}
                     </div>
                     {f.motivos.map((m) => (
-                      <p key={m} className="rotulo mt-1 normal-case">
+                      <p key={m} className="legenda mt-1">
                         {m}
                       </p>
                     ))}
@@ -330,7 +330,7 @@ export function Compositor({
               </ul>
             )}
 
-            <p className="rotulo mt-2.5 normal-case">
+            <p className="legenda mt-2.5">
               {FORMATOS[tipo].rotulo}: {FORMATOS[tipo].explica} · pede {PEDE[tipo]}
               {postId !== null && ' · o canal não muda depois de criar'}
             </p>
@@ -436,7 +436,7 @@ export function Compositor({
             {/* O motivo ao lado do botão desabilitado. Botão cinza sem
                 explicação é a pior coisa de uma tela. */}
             {faltaCanal && (
-              <span className="rotulo normal-case">escolha onde publica, acima</span>
+              <span className="legenda">escolha onde publica, acima</span>
             )}
           </>
         ) : (
@@ -452,7 +452,7 @@ export function Compositor({
               Postar agora
             </Botao>
             {faltaMidia > 0 && (
-              <span className="rotulo normal-case">
+              <span className="legenda">
                 falta {faltaMidia} arquivo{faltaMidia > 1 ? 's' : ''} para agendar
               </span>
             )}

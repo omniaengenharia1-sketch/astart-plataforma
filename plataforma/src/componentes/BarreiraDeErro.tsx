@@ -105,13 +105,13 @@ export class BarreiraDeErro extends Component<Props, Estado> {
         {/* Recolhido de propósito: quem está trabalhando não quer ler isso, e
             quem for consertar precisa. Aberto, assustaria sem ajudar. */}
         <details className="mt-8">
-          <summary className="rotulo cursor-pointer normal-case">
+          <summary className="legenda cursor-pointer">
             o que deu errado, em linguagem de máquina
           </summary>
           <pre className="mt-3 overflow-x-auto rounded-[var(--raio-p)] border border-linha bg-superficie px-3 py-2 font-mono text-[11.5px] break-words whitespace-pre-wrap text-tinta-2">
             {erro.name}: {erro.message}
           </pre>
-          <p className="rotulo mt-2 normal-case">
+          <p className="legenda mt-2">
             Se for mandar para quem cuida do sistema, mande este texto junto.
           </p>
         </details>

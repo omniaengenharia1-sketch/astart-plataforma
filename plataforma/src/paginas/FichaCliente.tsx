@@ -144,13 +144,15 @@ export function FichaCliente() {
   return (
     <div className="px-5 pb-16 sm:px-8 lg:px-12">
       <div className="pt-9">
-        <Link to="/clientes" className="rotulo hover:text-pink-texto">
-          &lt; clientes
+        <Link to="/clientes" className="legenda hover:text-pink-texto">
+          &lt; Clientes
         </Link>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="titulao text-[clamp(1.8rem,5vw,2.8rem)]">{ficha.cliente.nome}</h1>
-            <div className="rotulo mt-1.5">
+            {/* Endereço e fuso se LEEM — não são etiqueta. Em caixa alta
+                espaçada competiam com o nome do cliente logo acima. */}
+            <div className="legenda mt-1.5">
               {ficha.cliente.slug} · {ficha.cliente.fusoHorario}
             </div>
           </div>
@@ -227,7 +229,7 @@ export function FichaCliente() {
                 cliente com histórico, então o clique só apagava cadastro
                 vazio. Agora ele apaga anos de cliente — a confirmação sobe
                 junto com a consequência. */}
-            <p className="rotulo mt-3 normal-case">
+            <p className="legenda mt-3">
               digite <strong>{ficha.cliente.nome}</strong> para liberar
             </p>
             <Entrada
@@ -275,7 +277,7 @@ export function FichaCliente() {
           to={`/clientes/${clienteId}`}
           end
           className={({ isActive }) =>
-            'shrink-0 px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-[0.16em] uppercase ' +
+            'shrink-0 px-2.5 py-1.5 text-[13.5px] font-medium ' +
             (isActive ? 'bg-tinta text-papel' : 'text-tinta-3 hover:bg-superficie-2 hover:text-tinta')
           }
         >
@@ -288,7 +290,7 @@ export function FichaCliente() {
             key={m}
             to={`/clientes/${clienteId}/${m}`}
             className={({ isActive }) =>
-              'shrink-0 px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-[0.16em] uppercase whitespace-nowrap ' +
+              'shrink-0 px-2.5 py-1.5 text-[13.5px] font-medium whitespace-nowrap ' +
               (isActive ? 'bg-tinta text-papel' : 'text-tinta-3 hover:bg-superficie-2 hover:text-tinta')
             }
           >
@@ -359,8 +361,12 @@ export function FichaCliente() {
                   <span className="w-44 shrink-0 font-bold uppercase">{s.servicoNome}</span>
                   <Marca>{FORMATO[s.formato]}</Marca>
                   {s.status !== 'ativo' && <Marca forte>{STATUS_SERVICO[s.status]}</Marca>}
-                  <span className="numeros min-w-48 flex-1 text-[13px]">{comoCobra(s) ?? ''}</span>
-                  <span className="rotulo w-28 shrink-0">{s.responsavelNome ?? 'sem responsável'}</span>
+                  {/* `numeros` so no valor: ele alinha as casas entre linhas.
+                      Aplicado a frase inteira, deixava "todo dia 10" com cara
+                      de codigo. E o nome de quem cuida e nome proprio, nao
+                      etiqueta. */}
+                  <span className="legenda min-w-48 flex-1 text-[13px]">{comoCobra(s) ?? ''}</span>
+                  <span className="legenda w-28 shrink-0">{s.responsavelNome ?? 'sem responsável'}</span>
                   {s.entregaEm && <span className="rotulo w-24 shrink-0">entrega {diaMes(s.entregaEm)}</span>}
                 </li>
               ))}
@@ -421,7 +427,7 @@ export function FichaCliente() {
 
           {abrindoAcesso && (
             <div className="bloco mt-3 p-3">
-              <p className="rotulo normal-case">ele recebe um e-mail para criar a senha.</p>
+              <p className="legenda">ele recebe um e-mail para criar a senha.</p>
               <div className="mt-3 grid gap-3">
                 <Campo id="ac-nome" rotulo="Nome">
                   <Entrada id="ac-nome" value={nome} onChange={(e) => setNome(e.target.value)} />

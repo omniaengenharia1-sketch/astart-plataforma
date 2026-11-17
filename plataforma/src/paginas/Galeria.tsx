@@ -157,7 +157,7 @@ function Cartao({
 
       <button type="button" onClick={aoAbrir} className="block w-full px-4 pt-3.5 text-left sm:px-5">
         <span className="block text-[15.5px] font-bold text-tinta">{g.titulo}</span>
-        <span className="rotulo mt-1.5 flex flex-wrap items-center gap-x-2 normal-case">
+        <span className="legenda mt-1.5 flex flex-wrap items-center gap-x-2">
           {/* A bolinha de status, como na referência: verde no ar, apagada
               fora. É o que se lê de relance numa grade de vinte entregas. */}
           <span
@@ -540,7 +540,7 @@ export function Galeria({
       {equipe && (
         <div className="bloco mb-7 p-4 sm:p-5">
           <div className="rotulo-forte">nova galeria</div>
-          <p className="rotulo mt-1.5 normal-case">
+          <p className="legenda mt-1.5">
             o cliente abre por link, sem conta, e baixa em alta
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -582,7 +582,7 @@ export function Galeria({
             Lixeira {naLixeira.length > 0 ? `· ${naLixeira.length}` : ''}
           </Botao>
           {vendoLixeira && (
-            <span className="rotulo normal-case">
+            <span className="legenda">
               fora do ar: o link não abre e a cliente não vê. os arquivos continuam aqui.
             </span>
           )}
@@ -645,7 +645,7 @@ export function Galeria({
                     >
                       {subindo ? 'Subindo…' : 'Escolher arquivos'}
                     </Botao>
-                    <p className="rotulo mt-3 normal-case">
+                    <p className="legenda mt-3">
                       o original sobe inteiro, sem recompressão
                     </p>
                   </div>
@@ -678,7 +678,7 @@ export function Galeria({
                   <Fita>Link do cliente</Fita>
                   {tokens[g.id] ? (
                     <div className="mt-3">
-                      <p className="rotulo normal-case">copie agora — aparece uma vez só</p>
+                      <p className="legenda">copie agora — aparece uma vez só</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <code className="min-w-0 flex-1 truncate rounded-[var(--raio-p)] border border-linha bg-superficie px-3 py-2 font-mono text-[12px]">
                           {enderecoDe(tokens[g.id] as string)}
@@ -729,7 +729,7 @@ export function Galeria({
                   {/* ---- tirar do ar / apagar ---------------------------- */}
                   <div className="mt-6" />
                   <Fita>Lixeira</Fita>
-                  <p className="rotulo mt-2 normal-case">
+                  <p className="legenda mt-2">
                     {g.arquivadaEm
                       ? 'está na lixeira: o link não abre e a cliente não vê esta entrega'
                       : 'mover para a lixeira tira do ar sem apagar nada — o mesmo link volta a abrir se você restaurar'}
