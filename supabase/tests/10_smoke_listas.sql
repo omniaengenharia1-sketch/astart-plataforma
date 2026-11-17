@@ -32,16 +32,21 @@ insert into public.clientes_usuarios (user_id, cliente_id, nome, email) values
   ('20000000-0000-0000-0000-00000000000b','b0000000-0000-0000-0000-00000000000b','Carlos','carlos@clienteb.com.br');
 
 -- Aurora: gestao recorrente de 2.800,00 + site de 12.000,00 em 3 parcelas.
+--
+-- Quem cuida nao e mais coluna do contrato: desde a 0070 e a tabela de
+-- ligacao, porque um servico pode ser cuidado por mais de uma pessoa.
 insert into public.cliente_servicos
-  (cliente_id, servico_id, formato, valor_centavos, dia_vencimento, inicio, responsavel_id)
-select 'a0000000-0000-0000-0000-00000000000a', s.id,'recorrente',280000,10,date '2026-10-01',
-       '10000000-0000-0000-0000-000000000002'
+  (cliente_id, servico_id, formato, valor_centavos, dia_vencimento, inicio)
+select 'a0000000-0000-0000-0000-00000000000a', s.id,'recorrente',280000,10,date '2026-10-01'
   from public.servicos s where s.chave='gestao_digital';
 insert into public.cliente_servicos
-  (cliente_id, servico_id, formato, valor_centavos, parcelas, inicio, responsavel_id)
-select 'a0000000-0000-0000-0000-00000000000a', s.id,'projeto',1200000,3,date '2026-10-01',
-       '10000000-0000-0000-0000-000000000002'
+  (cliente_id, servico_id, formato, valor_centavos, parcelas, inicio)
+select 'a0000000-0000-0000-0000-00000000000a', s.id,'projeto',1200000,3,date '2026-10-01'
   from public.servicos s where s.chave='website';
+insert into public.cliente_servico_responsaveis (cliente_servico_id, perfil_id)
+select cs.id, '10000000-0000-0000-0000-000000000002'
+  from public.cliente_servicos cs
+ where cs.cliente_id = 'a0000000-0000-0000-0000-00000000000a';
 -- Bloco B: so gestao.
 insert into public.cliente_servicos
   (cliente_id, servico_id, formato, valor_centavos, dia_vencimento, inicio)
