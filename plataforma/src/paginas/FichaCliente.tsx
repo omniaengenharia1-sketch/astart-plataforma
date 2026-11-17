@@ -366,7 +366,9 @@ export function FichaCliente() {
                       de codigo. E o nome de quem cuida e nome proprio, nao
                       etiqueta. */}
                   <span className="legenda min-w-48 flex-1 text-[13px]">{comoCobra(s) ?? ''}</span>
-                  <span className="legenda w-28 shrink-0">{s.responsavelNome ?? 'sem responsável'}</span>
+                  <span className="legenda w-28 shrink-0">
+                    {s.responsaveis.length ? s.responsaveis.join(', ') : 'sem responsável'}
+                  </span>
                   {s.entregaEm && <span className="rotulo w-24 shrink-0">entrega {diaMes(s.entregaEm)}</span>}
                 </li>
               ))}

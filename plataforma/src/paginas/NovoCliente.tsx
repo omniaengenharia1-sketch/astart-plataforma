@@ -162,19 +162,43 @@ function LinhaServico({
           </Campo>
         )}
 
-        <Campo id={`${id}-resp`} rotulo="Responsável">
-          <Escolha
-            id={`${id}-resp`}
-            value={escolha.responsavelId ?? ''}
-            onChange={(e) => aoMudar({ ...escolha, responsavelId: e.target.value || null })}
-          >
-            <option value="">quem cuida disso</option>
-            {equipe.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {m.nome ?? m.userId}
-              </option>
-            ))}
-          </Escolha>
+        {/* CAIXAS DE MARCAR, e não um seletor de vários.
+            A dona: "às vezes o cliente é cuidado por mais de uma pessoa".
+            `<select multiple>` no telefone abre uma lista que exige segurar e
+            arrastar, e quase ninguém descobre que dá para marcar o segundo —
+            o mesmo motivo pelo qual o quadro de tarefas não usa arrastar. */}
+        <Campo id={`${id}-resp`} rotulo="Quem cuida">
+          <div id={`${id}-resp`} className="flex flex-wrap gap-1.5 pt-1">
+            {equipe.map((m) => {
+              const marcado = escolha.responsaveisIds.includes(m.userId);
+              return (
+                <button
+                  key={m.userId}
+                  type="button"
+                  aria-pressed={marcado}
+                  onClick={() =>
+                    aoMudar({
+                      ...escolha,
+                      responsaveisIds: marcado
+                        ? escolha.responsaveisIds.filter((x) => x !== m.userId)
+                        : [...escolha.responsaveisIds, m.userId],
+                    })
+                  }
+                  className={
+                    'min-h-9 rounded-full border px-3 text-[13px] font-medium transition-colors ' +
+                    (marcado
+                      ? 'border-transparent bg-pink text-sobre-pink'
+                      : 'border-linha bg-superficie text-tinta-2 hover:text-tinta')
+                  }
+                >
+                  {m.nome ?? m.userId}
+                </button>
+              );
+            })}
+          </div>
+          {escolha.responsaveisIds.length === 0 && (
+            <p className="legenda mt-1.5">ninguém ainda — dá para deixar assim e marcar depois</p>
+          )}
         </Campo>
       </div>
 
@@ -275,7 +299,7 @@ export function NovoCliente() {
         parcelas: s.formatoPadrao === 'recorrente' ? null : 1,
         inicio: hojeISO(),
         entregaEm: null,
-        responsavelId: null,
+        responsaveisIds: [],
         modulos: [],
       },
     ]);

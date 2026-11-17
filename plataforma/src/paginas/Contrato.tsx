@@ -102,7 +102,9 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
                   </div>
                   <div className="legenda mt-3">
                     começou em {porExtenso(s.inicio)}
-                    {s.responsavelNome && ` · ${s.responsavelNome} cuida disso`}
+                    {s.responsaveis.length > 0 &&
+                      ` · ${s.responsaveis.join(', ')} ` +
+                        (s.responsaveis.length > 1 ? 'cuidam disso' : 'cuida disso')}
                   </div>
                 </li>
               ))}

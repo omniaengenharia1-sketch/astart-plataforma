@@ -58,7 +58,14 @@ export interface ServicoContratado {
   servicoNome: string;
   formato: FormatoContrato;
   status: StatusServico;
-  responsavelNome: string | null;
+  /**
+   * Quem cuida — LISTA, desde a 0070.
+   *
+   * Era um nome so. A dona: "as vezes o cliente e cuidado por mais de uma
+   * pessoa". Vazia quer dizer que ninguem foi posto ainda, e a tela diz
+   * isso em vez de ficar em branco.
+   */
+  responsaveis: string[];
   /**
    * Centavos. Nunca float: centavo perdido em cobranca vira ligacao de cliente.
    *
@@ -265,7 +272,8 @@ export interface ServicoEscolhido {
   parcelas: number | null;
   inicio: string;
   entregaEm: string | null;
-  responsavelId: string | null;
+  /** Quem cuida. Lista desde a 0070: um serviço pode ter mais de um. */
+  responsaveisIds: string[];
   /** Só os módulos OPCIONAIS que ficam ligados. */
   modulos: ChaveModulo[];
 }

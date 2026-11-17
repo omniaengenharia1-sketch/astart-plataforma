@@ -53,6 +53,40 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   await p.locator('#srv-gestao_digital-dia').selectOption('15');
   await p.getByLabel('Campanhas').check();
 
+  // QUEM CUIDA, no plural (0070).
+  //
+  // A dona: "as vezes o cliente e cuidado por mais de uma pessoa". Antes era
+  // um seletor de um so, e a unica forma de dois nomes era cadastrar dois
+  // servicos.
+  //
+  // Sao caixas de marcar, e nao `<select multiple>`: no telefone o seletor de
+  // varios exige segurar e arrastar, e quase ninguem descobre que da para
+  // marcar o segundo. Mesmo motivo do quadro de tarefas nao usar arrastar.
+  {
+    const bloco = p.locator('#srv-gestao_digital-resp');
+    const pessoas = bloco.locator('button');
+    const quantas = await pessoas.count();
+    if (quantas < 2) {
+      problemas.push(`[${nome}] so ha ${quantas} pessoa(s) para marcar como responsavel`);
+    } else {
+      await pessoas.nth(0).click();
+      await pessoas.nth(1).click();
+      await p.waitForTimeout(150);
+      const marcadas = await bloco.locator('button[aria-pressed="true"]').count();
+      if (marcadas !== 2) {
+        problemas.push(`[${nome}] marquei duas pessoas e ficaram ${marcadas}`);
+      }
+      // Desmarcar tem de desmarcar: botao que so liga vira armadilha.
+      await pessoas.nth(1).click();
+      await p.waitForTimeout(150);
+      if ((await bloco.locator('button[aria-pressed="true"]').count()) !== 1) {
+        problemas.push(`[${nome}] clicar de novo nao desmarcou a pessoa`);
+      }
+      await pessoas.nth(1).click();
+      await p.waitForTimeout(150);
+    }
+  }
+
   // Audiovisual: o unico que pergunta o formato.
   await p.getByRole('button', { name: /adicionar outro serviço/i }).click();
   await p.getByRole('button', { name: 'Audiovisual mensal ou pontual' }).click();

@@ -162,7 +162,7 @@ function srv(
     servicoNome,
     formato,
     status: 'ativo',
-    responsavelNome: null,
+    responsaveis: [],
     valorCentavos,
     diaVencimento: formato === 'recorrente' ? 10 : null,
     parcelas: formato === 'recorrente' ? null : 1,
@@ -177,10 +177,10 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: CLIENTE_EXEMPLO,
     servicos: [
       srv('exemplo-mor', 'gestao_digital', 'Gestão Digital', 'recorrente', 280000, {
-        responsavelNome: 'Raquel', diaVencimento: 10,
+        responsaveis: ['Raquel'], diaVencimento: 10,
       }),
       srv('exemplo-mor', 'website', 'Website', 'projeto', 1200000, {
-        responsavelNome: 'Layana', parcelas: 3, entregaEm: emDias(38),
+        responsaveis: ['Layana'], parcelas: 3, entregaEm: emDias(38),
       }),
     ],
     extras: ['galeria'],
@@ -195,7 +195,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-pub', nome: 'Publika.ai', slug: 'publika-ai', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-pub', 'gestao_digital', 'Gestão Digital', 'recorrente', 320000, {
-        responsavelNome: 'Raquel', diaVencimento: 5,
+        responsaveis: ['Raquel'], diaVencimento: 5,
       }),
     ],
     extras: ['campanhas'],
@@ -207,10 +207,10 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-chopp', nome: 'Chopp do Barbudo', slug: 'chopp-do-barbudo', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-chopp', 'gestao_digital', 'Gestão Digital', 'recorrente', 190000, {
-        responsavelNome: 'Raquel', diaVencimento: 15,
+        responsaveis: ['Raquel'], diaVencimento: 15,
       }),
       srv('exemplo-chopp', 'audiovisual', 'Audiovisual', 'pontual', 240000, {
-        responsavelNome: 'Beatriz', parcelas: 2,
+        responsaveis: ['Beatriz'], parcelas: 2,
       }),
     ],
     contatos: [
@@ -221,7 +221,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-kb', nome: 'Karla Bernardo', slug: 'karla-bernardo', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-kb', 'branding', 'Branding', 'projeto', 950000, {
-        responsavelNome: 'Layana', parcelas: 4, entregaEm: emDias(55),
+        responsaveis: ['Layana'], parcelas: 4, entregaEm: emDias(55),
       }),
     ],
     contatos: [
@@ -232,10 +232,10 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-omnia', nome: 'Omnia Engenharia', slug: 'omnia-engenharia', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-omnia', 'website', 'Website', 'projeto', 1800000, {
-        responsavelNome: 'Layana', parcelas: 3, entregaEm: emDias(12),
+        responsaveis: ['Layana'], parcelas: 3, entregaEm: emDias(12),
       }),
       srv('exemplo-omnia', 'sistemas', 'Sistemas', 'projeto', 2400000, {
-        responsavelNome: 'Layana', parcelas: 6, entregaEm: emDias(90),
+        responsaveis: ['Layana'], parcelas: 6, entregaEm: emDias(90),
       }),
     ],
     contatos: [
@@ -246,7 +246,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-pam', nome: 'Pamela Dantas', slug: 'pamela-dantas', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-pam', 'identidade_visual', 'Identidade Visual', 'pontual', 420000, {
-        responsavelNome: 'Layana', parcelas: 2, status: 'pausado',
+        responsaveis: ['Layana'], parcelas: 2, status: 'pausado',
       }),
     ],
     contatos: [
@@ -376,7 +376,7 @@ export function listaClientesExemplo(): ClienteNaLista[] {
     nome: c.cliente.nome,
     slug: c.cliente.slug,
     servicos: ativos(c).map((s) => s.servicoNome),
-    responsaveis: [...new Set(ativos(c).map((s) => s.responsavelNome).filter((x): x is string => !!x))],
+    responsaveis: [...new Set(ativos(c).flatMap((s) => s.responsaveis))],
     precisaDeVoce: conta(c.cliente.id, 'com_ajustes'),
     esperandoCliente: conta(c.cliente.id, 'em_aprovacao'),
     mensalCentavos: mensalDe(c),
@@ -595,7 +595,9 @@ export function criarClienteExemplo(
       parcelas: formato === 'recorrente' ? null : (e.parcelas ?? 1),
       inicio: e.inicio,
       entregaEm: e.entregaEm,
-      responsavelNome: equipe.find((m) => m.userId === e.responsavelId)?.nome ?? null,
+      responsaveis: (e.responsaveisIds ?? [])
+        .map((id) => equipe.find((m) => m.userId === id)?.nome)
+        .filter((x): x is string => !!x),
     });
   });
 
@@ -682,7 +684,7 @@ function projetoDe(c: ClienteExemplo): ServicoNoProjeto[] {
         versaoAtual: null,
         enviadoEm: null,
         respondidoEm: null,
-        responsavelNome: s.responsavelNome,
+        responsavelNome: s.responsaveis[0] ?? null,
       })),
       marcos: [],
     }));
