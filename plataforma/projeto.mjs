@@ -19,7 +19,7 @@ async function entrar(email) {
 }
 
 await p.goto('http://localhost:4178', { waitUntil: 'networkidle' });
-await entrar('layana@astartstudio.com.br');
+await entrar('raquel@astartstudio.com.br');
 await p.getByRole('link', { name: 'Clientes', exact: true }).click();
 await p.locator('.font-bold:has-text("Mor Marcas"):visible').first().click();
 await p.getByRole('link', { name: 'Entregáveis' }).first().click();
@@ -94,7 +94,7 @@ await p.waitForTimeout(500);
 // Volta para a equipe: a etapa tem de estar como "pediu ajuste" e reenviavel.
 await p.locator('button:has-text("sair"):visible').first().click();
 await p.waitForTimeout(300);
-await entrar('layana@astartstudio.com.br');
+await entrar('raquel@astartstudio.com.br');
 await p.getByRole('link', { name: 'Clientes', exact: true }).click();
 await p.locator('.font-bold:has-text("Mor Marcas"):visible').first().click();
 await p.getByRole('link', { name: 'Entregáveis' }).first().click();

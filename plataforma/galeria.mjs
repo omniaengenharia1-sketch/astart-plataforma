@@ -18,7 +18,7 @@ async function entrar(email) {
 
 // --- equipe
 await p.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
-await entrar('layana@astartstudio.com.br');
+await entrar('raquel@astartstudio.com.br');
 await p.getByRole('link', { name: 'Clientes', exact: true }).click();
 await p.locator('.font-bold:has-text("Chopp do Barbudo"):visible').first().click();
 await p.waitForTimeout(300);
@@ -144,7 +144,7 @@ for (const esperado of ['Copiar link do cliente', 'Visualizar como cliente', 'Mo
     problemas.push(`o menu da colecao nao oferece "${esperado}"`);
   }
 }
-// Layana e 'operacao': move para a lixeira, mas nao apaga. O portao de verdade
+// Raquel e 'operacao': move para a lixeira, mas nao apaga. O portao de verdade
 // e o `usuario_admin()` no banco; isto cobra que a tela nao OFEREÇA o que seria
 // recusado — botao que so falha ensina a pessoa a desconfiar da tela.
 if (await p.getByRole('menuitem', { name: /Apagar de vez/ }).count()) {
@@ -194,7 +194,7 @@ const ctxD = await b.newContext({ viewport: { width: 1440, height: 1000 }, color
 const d = await ctxD.newPage();
 d.on('pageerror', (e) => problemas.push('erro(direcao): ' + e.message));
 await d.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
-await d.fill('input[type="email"]', 'viviane@astartstudio.com.br');
+await d.fill('input[type="email"]', 'layana@astartstudio.com.br');
 await d.fill('input[type="password"]', 'x');
 await d.click('button[type="submit"]');
 await d.waitForLoadState('networkidle');

@@ -18,7 +18,7 @@
     "calendario": "node calendario.mjs",
     "acessos": "node acessos.mjs",
     "galeria": "node galeria.mjs",
-    "roteiros": "npm run enderecos && npm run build:exemplo && node telas.mjs && node olhar.mjs && node tema.mjs && node link.mjs && node senha.mjs && node midia.mjs && node compositor.mjs && node projeto.mjs && node cadastro.mjs && node arquivos.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node tarefas.mjs && node acessibilidade.mjs && node contraste.mjs",
+    "roteiros": "npm run enderecos && npm run build:exemplo && node barreira.mjs && node telas.mjs && node olhar.mjs && node tema.mjs && node link.mjs && node senha.mjs && node midia.mjs && node compositor.mjs && node projeto.mjs && node cadastro.mjs && node arquivos.mjs && node calendario.mjs && node acessos.mjs && node galeria.mjs && node tarefas.mjs && node acessibilidade.mjs && node contraste.mjs",
     "tema": "node tema.mjs",
     "build:exemplo": "npm run typecheck && VITE_SUPABASE_URL= VITE_SUPABASE_PUBLISHABLE_KEY= VITE_SUPABASE_ANON_KEY= vite build",
     "link": "node link.mjs",
@@ -28,7 +28,8 @@
     "enderecos": "node --experimental-strip-types enderecos.mjs",
     "entrega-producao": "node entrega-producao.mjs",
     "tarefas": "node tarefas.mjs",
-    "arquivos": "node arquivos.mjs"
+    "arquivos": "node arquivos.mjs",
+    "barreira": "node barreira.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

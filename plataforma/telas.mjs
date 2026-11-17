@@ -67,7 +67,7 @@ for (const [larg, alt, largura] of [[1440, 900, 'desktop'], [390, 844, 'celular'
   const ctx = await navegador.newContext({ viewport: { width: larg, height: alt } });
   const p = await pagina(ctx, largura);
   // Direcao: e quem ve o dinheiro. A operacao tem o seu proprio bloco, no fim.
-  await abrir(p, 'viviane@astartstudio.com.br');
+  await abrir(p, 'layana@astartstudio.com.br');
 
   const equipe = [
     ['Financeiro', ['atrasado', 'entrou', 'lançamentos', 'por cliente', 'karla bernardo'], 'financeiro'],
@@ -142,7 +142,7 @@ for (const [larg, alt, largura] of [[1280, 900, 'portal'], [390, 844, 'portal-ce
   // E a equipe tem de ver a nota que acabou de entrar.
   await vis(p, 'button:has-text("sair")').click();
   await p.waitForTimeout(300);
-  await entrar(p, 'layana@astartstudio.com.br');
+  await entrar(p, 'raquel@astartstudio.com.br');
   await menu(p).getByRole('link', { name: 'Feedbacks', exact: true }).click();
   await p.waitForLoadState('networkidle');
   const naEquipe = (await p.locator('body').innerText()).toLowerCase();
@@ -161,7 +161,7 @@ for (const [larg, alt, largura] of [[1280, 900, 'portal'], [390, 844, 'portal-ce
 {
   const ctx = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
   const p = await pagina(ctx, 'operacao');
-  await abrir(p, 'layana@astartstudio.com.br');
+  await abrir(p, 'raquel@astartstudio.com.br');
 
   const menuTexto = (await menu(p).innerText()).toLowerCase();
   for (const item of ['financeiro', 'comercial']) {

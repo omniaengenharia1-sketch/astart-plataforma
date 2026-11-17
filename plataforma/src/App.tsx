@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { sb } from './dados/supabase';
 import { CascaEquipe } from './componentes/Casca';
 import { Carregando, NaoEAqui, Vazio } from './componentes/Estado';
 import { useSessao } from './sessao';
@@ -48,6 +49,29 @@ export default function App() {
         <Route path="/exclusao-de-dados" element={<ExclusaoDeDados />} />
       </Routes>
     );
+  }
+
+  // A COSTURA QUE PROVA A BARREIRA DE ERRO.
+  //
+  // A barreira existe porque a plataforma inteira virou uma tela em branco
+  // quando algo estourou durante o desenho. Barreira que ninguem exercita e
+  // barreira que a gente DESCOBRE quebrada no dia seguinte — e o dia seguinte
+  // e, de novo, uma tela branca na frente da dona.
+  //
+  // Para exercita-la de verdade e preciso uma tela que estoure de verdade:
+  // erro simulado por fora nao passa pelo caminho de desenho do React, que e
+  // justamente o caminho que apaga a pagina.
+  //
+  // So existe no MODO EXEMPLO (`sb` nulo, que e quando nao ha Supabase
+  // configurado). Na producao a condicao e falsa e este caminho nao responde.
+  // E o mesmo portao do resto do modo exemplo, entao nao e um portao novo para
+  // alguem errar.
+  // `(^|#)` porque o modo exemplo roda nas duas rotas: `/estourar` com a URL
+  // limpa e `#/estourar` na previa estatica. Escrevi so a segunda na primeira
+  // versao e o roteiro nunca teria chegado aqui — guarda que nao e alcancada e
+  // guarda que nao existe.
+  if (!sb && /(^|#)\/estourar$/.test(window.location.pathname + window.location.hash)) {
+    throw new Error('Tela de teste da barreira de erro.');
   }
 
   const caminho = window.location.pathname + window.location.hash;

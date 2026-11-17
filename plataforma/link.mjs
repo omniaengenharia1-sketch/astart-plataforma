@@ -28,7 +28,7 @@ const equipe = await navegador.newContext({ viewport: { width: 1440, height: 100
 // justamente para o caso de o navegador recusar o clipboard.
 const pe = await pagina(equipe, 'equipe');
 await pe.goto(BASE, { waitUntil: 'networkidle' });
-await pe.fill('input[type="email"]', 'layana@astartstudio.com.br');
+await pe.fill('input[type="email"]', 'raquel@astartstudio.com.br');
 await pe.fill('input[type="password"]', 'x');
 await pe.click('button[type="submit"]');
 await pe.waitForLoadState('networkidle');

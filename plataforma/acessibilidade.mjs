@@ -2,7 +2,7 @@
 // O contraste fica de fora aqui: o axe não sabe compor vidro translúcido sobre
 // campo com aurora, e dá falso positivo em tudo. Quem mede contraste é o
 // contraste.mjs, que compõe as camadas de verdade.
-import { abrirNavegador } from './navegador.mjs';
+import { abrirNavegador, esperarAnimacoes } from './navegador.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = readFileSync(new URL('./node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
@@ -17,6 +17,9 @@ const CONFIG = {
 const achados = new Map();
 
 async function varre(p, onde) {
+  // Mesma razao do arquivos.mjs: medir cor no meio da animacao acusa
+  // contraste que a tela parada nao tem.
+  await esperarAnimacoes(p);
   await p.evaluate(AXE);
   const r = await p.evaluate((cfg) => window.axe.run(document, cfg), CONFIG);
   for (const v of r.violations) {
@@ -35,7 +38,7 @@ async function varre(p, onde) {
 for (const [larg, alt, nome] of [[1440, 980, 'desktop'], [390, 844, 'celular']]) {
   for (const claro of [false, true]) {
     for (const [papel, email, abas] of [
-      ['equipe', 'viviane@astartstudio.com.br',
+      ['equipe', 'layana@astartstudio.com.br',
         ['Clientes', 'Aprovações', 'Agenda', 'Fila', 'Financeiro', 'Comercial', 'Feedbacks', 'Ajustes']],
       ['cliente', 'bruna@mormarcas.com.br',
         ['Para aprovar', 'Meu projeto', 'Calendário', 'Grid', 'Financeiro', 'Contrato', 'Meu site', 'Feedback']],

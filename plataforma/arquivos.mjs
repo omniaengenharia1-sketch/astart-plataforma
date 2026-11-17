@@ -7,7 +7,7 @@
 //
 // A regra da visibilidade está escrita em dois lugares — na função do banco
 // (0053) e no modo exemplo. Se as duas discordarem, é aqui que aparece.
-import { abrirNavegador } from './navegador.mjs';
+import { abrirNavegador, esperarAnimacoes } from './navegador.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = readFileSync(new URL('./node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
@@ -166,11 +166,27 @@ await p.waitForTimeout(400);
 await p.addScriptTag({ content: AXE });
 for (const tema of ['dark', 'light']) {
   await p.emulateMedia({ colorScheme: tema });
-  await p.waitForTimeout(250);
+  // Espera a TRANSICAO acabar, nao um tanto de milissegundos: medir cor no
+  // meio da animacao acusa contraste que a tela parada nao tem. Ver
+  // `esperarAnimacoes` em navegador.mjs.
+  await esperarAnimacoes(p);
   const r = await p.evaluate(() => window.axe.run(document, { resultTypes: ['violations'] }));
   const graves = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   cobrar(graves.length === 0, `axe sem violacao grave nos documentos, tema ${tema === 'dark' ? 'escuro' : 'claro'}`
     + (graves.length ? `: ${graves.map((v) => v.id).join(', ')}` : ''));
+
+  // QUANDO FALHAR, TEM DE DIZER O QUE E ONDE.
+  //
+  // Esta cobranca ja reprovou uma vez e eu nao tinha como saber por que: a
+  // mensagem dizia so `color-contrast`. Chutei animacao, e o chute estava
+  // errado — sem espera nenhuma o teste passou tres vezes seguidas. Sem o
+  // elemento e as cores medidas, a proxima falha custaria o mesmo chute.
+  for (const v of graves) {
+    for (const no of v.nodes.slice(0, 4)) {
+      console.log(`    ${v.id}  ${no.target.join(' ')}`);
+      console.log(`      ${(no.failureSummary ?? '').split('\n').slice(0, 3).join(' | ')}`);
+    }
+  }
 }
 
 cobrar(problemas.length === 0, `nenhum erro de pagina (${problemas.length})`);

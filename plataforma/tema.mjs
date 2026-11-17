@@ -203,7 +203,7 @@ for (const tema of ['dark', 'light']) {
 
   await conferir(p, tema, 'entrar');
 
-  await entrar(p, 'viviane@astartstudio.com.br');
+  await entrar(p, 'layana@astartstudio.com.br');
   await conferir(p, tema, 'inicio-equipe');
 
   const menu = p.getByRole('navigation', { name: 'Seções', exact: true });
@@ -236,7 +236,7 @@ for (const tema of ['dark', 'light']) {
   const ctx = await navegador.newContext({ viewport: { width: 1440, height: 1000 } });
   const p = await ctx.newPage();
   await p.goto(BASE, { waitUntil: 'networkidle' });
-  await entrar(p, 'viviane@astartstudio.com.br');
+  await entrar(p, 'layana@astartstudio.com.br');
   await assentar(p);
   const sumidos = await p.evaluate(`(${AINDA_SUMIDO})()`);
   if (sumidos.length) {

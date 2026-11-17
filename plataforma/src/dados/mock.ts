@@ -37,9 +37,9 @@ const emDias = (n: number) => {
 const haHoras = (n: number) => new Date(Date.now() - n * 3_600_000).toISOString();
 
 export const PERFIL_EXEMPLO: Perfil = {
-  userId: 'exemplo-layana',
-  nome: 'Layana',
-  email: 'layana@astartstudio.com.br',
+  userId: 'exemplo-raquel',
+  nome: 'Raquel',
+  email: 'raquel@astartstudio.com.br',
   papel: 'operacao',
   cargo: 'Social Media',
   ativo: true,
@@ -54,14 +54,26 @@ export const CLIENTE_EXEMPLO: Cliente = {
 };
 
 /**
- * A dona da agencia. Existe porque a Layana e operacao: sem uma persona de
- * admin, o modo exemplo nao teria como mostrar o Financeiro, o Comercial nem a
- * troca de papel — e quem esta avaliando concluiria que as telas nao existem.
+ * A direcao. Precisa existir separada da operacao: sem uma persona de admin, o
+ * modo exemplo nao teria como mostrar o Financeiro, o Comercial nem a troca de
+ * papel — e quem esta avaliando concluiria que as telas nao existem.
+ *
+ * OS NOMES SAO OS DA EQUIPE DE VERDADE, e isso foi corrigido depois.
+ *
+ * Antes a persona de admin se chamava "Viviane", inventada, e a Layana
+ * aparecia como operacao. A dona leu e disse: "nao tem viviane na equipe".
+ * Renomear a inventada nao bastava — deixaria a Raquel, que existe, sentada na
+ * cadeira da direcao, o que e pior do que inventar alguem. Entao os papeis
+ * foram para onde estao na vida real: Layana na direcao, Raquel na operacao.
+ *
+ * Importa porque esta demonstracao e o que a Meta olha na homologacao: um
+ * organograma falso, num sistema que pede acesso a conta de clientes, e um
+ * detalhe caro.
  */
 export const PERFIL_DONO: Perfil = {
-  userId: 'exemplo-viviane',
-  nome: 'Viviane',
-  email: 'viviane@astartstudio.com.br',
+  userId: 'exemplo-layana',
+  nome: 'Layana',
+  email: 'layana@astartstudio.com.br',
   papel: 'admin',
   cargo: 'Direção',
   ativo: true,
@@ -165,10 +177,10 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: CLIENTE_EXEMPLO,
     servicos: [
       srv('exemplo-mor', 'gestao_digital', 'Gestão Digital', 'recorrente', 280000, {
-        responsavelNome: 'Layana', diaVencimento: 10,
+        responsavelNome: 'Raquel', diaVencimento: 10,
       }),
       srv('exemplo-mor', 'website', 'Website', 'projeto', 1200000, {
-        responsavelNome: 'Viviane', parcelas: 3, entregaEm: emDias(38),
+        responsavelNome: 'Layana', parcelas: 3, entregaEm: emDias(38),
       }),
     ],
     extras: ['galeria'],
@@ -183,7 +195,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-pub', nome: 'Publika.ai', slug: 'publika-ai', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-pub', 'gestao_digital', 'Gestão Digital', 'recorrente', 320000, {
-        responsavelNome: 'Layana', diaVencimento: 5,
+        responsavelNome: 'Raquel', diaVencimento: 5,
       }),
     ],
     extras: ['campanhas'],
@@ -195,7 +207,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-chopp', nome: 'Chopp do Barbudo', slug: 'chopp-do-barbudo', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-chopp', 'gestao_digital', 'Gestão Digital', 'recorrente', 190000, {
-        responsavelNome: 'Layana', diaVencimento: 15,
+        responsavelNome: 'Raquel', diaVencimento: 15,
       }),
       srv('exemplo-chopp', 'audiovisual', 'Audiovisual', 'pontual', 240000, {
         responsavelNome: 'Beatriz', parcelas: 2,
@@ -209,7 +221,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-kb', nome: 'Karla Bernardo', slug: 'karla-bernardo', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-kb', 'branding', 'Branding', 'projeto', 950000, {
-        responsavelNome: 'Viviane', parcelas: 4, entregaEm: emDias(55),
+        responsavelNome: 'Layana', parcelas: 4, entregaEm: emDias(55),
       }),
     ],
     contatos: [
@@ -220,10 +232,10 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-omnia', nome: 'Omnia Engenharia', slug: 'omnia-engenharia', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-omnia', 'website', 'Website', 'projeto', 1800000, {
-        responsavelNome: 'Viviane', parcelas: 3, entregaEm: emDias(12),
+        responsavelNome: 'Layana', parcelas: 3, entregaEm: emDias(12),
       }),
       srv('exemplo-omnia', 'sistemas', 'Sistemas', 'projeto', 2400000, {
-        responsavelNome: 'Viviane', parcelas: 6, entregaEm: emDias(90),
+        responsavelNome: 'Layana', parcelas: 6, entregaEm: emDias(90),
       }),
     ],
     contatos: [
@@ -234,7 +246,7 @@ const CLIENTES: ClienteExemplo[] = [
     cliente: { id: 'exemplo-pam', nome: 'Pamela Dantas', slug: 'pamela-dantas', fusoHorario: 'America/Sao_Paulo', ativo: true },
     servicos: [
       srv('exemplo-pam', 'identidade_visual', 'Identidade Visual', 'pontual', 420000, {
-        responsavelNome: 'Viviane', parcelas: 2, status: 'pausado',
+        responsavelNome: 'Layana', parcelas: 2, status: 'pausado',
       }),
     ],
     contatos: [
@@ -461,8 +473,8 @@ export const PAINEL_EQUIPE: PainelEquipe = {
   ],
   semana: [
     { id: 'w1', data: emDias(1), titulo: 'Captação: na fábrica', responsavelNome: 'Beatriz' },
-    { id: 'w2', data: emDias(4), titulo: 'Entrega do Layout mobile', responsavelNome: 'Viviane' },
-    { id: 'w3', data: emDias(7), titulo: 'Fechar novembro de 4 clientes', responsavelNome: 'Layana' },
+    { id: 'w2', data: emDias(4), titulo: 'Entrega do Layout mobile', responsavelNome: 'Layana' },
+    { id: 'w3', data: emDias(7), titulo: 'Fechar novembro de 4 clientes', responsavelNome: 'Raquel' },
   ],
 };
 
@@ -545,8 +557,8 @@ export function catalogoExemplo(): Catalogo {
     }),
     modulosSempre: SEMPRE.map((m) => ({ chave: m, nome: NOME_MODULO[m] })),
     equipe: [
-      { userId: 'exemplo-viviane', nome: 'Viviane', papel: 'admin' },
-      { userId: 'exemplo-layana', nome: 'Layana', papel: 'operacao' },
+      { userId: 'exemplo-layana', nome: 'Layana', papel: 'admin' },
+      { userId: 'exemplo-raquel', nome: 'Raquel', papel: 'operacao' },
       { userId: 'exemplo-beatriz', nome: 'Beatriz', papel: 'operacao' },
       { userId: 'exemplo-camila', nome: 'Camila', papel: 'financeiro' },
     ],
@@ -898,9 +910,9 @@ export function moverPecaExemplo(pecaId: string, dia: string, hora?: string): vo
 // Acessos
 // ---------------------------------------------------------------------------
 const PESSOAS: PessoaDaEquipe[] = [
-  { userId: 'exemplo-viviane', nome: 'Viviane', email: 'viviane@astartstudio.com.br',
-    papel: 'admin', cargo: 'Direção', ativo: true, desativadoEm: null },
   { userId: 'exemplo-layana', nome: 'Layana', email: 'layana@astartstudio.com.br',
+    papel: 'admin', cargo: 'Direção', ativo: true, desativadoEm: null },
+  { userId: 'exemplo-raquel', nome: 'Raquel', email: 'raquel@astartstudio.com.br',
     papel: 'operacao', cargo: 'Social Media', ativo: true, desativadoEm: null },
   { userId: 'exemplo-beatriz', nome: 'Beatriz', email: 'beatriz@astartstudio.com.br',
     papel: 'operacao', cargo: 'Audiovisual', ativo: true, desativadoEm: null },
@@ -1897,22 +1909,22 @@ const LEADS: (LeadNoFunil & { convertidoEm: string | null })[] = [
   {
     id: 'ld-1', nome: 'Renata Alves', empresa: 'Clínica Viva', etapa: 'proposta_enviada',
     valorCentavos: 450_000, origem: 'indicação', proximoPasso: 'Ligar para fechar',
-    proximoEm: emDias(1), responsavelNome: 'Layana', ultimaEm: emDias(-2), convertidoEm: null,
+    proximoEm: emDias(1), responsavelNome: 'Raquel', ultimaEm: emDias(-2), convertidoEm: null,
   },
   {
     id: 'ld-2', nome: 'Diego Matos', empresa: 'Matos Advocacia', etapa: 'reuniao_agendada',
     valorCentavos: 320_000, origem: 'Instagram', proximoPasso: 'Reunião às 15h',
-    proximoEm: emDias(2), responsavelNome: 'Viviane', ultimaEm: emDias(-1), convertidoEm: null,
+    proximoEm: emDias(2), responsavelNome: 'Layana', ultimaEm: emDias(-1), convertidoEm: null,
   },
   {
     id: 'ld-3', nome: 'Juliana Prado', empresa: 'Doce Ponto', etapa: 'em_conversa',
     valorCentavos: 190_000, origem: 'Google', proximoPasso: 'Mandar portfólio de food',
-    proximoEm: hoje, responsavelNome: 'Layana', ultimaEm: emDias(-4), convertidoEm: null,
+    proximoEm: hoje, responsavelNome: 'Raquel', ultimaEm: emDias(-4), convertidoEm: null,
   },
   {
     id: 'ld-4', nome: 'Sérgio Lima', empresa: 'Lima Construções', etapa: 'qualificado',
     valorCentavos: 1_200_000, origem: 'indicação', proximoPasso: 'Levantar escopo do site',
-    proximoEm: emDias(3), responsavelNome: 'Viviane', ultimaEm: emDias(-6), convertidoEm: null,
+    proximoEm: emDias(3), responsavelNome: 'Layana', ultimaEm: emDias(-6), convertidoEm: null,
   },
   {
     id: 'ld-5', nome: 'Camila Rocha', empresa: null, etapa: 'novo_lead',
@@ -1922,17 +1934,17 @@ const LEADS: (LeadNoFunil & { convertidoEm: string | null })[] = [
   {
     id: 'ld-6', nome: 'Fábio Nunes', empresa: 'Nunes Pneus', etapa: 'negociacao',
     valorCentavos: 280_000, origem: 'Instagram', proximoPasso: 'Responder contraproposta',
-    proximoEm: emDias(-1), responsavelNome: 'Layana', ultimaEm: emDias(-3), convertidoEm: null,
+    proximoEm: emDias(-1), responsavelNome: 'Raquel', ultimaEm: emDias(-3), convertidoEm: null,
   },
   {
     id: 'ld-7', nome: 'Marcos Lopes', empresa: 'Omnia Engenharia', etapa: 'fechado',
     valorCentavos: 4_200_000, origem: 'indicação', proximoPasso: null,
-    proximoEm: null, responsavelNome: 'Viviane', ultimaEm: emDias(-20), convertidoEm: emDias(-18),
+    proximoEm: null, responsavelNome: 'Layana', ultimaEm: emDias(-20), convertidoEm: emDias(-18),
   },
   {
     id: 'ld-8', nome: 'Paula Freitas', empresa: 'Freitas Odonto', etapa: 'perdido',
     valorCentavos: 240_000, origem: 'Google', proximoPasso: null,
-    proximoEm: null, responsavelNome: 'Layana', ultimaEm: emDias(-25), convertidoEm: null,
+    proximoEm: null, responsavelNome: 'Raquel', ultimaEm: emDias(-25), convertidoEm: null,
   },
 ];
 
@@ -2448,30 +2460,30 @@ const TAREFAS_EXEMPLO: Tarefa[] = [
   {
     id: 'tar-1', titulo: 'Fazer criativo do lançamento', detalhe: 'Três opções de arte',
     colunaId: 'col-1', ordem: 1, prazo: emDias(3), concluidoEm: null,
-    responsavelId: 'exemplo-layana', responsavel: 'Layana',
-    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    responsavelId: 'exemplo-raquel', responsavel: 'Raquel',
+    criadoPor: 'exemplo-raquel', criadoPorNome: 'Raquel',
     clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [], arquivos: [],
   },
   {
     id: 'tar-2', titulo: 'Escrever legendas da semana', detalhe: null,
     colunaId: 'col-2', ordem: 1, prazo: emDias(1), concluidoEm: null,
-    responsavelId: 'exemplo-layana', responsavel: 'Layana',
-    criadoPor: 'exemplo-viviane', criadoPorNome: 'Viviane',
+    responsavelId: 'exemplo-raquel', responsavel: 'Raquel',
+    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
     clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo',
-    mencionados: [{ id: 'exemplo-viviane', nome: 'Viviane' }], arquivos: [],
+    mencionados: [{ id: 'exemplo-layana', nome: 'Layana' }], arquivos: [],
   },
   {
     id: 'tar-3', titulo: 'Revisar contrato da Padaria', detalhe: null,
     colunaId: 'col-3', ordem: 1, prazo: null, concluidoEm: null,
-    responsavelId: 'exemplo-layana', responsavel: 'Layana',
-    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    responsavelId: 'exemplo-raquel', responsavel: 'Raquel',
+    criadoPor: 'exemplo-raquel', criadoPorNome: 'Raquel',
     clienteId: null, cliente: null, mencionados: [], arquivos: [],
   },
   {
     id: 'tar-4', titulo: 'Entregar galeria da Confraria', detalhe: null,
     colunaId: 'col-4', ordem: 1, prazo: emDias(-2), concluidoEm: new Date().toISOString(),
-    responsavelId: 'exemplo-layana', responsavel: 'Layana',
-    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    responsavelId: 'exemplo-raquel', responsavel: 'Raquel',
+    criadoPor: 'exemplo-raquel', criadoPorNome: 'Raquel',
     clienteId: 'exemplo-mor', cliente: 'Chopp do Barbudo', mencionados: [], arquivos: [],
   },
 ];
@@ -2495,9 +2507,9 @@ export function criarTarefaExemplo(t: TarefaNova): string {
     ordem: TAREFAS_EXEMPLO.filter((x) => x.colunaId === col).length + 1,
     prazo: t.prazo ?? null, concluidoEm: null,
     responsavelId: t.responsavelId ?? null,
-    responsavel: t.responsavelId === 'exemplo-viviane' ? 'Viviane'
-      : t.responsavelId ? 'Layana' : null,
-    criadoPor: 'exemplo-layana', criadoPorNome: 'Layana',
+    responsavel: t.responsavelId === 'exemplo-layana' ? 'Layana'
+      : t.responsavelId ? 'Raquel' : null,
+    criadoPor: 'exemplo-raquel', criadoPorNome: 'Raquel',
     clienteId: t.clienteId ?? null,
     cliente: t.clienteId ? 'Chopp do Barbudo' : null,
     mencionados: [], arquivos: [],
@@ -2529,7 +2541,7 @@ export function editarTarefaExemplo(
   if (limpar.includes('responsavel')) { t.responsavelId = null; t.responsavel = null; }
   else if (m.responsavelId) {
     t.responsavelId = m.responsavelId;
-    t.responsavel = m.responsavelId === 'exemplo-viviane' ? 'Viviane' : 'Layana';
+    t.responsavel = m.responsavelId === 'exemplo-layana' ? 'Layana' : 'Raquel';
   }
   if (limpar.includes('cliente')) { t.clienteId = null; t.cliente = null; }
   else if (m.clienteId) { t.clienteId = m.clienteId; t.cliente = 'Chopp do Barbudo'; }
@@ -2544,7 +2556,7 @@ export function apagarTarefaExemplo(id: string): void {
 export function mencionarExemplo(id: string, perfilId: string, ligar: boolean): void {
   const t = TAREFAS_EXEMPLO.find((x) => x.id === id);
   if (!t) throw new Error('Tarefa nao encontrada.');
-  const nome = perfilId === 'exemplo-viviane' ? 'Viviane' : 'Layana';
+  const nome = perfilId === 'exemplo-layana' ? 'Layana' : 'Raquel';
   t.mencionados = ligar
     ? [...t.mencionados.filter((m) => m.id !== perfilId), { id: perfilId, nome }]
     : t.mencionados.filter((m) => m.id !== perfilId);

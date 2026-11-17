@@ -8,7 +8,7 @@
 // O que este roteiro cobra de verdade e o que a tela NAO pode fazer: oferecer
 // campo de senha para um link morto, aceitar senha curta, aceitar duas senhas
 // diferentes, e dizer se um e-mail existe ou nao.
-import { abrirNavegador } from './navegador.mjs';
+import { abrirNavegador, esperarAnimacoes } from './navegador.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = readFileSync(new URL('./node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
@@ -162,6 +162,7 @@ for (const claro of [false, true]) {
     ['expirado', `${BASE}/nova-senha#error=access_denied&error_code=otp_expired`],
   ]) {
     await abrir(p2, endereco);
+    await esperarAnimacoes(p2);
     await p2.evaluate(AXE);
     const r = await p2.evaluate((cfg) => window.axe.run(document, cfg), CONFIG);
     const graves = r.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');

@@ -22,7 +22,7 @@ p.on('pageerror', (e) => problemas.push('erro na pagina: ' + e.message));
 const limpo = async () => (await p.locator('body').innerText()).toLowerCase().replace(/\s+/g, ' ');
 
 await p.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
-await p.fill('input[type="email"]', 'layana@astartstudio.com.br');
+await p.fill('input[type="email"]', 'raquel@astartstudio.com.br');
 await p.fill('input[type="password"]', 'x');
 await p.click('button[type="submit"]');
 await p.waitForLoadState('networkidle');
@@ -194,7 +194,7 @@ await ctx.close();
   const m = await cel.newPage();
   m.on('pageerror', (e) => problemas.push('erro no celular: ' + e.message));
   await m.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
-  await m.fill('input[type="email"]', 'layana@astartstudio.com.br');
+  await m.fill('input[type="email"]', 'raquel@astartstudio.com.br');
   await m.fill('input[type="password"]', 'x');
   await m.click('button[type="submit"]');
   await m.waitForLoadState('networkidle');

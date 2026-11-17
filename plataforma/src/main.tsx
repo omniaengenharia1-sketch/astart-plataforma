@@ -1,7 +1,8 @@
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, HashRouter } from 'react-router-dom';
+import { BrowserRouter, HashRouter, useLocation } from 'react-router-dom';
 import App from './App';
+import { BarreiraDeErro } from './componentes/BarreiraDeErro';
 import { ProvedorSessao } from './sessao';
 import { ligarReflexo } from './efeitos/reflexo';
 import './estilos/global.css';
@@ -21,12 +22,29 @@ document.body.prepend(luz);
 // é BrowserRouter, com a URL limpa.
 const Rota = import.meta.env['VITE_PREVIA'] === '1' ? HashRouter : BrowserRouter;
 
+/**
+ * A barreira fica DENTRO da rota, e envolve a sessão.
+ *
+ * Dentro da rota porque ela precisa saber quando a pessoa mudou de tela: é
+ * assim que a barreira abaixa sozinha quando a tela quebrada fica para trás.
+ *
+ * Envolvendo a sessão, e não só o `App`, porque um erro ao ler quem está
+ * logado também apagava a página — e esse é justamente o erro que aparece
+ * antes de qualquer tela existir.
+ */
+function ComBarreira({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return <BarreiraDeErro chave={pathname}>{children}</BarreiraDeErro>;
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Rota>
-      <ProvedorSessao>
-        <App />
-      </ProvedorSessao>
+      <ComBarreira>
+        <ProvedorSessao>
+          <App />
+        </ProvedorSessao>
+      </ComBarreira>
     </Rota>
   </StrictMode>,
 );

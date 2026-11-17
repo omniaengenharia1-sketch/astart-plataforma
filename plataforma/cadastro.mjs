@@ -15,7 +15,7 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   // Direcao, nao operacao: o cadastro DIGITA o valor do contrato, e desde a
   // 0039 quem nao cuida do dinheiro grava e nao le de volta. Entrar como
   // operacao aqui testaria o cadastro contra uma ficha que esconde o preco.
-  await p.fill('input[type="email"]', 'viviane@astartstudio.com.br');
+  await p.fill('input[type="email"]', 'layana@astartstudio.com.br');
   await p.fill('input[type="password"]', 'x');
   await p.click('button[type="submit"]');
   await p.waitForLoadState('networkidle');
@@ -110,7 +110,7 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   p.on('pageerror', (e) => problemas.push(`[cad-operacao] erro: ${e.message}`));
 
   await p.goto('http://localhost:4178', { waitUntil: 'networkidle' });
-  await p.fill('input[type="email"]', 'layana@astartstudio.com.br');
+  await p.fill('input[type="email"]', 'raquel@astartstudio.com.br');
   await p.fill('input[type="password"]', 'x');
   await p.click('button[type="submit"]');
   await p.waitForLoadState('networkidle');

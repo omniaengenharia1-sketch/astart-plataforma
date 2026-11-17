@@ -231,12 +231,12 @@ export async function sessaoAtual(): Promise<Sessao> {
 
 export async function entrar(email: string, senha: string): Promise<void> {
   if (!sb) {
-    // Em exemplo o e-mail escolhe a persona. A Layana e operacao de proposito:
+    // Em exemplo o e-mail escolhe a persona. A Raquel e operacao de proposito:
     // e o unico jeito de a demonstracao mostrar o que ela NAO ve.
     usarPersona(
       !email.includes('@astartstudio')
         ? 'cliente'
-        : email.toLowerCase().startsWith('layana')
+        : email.toLowerCase().startsWith('raquel')
           ? 'equipe'
           : 'dono',
     );

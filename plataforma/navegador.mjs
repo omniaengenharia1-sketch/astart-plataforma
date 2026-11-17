@@ -91,3 +91,43 @@ export async function abrirNavegador() {
     ...(executablePath ? { executablePath } : {}),
   });
 }
+
+/**
+ * Espera as animacoes TERMINAREM — nao um tanto de milissegundos.
+ *
+ * O defeito que trouxe isto: o roteiro de arquivos trocava o tema, esperava
+ * 250ms fixos e mandava o axe medir contraste. As animacoes da interface duram
+ * 320ms e 520ms. Quando a troca demorava um pouco mais, o axe media a cor NO
+ * MEIO da transicao, quando ela ainda nao e a cor final — e acusava contraste
+ * insuficiente numa tela que, parada, passa.
+ *
+ * Falhou uma vez em quatro execucoes. Era facil chamar de azar, e azar nao e
+ * diagnostico: um teste que reprova as vezes ensina a equipe a rodar de novo
+ * ate passar, e esse habito e o que deixa defeito de verdade entrar.
+ *
+ * Aumentar o numero so empurraria o problema para a proxima maquina lenta. O
+ * conserto e esperar a CONDICAO: `document.getAnimations()` devolve o que esta
+ * correndo agora, e `finished` resolve quando cada uma acaba.
+ *
+ * As infinitas ficam de fora de proposito — a classe `piscando` do "carregando"
+ * nunca termina, e esperar por ela travaria o roteiro para sempre.
+ */
+export async function esperarAnimacoes(pagina, limiteMs = 3000) {
+  await pagina.evaluate(async (limite) => {
+    const correndo = document.getAnimations().filter((a) => {
+      try {
+        return a.effect?.getTiming().iterations !== Infinity;
+      } catch {
+        return false;
+      }
+    });
+    if (correndo.length === 0) return;
+    await Promise.race([
+      Promise.all(correndo.map((a) => a.finished.catch(() => undefined))),
+      new Promise((r) => setTimeout(r, limite)),
+    ]);
+  }, limiteMs);
+  // Um quadro a mais: `finished` resolve quando a animacao acaba, e o pintor
+  // ainda precisa desenhar o estado final antes de alguem medir a cor dele.
+  await pagina.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(undefined))));
+}

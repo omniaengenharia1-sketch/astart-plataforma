@@ -33,7 +33,7 @@ for (const [larg, alt, nome] of [[1440, 900, 'desktop'], [820, 1180, 'tablet'], 
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.screenshot({ path: `${SAIDA}/${nome}-01-entrar.png`, fullPage: true });
 
-  await entrar(p, 'layana@astartstudio.com.br');
+  await entrar(p, 'raquel@astartstudio.com.br');
   await p.screenshot({ path: `${SAIDA}/${nome}-02-inicio-equipe.png`, fullPage: true });
 
   await p.getByRole('link', { name: 'Clientes' }).click();
@@ -120,7 +120,7 @@ for (const [larg, alt, nome] of [[1280, 900, 'ciclo'], [390, 844, 'ciclo-celular
   // da equipe tem de mostrar o que o cliente acabou de responder.
   await vis(p, 'button:has-text("sair")').click();
   await p.waitForTimeout(300);
-  await entrar(p, 'layana@astartstudio.com.br');
+  await entrar(p, 'raquel@astartstudio.com.br');
   await p.getByRole('link', { name: 'Aprovações' }).click();
   await p.waitForLoadState('networkidle');
   const corpo = (await p.locator('body').innerText()).toLowerCase();

@@ -21,7 +21,7 @@ async function entrar(p, email) {
 
 const { ctx, p } = await sessao(1440, 1000, 'cal');
 await p.goto('http://localhost:4178', { waitUntil: 'networkidle' });
-await entrar(p, 'layana@astartstudio.com.br');
+await entrar(p, 'raquel@astartstudio.com.br');
 await p.getByRole('link', { name: 'Clientes', exact: true }).click();
 await p.locator('.font-bold:has-text("Mor Marcas"):visible').first().click();
 await p.getByRole('link', { name: 'Calendário' }).first().click();
@@ -116,7 +116,7 @@ await ctx.close();
 // Celular: a grade vira agenda.
 const { ctx: c2, p: m } = await sessao(390, 844, 'cal-celular');
 await m.goto('http://localhost:4178', { waitUntil: 'networkidle' });
-await entrar(m, 'layana@astartstudio.com.br');
+await entrar(m, 'raquel@astartstudio.com.br');
 await m.getByRole('link', { name: 'Clientes', exact: true }).click();
 await m.locator('.font-bold:has-text("Mor Marcas"):visible').first().click();
 await m.getByRole('link', { name: 'Calendário' }).first().click();

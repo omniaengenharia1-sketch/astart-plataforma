@@ -400,10 +400,25 @@ function Lente({
         ) : (
           <img
             // O original quando ele chega; a miniatura enquanto não chega.
-            // Os dois passam pelo redimensionador: pedir 6000px para mostrar
-            // em 1600 é baixar quinze vezes mais do que a tela usa.
+            //
+            // SÓ O ORIGINAL passa pelo redimensionador. Nele isso se paga:
+            // pedir 6000px para mostrar em 1600 é baixar quinze vezes mais do
+            // que a tela usa.
+            //
+            // Na miniatura não se pagava — e ainda piorava. Ela tem 640px, e
+            // mandá-la ao redimensionador pedindo 1600 é pedir que AUMENTEM
+            // uma imagem pequena: o arquivo cresce, a espera cresce, e a foto
+            // de espera fica mais borrada do que a própria miniatura. Além de
+            // gastar uma "imagem de origem" da cota de transformação, que é
+            // contada por imagem distinta no mês.
+            //
+            // Medido nesta galeria: as miniaturas guardadas têm de 72 a 129 kB
+            // em 640px. Servida direto, a foto de espera aparece na hora, sem
+            // passar por servidor nenhum.
             src={
-              noTamanho(grandes[item.id] ?? item.miniatura, LARGURA.lente) ?? ''
+              noTamanho(grandes[item.id] ?? null, LARGURA.lente) ??
+              item.miniatura ??
+              ''
             }
             alt={item.nome}
             // MEDIDA DE TELA, não porcentagem. `max-h-full` é `max-height:100%`

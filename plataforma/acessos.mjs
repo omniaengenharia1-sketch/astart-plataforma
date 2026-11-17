@@ -11,7 +11,7 @@ p.on('console', (m) => { if (m.type() === 'error') problemas.push(`console: ${m.
 const limpo = async () => (await p.locator('body').innerText()).toLowerCase().replace(/ /g, ' ');
 
 await p.goto('http://localhost:4178', { waitUntil: 'networkidle' });
-await p.fill('input[type="email"]', 'layana@astartstudio.com.br');
+await p.fill('input[type="email"]', 'raquel@astartstudio.com.br');
 await p.fill('input[type="password"]', 'x');
 await p.click('button[type="submit"]');
 await p.waitForLoadState('networkidle');
@@ -19,7 +19,7 @@ await p.waitForLoadState('networkidle');
 await p.getByRole('link', { name: 'Ajustes' }).click();
 await p.waitForLoadState('networkidle');
 const inicio = await limpo();
-for (const esperado of ['viviane', 'camila', 'sem acesso', 'convite aberto']) {
+for (const esperado of ['layana', 'camila', 'sem acesso', 'convite aberto']) {
   if (!inicio.includes(esperado)) problemas.push(`a tela de equipe nao mostra "${esperado}"`);
 }
 await p.screenshot({ path: `${SAIDA}/acesso-01-equipe.png`, fullPage: true });
@@ -104,9 +104,9 @@ if (!(await contato.innerText()).toLowerCase().includes('sem acesso')) {
 // engolia a falha em silencio — "o resto e lixo no balde, nao defeito na
 // tela", escrito por mim.
 //
-// CUIDADO COM OS PAPEIS DO CENARIO DE EXEMPLO. Aqui a "Layana" e OPERACAO e a
-// "Viviane" e DIRECAO — o contrario da agencia de verdade, onde a Layana e a
-// direcao e nao existe Viviane nenhuma. Este roteiro roda como Layana, entao
+// CUIDADO COM OS PAPEIS DO CENARIO DE EXEMPLO. Aqui a "Raquel" e OPERACAO e a
+// "Layana" e DIRECAO — o contrario da agencia de verdade, onde a Raquel e a
+// direcao e nao existe Layana nenhuma. Este roteiro roda como Raquel, entao
 // ate aqui a faxina tem de estar ESCONDIDA. Escrevi isto ao contrario na
 // primeira versao, por confundir a dona com a persona.
 await p.getByRole('link', { name: 'Ajustes' }).click();
@@ -128,7 +128,7 @@ await p.screenshot({ path: `${SAIDA}/acesso-05-sem-faxina.png`, fullPage: true }
   const ctxDir = await b.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'dark' });
   const d = await ctxDir.newPage();
   await d.goto('http://localhost:4178/', { waitUntil: 'networkidle' });
-  await d.fill('input[type="email"]', 'viviane@astartstudio.com.br');
+  await d.fill('input[type="email"]', 'layana@astartstudio.com.br');
   await d.fill('input[type="password"]', 'x');
   await d.click('button[type="submit"]');
   await d.waitForLoadState('networkidle');

@@ -20,7 +20,7 @@
 //   - carrossel com vídeo é RECUSADO no anexo, com a frase que diz que a
 //     limitação é nossa. O modo exemplo aceitava — e é nele que este roteiro
 //     roda, então a mentira era invisível para todos os roteiros.
-import { abrirNavegador } from './navegador.mjs';
+import { abrirNavegador, esperarAnimacoes } from './navegador.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = readFileSync(new URL('./node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
@@ -189,7 +189,7 @@ for (const claro of [false, true]) {
   await p2.waitForTimeout(400);
   await p2.goto(`${BASE}/clientes/exemplo-mor/calendario`, { waitUntil: 'domcontentloaded' });
   await p2.getByRole('button', { name: 'Nova publicação' }).click();
-  await p2.waitForTimeout(700);
+  await esperarAnimacoes(p2);
   await p2.evaluate(AXE);
   const r = await p2.evaluate((cfg) => window.axe.run(document, cfg), CONFIG);
   const graves = r.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
