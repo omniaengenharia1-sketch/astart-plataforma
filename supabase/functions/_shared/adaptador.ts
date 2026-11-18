@@ -64,7 +64,24 @@ export interface AdaptadorPlataforma {
   /** Janela movel de 24h lida da propria Meta. Nunca um contador local. */
   consultarCota(ctx: ContextoConta): Promise<Cota>;
 
-  publicar(ctx: ContextoConta, containerId: string): Promise<ResultadoPublicacao>;
+  /**
+   * Solta o que `criarContainer` preparou.
+   *
+   * `entrada` e opcional porque as duas plataformas pedem coisas diferentes, e
+   * forcar as duas ao mesmo formato esconderia a diferenca em vez de mostra-la:
+   *
+   *   · Instagram — a legenda ja foi junto na criacao do container. Ignora.
+   *   · Facebook  — a Pagina nao tem "criar desligado e ligar depois"; o post
+   *                 nasce aqui, e a legenda so e dita AGORA.
+   *
+   * Quem nao receber o que precisa estoura alto: o adaptador do Facebook
+   * recusa publicar sem legenda em vez de publicar um post mudo.
+   */
+  publicar(
+    ctx: ContextoConta,
+    containerId: string,
+    entrada?: { legenda: string },
+  ): Promise<ResultadoPublicacao>;
 
   comentar(ctx: ContextoConta, mediaId: string, texto: string): Promise<ResultadoPublicacao>;
 

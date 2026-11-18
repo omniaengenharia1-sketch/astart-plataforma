@@ -304,9 +304,13 @@ Em *Facebook Login for Business → Configurações*:
 3. **Antes de qualquer submissão:** apontar o subdomínio de `astartstudio.com.br`
    para a plataforma, e trocar as três URLs. Fazer isso depois custa uma
    atualização no app da Meta e, no pior caso, outra análise.
-4. **Antes de gravar o vídeo:** escrever o adaptador do Facebook. A dona
-   confirmou que precisa dele, e o `pages_manage_posts` só se justifica se o
-   screencast mostrar um post na Página.
+4. ~~**Antes de gravar o vídeo:** escrever o adaptador do Facebook.~~
+   **FEITO (0072).** A Página publica **foto e álbum de fotos**. Reel e story
+   da Página continuam recusados, com o motivo na tela: vídeo sobe por
+   `rupload.facebook.com`, em upload retomável de três fases — outro host e
+   outro protocolo, que pede um estado novo na máquina do worker.
+   Para o screencast isso basta: o que o `pages_manage_posts` precisa mostrar
+   é **um post saindo numa Página**, e uma foto é um post.
 5. **Depois do primeiro post de teste funcionar:** gravar o screencast. Gravar
    antes é perder o trabalho, porque o fluxo ainda vai mudar.
 6. **Com a verificação aprovada e o vídeo pronto:** submeter as seis permissões
@@ -335,3 +339,105 @@ auditorias que ainda não existem aqui.
 > lido só pela Edge Function". Continua sendo uma escolha legítima, porque o
 > fornecedor é quem tem a homologação; mas é uma escolha, não um detalhe, e a
 > política de privacidade teria de passar a citá-lo.
+
+
+---
+
+# Fase 2 — o WhatsApp no sistema (coexistence)
+
+> Escrito em 18/11/2026, depois de a dona perguntar como o Kommo conecta o
+> WhatsApp sem perder nada. **Nada disto está construído.** É o mapa do que a
+> Meta exige, levantado na documentação oficial, para a decisão não ser tomada
+> em cima de blog de fornecedor.
+
+## O recurso tem nome: Coexistence
+
+Desde 2025 a Meta deixa o **mesmo número** rodar no app WhatsApp Business do
+celular **e** na Cloud API ao mesmo tempo. Na doc:
+
+> They can still send messages on a one-to-one basis using the WhatsApp
+> Business app
+
+> Messages sent and received are mirrored between the Cloud API and WhatsApp
+> Business app
+
+É isto que o Kommo vende como *"Connect WhatsApp Business app to Kommo"*. Não
+é leitura de QR do WhatsApp Web.
+
+**Correção de uma afirmação minha anterior.** Eu disse à dona que migrar o
+número faria perder o app e o histórico. Isso vale para o caminho **direto**
+(registrar o número na Cloud API), e não para este. Eu estava desatualizado.
+
+## O que NÃO sobrevive
+
+Da doc, e vale escrever antes de alguém prometer "não perde nada":
+
+| | |
+|---|---|
+| histórico | `All chat messages in the most recent 6 months can be synchronized` — e só se o negócio aceitar compartilhar no onboarding. **O Kommo, no artigo dele, importa só os últimos 30 dias.** |
+| grupos | `Group chats will not be synchronized.` |
+| listas de transmissão | `Broadcast lists will be disabled.` As que existem ficam só-leitura |
+| sem suporte na API | chamadas de voz e vídeo, catálogo, pedidos, status, etiquetas, respostas rápidas, mensagem de saudação e de ausência |
+| aparelhos | ao conectar, `all companion apps will be unlinked`; depois religa até 4 |
+| vazão | `a fixed throughput of 20 mps` |
+| prazo | 24 h para sincronizar depois do onboarding, e **uma vez só** — para refazer, desconectar no app e repetir |
+
+Requisitos do número: app **2.24.17 ou superior**, não pode ser WhatsApp
+pessoal, e a elegibilidade é decisão da Meta (conta nova de app não entra na
+hora).
+
+**É reversível.** Sai pelo app, em *Ajustes → Conta → Plataforma de Negócios →
+Desconectar*. Não dá para usar a Deregister API.
+
+## O requisito que decide tudo
+
+> You must already be a Solution Partner or Tech Provider.
+
+Coexistence só acontece pelo **Embedded Signup**, e Embedded Signup é de
+parceiro. É exatamente por isso que o Kommo consegue e a plataforma não.
+
+**Tech Provider é autosserviço** — não há aplicação comercial, só painel:
+
+1. Business Verification: `Your business must be verified before you can start
+   the app review process.` **É a mesma da fase 1** — feita uma vez, serve às
+   duas.
+2. App Review com **Advanced Access** em:
+   - `whatsapp_business_messaging` — *"required to send messages on behalf of
+     your clients"*
+   - `whatsapp_business_management` — *"required to access your clients'
+     WhatsApp accounts and Messaging accounts"*
+3. Sem isso: `You will not be able to onboard business customers until your app
+   has been approved for advanced access`.
+
+Prazo médio que a doc cita para o App Review: **~24 h** (a nossa experiência
+com os prazos reais da fase 1 dirá se vale para nós).
+
+Um teto de volume existe, e não atrapalha a Astart: sem verificação são 10
+novos clientes a cada 7 dias; com ela, 200.
+
+## O preço
+
+A Meta cobra **por mensagem** desde 1º de julho de 2025, não por conversa:
+*"Meta charges on a per-message basis"*. A tabela em vigor é `effective October
+1, 2026`, e nela as mensagens de **service** voltaram a ser cobradas depois de
+uma franquia de **1.000 por mês por número**. As enviadas pelo app do celular
+continuam de graça: *"messages sent by the business via the WhatsApp Business
+app will continue to be free"*.
+
+Comparação, para a decisão: o Kommo custa **US$ 20 a 45 por usuário/mês**
+(cobrado em blocos de 6 meses) **mais** as taxas da Meta. Como Tech Provider,
+só as taxas da Meta.
+
+## A ordem
+
+1. **Fase 1 primeiro** (Instagram e Facebook). A doc avisa que pedir permissão
+   desnecessária é *"a common reason for rejection"*: empacotar WhatsApp junto
+   arrisca a aprovação que destrava o atendimento aos clientes.
+2. Business Verification aprovada → submeter os dois escopos de WhatsApp.
+3. Só então construir o módulo: webhook de `smb_message_echoes` (o que ela
+   manda pelo celular chega na plataforma), janela de atendimento de 24 h, e a
+   conversa dentro do cartão do lead.
+
+**Atenção à versão.** A doc avisa que `Embedded Signup v2 and v3 will be
+deprecated on October 15, 2026` — data que já passou. Conferir v4/v5 no dia da
+implementação, não hoje.

@@ -65,19 +65,28 @@ export const FORMATOS_INSTAGRAM: Record<string, RegraDeFormato> = {
 };
 
 /**
- * Facebook. Nenhum formato: a Page nao tem adaptador nenhum ainda.
+ * Facebook. Foto e album de fotos publicam; video nao.
  *
- * Escrito como quatro recusas em vez de uma lista vazia de proposito — a tela
- * mostra os chips desligados com o motivo, e "nao aparece" e pior que "aparece
- * apagado dizendo por que": a pessoa fica procurando o que nao existe.
+ * O corte nao e preguica, e protocolo: foto entra por `POST /{page}/photos`
+ * com a URL do arquivo, que e o mesmo feitio do Instagram e usa o mesmo
+ * `chamarGraph`. Reel e story da Pagina sobem por `rupload.facebook.com`, em
+ * upload retomavel de tres fases — outro host, outro protocolo, e um estado
+ * novo na maquina do worker. Entra quando esse estado existir.
+ *
+ * As quatro linhas continuam aqui, duas ligadas e duas desligadas com motivo,
+ * porque "nao aparece" e pior que "aparece apagado dizendo por que": a pessoa
+ * fica procurando o que nao existe.
  */
-const SEM_ADAPTADOR = 'O Facebook ainda nao publica por aqui — so o Instagram. Falta o adaptador da Page.';
+const SO_FOTO = 'O Facebook ainda publica so foto por aqui — video da Pagina usa outro protocolo de envio. Ja esta na fila.';
 
 export const FORMATOS_FACEBOOK: Record<string, RegraDeFormato> = {
-  imagem: { minimo: 1, maximo: 1, natureza: 'imagem', publicavel: false, motivo: SEM_ADAPTADOR },
-  carrossel: { minimo: 2, maximo: 10, natureza: 'imagem', publicavel: false, motivo: SEM_ADAPTADOR },
-  reel: { minimo: 1, maximo: 1, natureza: 'video', publicavel: false, motivo: SEM_ADAPTADOR },
-  story: { minimo: 1, maximo: 1, natureza: 'imagem_ou_video', publicavel: false, motivo: SEM_ADAPTADOR },
+  imagem: { minimo: 1, maximo: 1, natureza: 'imagem', publicavel: true },
+  // Ate 10, o mesmo teto do carrossel do Instagram. A referencia da Pagina nao
+  // publica um limite de `attached_media`; na duvida, o numero que a equipe ja
+  // conhece, e nao um palpite mais alto.
+  carrossel: { minimo: 2, maximo: 10, natureza: 'imagem', publicavel: true },
+  reel: { minimo: 1, maximo: 1, natureza: 'video', publicavel: false, motivo: SO_FOTO },
+  story: { minimo: 1, maximo: 1, natureza: 'imagem_ou_video', publicavel: false, motivo: SO_FOTO },
 };
 
 export const FORMATOS_POR_PLATAFORMA: Record<string, Record<string, RegraDeFormato>> = {

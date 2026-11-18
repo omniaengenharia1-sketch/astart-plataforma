@@ -68,17 +68,32 @@ begin
     'a conta boa de Instagram publica nos quatro formatos'
   );
 
-  -- 2. O Facebook APARECE, e aparece recusado com motivo.
+  -- 2. O Facebook aparece, e agora aparece PARTIDO: foto publica, video nao.
+  --
+  -- Ate a 0072 este bloco so dizia "o Facebook e recusado", o que era verdade
+  -- por nao existir adaptador nenhum. Agora cobra formato a formato — que e a
+  -- afirmacao que importa, e a que continua de pe quando o video entrar.
   perform public.afirma(
     (select count(*) from jsonb_array_elements(v) x
       where x->>'plataforma' = 'facebook') = 4,
     'o Facebook aparece na lista — nao aparecer faria a pessoa procurar'
   );
+
   select x into v_c from jsonb_array_elements(v) x
-   where x->>'plataforma' = 'facebook' limit 1;
-  perform public.afirma(not (v_c->>'publicavel')::boolean, 'e aparece recusado');
+   where x->>'plataforma' = 'facebook' and x->>'tipo' = 'imagem' limit 1;
+  perform public.afirma((v_c->>'publicavel')::boolean,
+    'foto na Pagina publica — e o que o video da homologacao precisa mostrar');
+
+  select x into v_c from jsonb_array_elements(v) x
+   where x->>'plataforma' = 'facebook' and x->>'tipo' = 'carrossel' limit 1;
+  perform public.afirma((v_c->>'publicavel')::boolean, 'album de fotos na Pagina tambem');
+
+  select x into v_c from jsonb_array_elements(v) x
+   where x->>'plataforma' = 'facebook' and x->>'tipo' = 'reel' limit 1;
+  perform public.afirma(not (v_c->>'publicavel')::boolean,
+    'reel na Pagina continua recusado: video usa outro protocolo de envio');
   perform public.afirma(
-    position('adaptador' in (v_c->>'motivo')) > 0,
+    position('protocolo' in (v_c->>'motivo')) > 0,
     'com o motivo escrito, nao so apagado'
   );
 
@@ -133,7 +148,10 @@ begin
       '', '', false, array['30000000-0000-0000-0000-000000000002'::uuid]);
     ok := false;
   exception when others then
-    ok := position('adaptador' in sqlerrm) > 0 and position('Padaria Aurora' in sqlerrm) > 0;
+    -- 'protocolo' desde a 0072: a Pagina publica foto, o que falta e o
+    -- envio de video. O nome da conta continua sendo cobrado, que e a
+    -- parte que faz a mensagem servir para alguem.
+    ok := position('protocolo' in sqlerrm) > 0 and position('Padaria Aurora' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'reel no Facebook e recusado, dizendo em qual conta');
 

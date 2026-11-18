@@ -93,8 +93,11 @@ export const ORDEM_FORMATOS: TipoPeca[] = ['imagem', 'carrossel', 'reel', 'story
  * linha por linha — inclusive o motivo, porque chip apagado sem motivo é a pior
  * tela possível: a pessoa não sabe se é defeito ou se falta recurso.
  */
-const FALTA_FACEBOOK =
-  'O Facebook ainda não publica por aqui — falta o adaptador da Página. Já está na fila.';
+// Desde a 0072 a Página publica FOTO. O que falta é vídeo, e o motivo é
+// protocolo: reel e story da Página sobem por upload retomável de três fases,
+// em outro servidor, que não é a chamada que o adaptador usa hoje.
+const SO_FOTO_FACEBOOK =
+  'O Facebook ainda publica só foto por aqui — vídeo da Página usa outro protocolo de envio. Já está na fila.';
 
 export const CANAIS: {
   plataforma: PlataformaSocial;
@@ -106,10 +109,10 @@ export const CANAIS: {
   { plataforma: 'instagram', tipo: 'carrossel', publicavel: true, motivo: null },
   { plataforma: 'instagram', tipo: 'reel', publicavel: true, motivo: null },
   { plataforma: 'instagram', tipo: 'story', publicavel: true, motivo: null },
-  { plataforma: 'facebook', tipo: 'imagem', publicavel: false, motivo: FALTA_FACEBOOK },
-  { plataforma: 'facebook', tipo: 'carrossel', publicavel: false, motivo: FALTA_FACEBOOK },
-  { plataforma: 'facebook', tipo: 'reel', publicavel: false, motivo: FALTA_FACEBOOK },
-  { plataforma: 'facebook', tipo: 'story', publicavel: false, motivo: FALTA_FACEBOOK },
+  { plataforma: 'facebook', tipo: 'imagem', publicavel: true, motivo: null },
+  { plataforma: 'facebook', tipo: 'carrossel', publicavel: true, motivo: null },
+  { plataforma: 'facebook', tipo: 'reel', publicavel: false, motivo: SO_FOTO_FACEBOOK },
+  { plataforma: 'facebook', tipo: 'story', publicavel: false, motivo: SO_FOTO_FACEBOOK },
 ];
 
 /** Como se escreve o que o formato pede. Uma frase, não um número solto. */

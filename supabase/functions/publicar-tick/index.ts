@@ -13,6 +13,7 @@
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
+import { adaptadorFacebook } from '../_shared/meta/facebook.ts';
 import { adaptadorInstagram } from '../_shared/meta/instagram.ts';
 import { FalhaMeta } from '../_shared/graph.ts';
 import { type ErroClassificado, erroPermanente, erroTransitorio, FalhaPasso } from '../_shared/erros.ts';
@@ -37,6 +38,7 @@ const ESPERA_COTA_SEGUNDOS = 900;
 
 const ADAPTADORES: Record<string, AdaptadorPlataforma> = {
   instagram: adaptadorInstagram,
+  facebook: adaptadorFacebook,
 };
 
 // --- Tipos de resposta ------------------------------------------------------
@@ -169,7 +171,8 @@ async function carregarContexto(
     throw new FalhaPasso(
       erroPermanente(
         'plataforma_nao_suportada',
-        `Esta versao publica apenas no Instagram. Plataforma da conta: "${ctx.plataforma}".`,
+        `Esta versao publica no Instagram e na Pagina do Facebook. ` +
+          `Plataforma da conta: "${ctx.plataforma}".`,
       ),
     );
   }
@@ -510,7 +513,13 @@ async function passoPublicar(
 
   let mediaId: string;
   try {
-    const resultado = await adaptador.publicar(ctx, alvo.container_id);
+    // A legenda vai junto porque o adaptador da Pagina precisa dela AGORA: la
+    // o post nasce nesta chamada, nao na criacao do container. E o MESMO texto
+    // que o Instagram ja levou na criacao — `legendaFinal(post)` nos dois —
+    // para as duas redes nunca sairem com legenda diferente.
+    const resultado = await adaptador.publicar(ctx, alvo.container_id, {
+      legenda: legendaFinal(post),
+    });
     await registrarChamadas(sb, alvo.id, resultado.registros);
     mediaId = resultado.mediaId;
   } catch (e) {
