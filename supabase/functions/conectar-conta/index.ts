@@ -40,12 +40,26 @@ interface Pedido {
  * escopos desse caminho são estes. O caminho alternativo — Instagram API com
  * Instagram Login — usa outros nomes (`instagram_business_*`), e pedir os
  * nomes do caminho errado na homologação queima um ciclo de análise inteiro.
+ *
+ * `pages_manage_posts` ENTROU COM A 0072, e a falta dele era silenciosa.
+ * Enquanto só existia o adaptador do Instagram, a lista de cinco descrevia a
+ * realidade. No dia em que a Página passou a publicar, a régua ficou mais
+ * curta que o sistema — e régua curta não acusa nada: um token sem o escopo
+ * passaria como "sem escopo faltando" para falhar depois, na publicação, de
+ * madrugada.
+ *
+ * A regra: quem decide o que entra aqui é o que os ADAPTADORES fazem, não o
+ * que a documentação da Meta oferece.
  */
 const ESCOPOS_NECESSARIOS = [
+  // Instagram: ler a conta e publicar nela.
   'instagram_basic',
   'instagram_content_publish',
+  // Página: listar, ler o vínculo com o Instagram, e publicar nela.
   'pages_show_list',
   'pages_read_engagement',
+  'pages_manage_posts',
+  // Alcançar os ativos dos clientes dentro do Business Manager da agência.
   'business_management',
 ];
 

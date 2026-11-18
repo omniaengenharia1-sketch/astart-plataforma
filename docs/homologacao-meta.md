@@ -425,6 +425,34 @@ Texto-base para o campo de justificativa (adapte, não copie cego):
 
 ---
 
+## 3.2. O token de produção: conferido, e tem os seis escopos
+
+Lido pela dona na própria plataforma em 18/11/2026, em *Ajustes → Integrações
+→ Meta → Conferir se o token funciona*:
+
+> SYSTEM_USER · não expira · aceito pela Meta · cadastrada há 36 dias
+>
+> escopos: `pages_manage_instant_articles`, `pages_show_list`,
+> `business_management`, `instagram_basic`, `instagram_manage_comments`,
+> `instagram_manage_insights`, `instagram_content_publish`,
+> `instagram_manage_messages`, `pages_read_engagement`, **`pages_manage_posts`**,
+> `instagram_manage_contents`, `public_profile`
+
+**As seis que a submissão pede estão todas lá.** O token não precisa ser
+regerado para o teste real de publicação.
+
+> **Eu disse que `pages_manage_posts` estava faltando. Estava errado.** Li a
+> lista do MODO EXEMPLO num retrato de tela e tratei como se fosse a conta
+> dela. Terceira vez no mesmo dia que confundi um artefato meu com o estado
+> do mundo — depois da Business Verification e do subdomínio. O padrão agora
+> está claro o bastante para virar regra: **dado de exemplo nunca é prova de
+> produção**, nem quando aparece numa tela que parece a de verdade.
+
+**De qual app é este token.** Os escopos respondem sozinhos: `instagram_*` só
+pode vir de um app que tenha o produto Instagram. Dos dois apps da conta, só o
+**Astart Publicador** tem (o `automacaoIA` tem apenas Facebook Login for
+Business). É inferência, mas de uma evidência que não admite outra leitura.
+
 ## 3.5. A exigência que faltava nesta página, e que muda a ordem
 
 > **Make at least 1 successful API call using each permission for which you
