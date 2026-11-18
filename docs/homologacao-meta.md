@@ -174,11 +174,50 @@ select vault.create_secret('<app secret>', 'meta_app_secret');
 
 ## 2. O que só a Astart pode produzir
 
-### Business Verification
+### Business Verification — ✅ **JÁ ESTÁ FEITA**
 
-O item mais lento, e o único que não depende de código. Dá para iniciar
-**antes** do App Review, e é o que eu recomendo: enquanto ela corre, a gente
-prepara o resto.
+> **Conferido pela dona no painel, em 18/11/2026.** No portfólio **Astart
+> Design**, Centro de Segurança → *Verificação do negócio*:
+>
+> | | |
+> |---|---|
+> | pessoa jurídica | **Astart Agencia de Publicidade LTDA** |
+> | estado | **Verificado** |
+> | primeira verificação | **13 de dezembro de 2024** |
+> | caso de uso | trocado para *"A configurar uma conta do WhatsApp Business"* — continuou Verificado |
+> | 2FA dos administradores | em ordem, ninguém pendente |
+>
+> Não existe botão "Iniciar verificação" para clicar. **O passo a passo
+> abaixo não é necessário para este portfólio** — fica como referência para
+> um portfólio novo, ou para o dia em que a Meta pedir de novo.
+>
+> **O erro foi meu, e vale nomear:** eu listei a Business Verification como
+> pendência e a chamei de "a fila mais lenta" em todas as versões desta
+> página, sem nunca ter conferido. Eu não consigo abrir o Business Manager
+> daqui — mas isso é razão para PERGUNTAR, não para afirmar. Duas semanas de
+> espera que não existiam entraram em todo plano que escrevi.
+>
+> **A interface da conta está em português de PORTUGAL.** O menu chama-se
+> *Centro de Segurança* (não "Central"), e chega-se a ele por **Definições**,
+> no fim da lista da esquerda. Os nomes do passo a passo abaixo são os da
+> Central de Ajuda em pt-BR e podem aparecer diferentes na tela.
+
+#### O que isto destrava, e o que NÃO destrava
+
+Destrava: o pré-requisito que a doc de Tech Provider chama de *"Your business
+must be verified before you can start the app review process"*. Vale para as
+duas fases, Instagram/Facebook e WhatsApp.
+
+**Não destrava, e é o que precisa ser conferido antes de qualquer submissão:**
+a verificação é do **portfólio**, não da conta. O app da plataforma tem de
+estar ligado ao portfólio **Astart Design** — se ele nasceu sob outro
+portfólio, a verificação não viaja junto e o App Review barra do mesmo jeito.
+É uma conferência de um minuto no painel do app, em *Configurações → Básico*,
+no campo do portfólio empresarial.
+
+---
+
+#### Referência: como seria, num portfólio ainda não verificado
 
 > **Esta seção foi reescrita em 18/11/2026 contra a fonte certa.** A versão
 > anterior veio de guias de terceiros e errava duas coisas que importam: dizia
@@ -399,9 +438,9 @@ Em *Facebook Login for Business → Configurações*:
 
 ## 5. A ordem que eu recomendo
 
-1. **Hoje:** abrir a Business Verification. É a fila mais lenta e não depende
-   de mais nada — inclusive **não depende da zona de DNS**: na hora de
-   confirmar, escolher *telefone*, *SMS* ou *WhatsApp* em vez de e-mail.
+1. ~~**Hoje:** abrir a Business Verification.~~ **PRONTA desde 13/12/2024**,
+   no portfólio Astart Design. Em vez disso: conferir que o app da plataforma
+   está ligado A ESSE portfólio — a verificação é do portfólio, não da conta.
 2. **Hoje:** conferir as três páginas públicas e me dizer se o texto está certo.
    O e-mail de contato já foi confirmado: `projetos@astartstudio.com.br`.
 3. **Antes de qualquer submissão:** apontar o subdomínio de `astartstudio.com.br`
