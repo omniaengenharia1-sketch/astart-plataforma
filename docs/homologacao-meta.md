@@ -12,9 +12,11 @@ serve para testar, não para atender cliente.
 > item no painel na hora, e me diga o que estiver diferente — eu corrijo esta
 > página.
 
-Prazo relatado em 2026: **2 a 4 semanas**, com uma fonte citando ~20 dias.
-Reprovar e resubmeter é comum e não é problema; o caro é submeter com material
-incompleto e perder o ciclo.
+Prazos, cada um da sua fonte: a **Business Verification** leva *até 14 dias
+úteis* (página oficial da Meta, lida em 18/11/2026); o **App Review** tem média
+declarada de ~24 h na doc de desenvolvedor, e os relatos de 2026 falam em 2 a 4
+semanas — então conte com semanas, não com horas. Reprovar e resubmeter é comum
+e não é problema; o caro é submeter com material incompleto e perder o ciclo.
 
 ---
 
@@ -173,17 +175,117 @@ select vault.create_secret('<app secret>', 'meta_app_secret');
 ## 2. O que só a Astart pode produzir
 
 ### Business Verification
-O item mais lento, e o único que não depende de código.
 
-- CNPJ da Astart, com situação regular
-- Documento constitutivo (contrato social ou equivalente)
-- Comprovante de endereço da empresa
-- Telefone e e-mail no domínio da empresa, que a Meta vai usar para confirmar
-- Site público da empresa
+O item mais lento, e o único que não depende de código. Dá para iniciar
+**antes** do App Review, e é o que eu recomendo: enquanto ela corre, a gente
+prepara o resto.
 
-Começa em **Business Manager → Configurações do negócio → Central de segurança
-→ Verificação do negócio**. Dá para iniciar **antes** do App Review, e é o que
-eu recomendo: enquanto ela corre, a gente prepara o resto.
+> **Esta seção foi reescrita em 18/11/2026 contra a fonte certa.** A versão
+> anterior veio de guias de terceiros e errava duas coisas que importam: dizia
+> que a Meta confirma por "telefone e e-mail no domínio da empresa" (são
+> **cinco** métodos, e o e-mail é o pior deles para a Astart), e estimava
+> "2 a 4 semanas" (a Meta diz **até 14 dias úteis**). O que está abaixo saiu
+> das páginas em português da Central de Ajuda, lidas com navegador — elas
+> carregam por JavaScript e vêm vazias num `curl`, que foi por isso que a
+> primeira versão era palpite.
+
+**Onde fica, com o nome de hoje:** *Central de Segurança*, no **Meta Business
+Suite** → botão **Iniciar verificação**. Não é mais "Business Manager →
+Configurações do negócio" na nomenclatura atual.
+
+Quem clica precisa ter **controle total do portfólio empresarial**: *"Os
+proprietários de portfólios empresariais com controle total podem verificar
+suas empresas"*. Se a Central de Segurança não abrir, é isso que falta.
+
+Se aparecer **"Não se qualifica para verificação"**, não é erro: a Meta diz que
+nem toda empresa precisa, e que o pedido pode chegar depois por e-mail ou
+notificação, vindo do produto que exige — no nosso caso, a Plataforma do
+WhatsApp Business, que está na lista oficial de produtos que exigem verificação.
+
+#### O que preencher
+
+Razão social, endereço, telefone e site. A Meta é explícita:
+
+> Verifique se os detalhes inseridos correspondem exatamente aos detalhes da
+> sua pessoa jurídica.
+
+> verifique se o site da sua empresa está carregando corretamente e se está em
+> conformidade com o HTTPS
+
+**O site já passa.** Conferido em 18/11/2026 com navegador:
+`https://astartstudio.com.br` responde 200 em HTTPS, e `www` redireciona para
+ele. Site que não carrega, sem HTTPS, ou com link que leva a erro é **motivo
+declarado de rejeição**.
+
+#### Como a Meta confirma que a empresa é sua — e por que isto desbloqueia a Astart
+
+> Escolha um método para confirmar sua conexão: **email, telefone, SMS,
+> mensagem do WhatsApp ou verificação de domínio**.
+
+São cinco, não dois. **Escolher telefone, SMS ou WhatsApp resolve o problema
+da zona de DNS quebrada**: o código não passa por e-mail nenhum.
+
+E há um motivo a mais para não escolher e-mail:
+
+> Talvez você também tenha que fornecer comprovantes de que é proprietário do
+> domínio do site, **caso escolha receber o código de verificação pelo endereço
+> de email**.
+
+Ou seja, o caminho do e-mail custa mais trabalho E depende de uma caixa que
+hoje não recebe. **Telefone ou WhatsApp, e segue.**
+
+Isto corrige a dependência que esta página afirmava: consertar a zona de DNS
+continua certo e necessário (as três páginas públicas prometem um canal de
+contato), mas **não bloqueia a Business Verification**.
+
+#### Os documentos, com os nomes que a Meta usa
+
+Pode ser pedido quando a empresa não é encontrada no registro automático
+("Minha empresa não está listada"). A lista oficial:
+
+| documento | serve para |
+|---|---|
+| Certificado/contrato social | razão social |
+| Documento de inscrição ou licença da empresa | razão social |
+| Documento fiscal emitido **pelo governo** (ex.: certificado fiscal — o cartão CNPJ) | razão social |
+| Extrato bancário da empresa | razão social |
+| Conta de serviços públicos | **só** endereço e telefone, nunca razão social |
+
+Regras que reprovam se ignoradas:
+
+- documento **vencido** não vale, e tem de ser emitido pela autoridade competente;
+- *"Documentos fiscais preenchidos pela própria empresa não são aceitos"*;
+- a conta de luz/água tem de trazer a **razão social**, não o nome de uma pessoa;
+- **tape o CPF**: *"Lembre-se de cobrir as informações pessoais adicionais de
+  que não precisamos"*;
+- **português é aceito** — não precisa traduzir nada.
+
+#### Prazo e reprovação
+
+> Uma decisão sobre o envio da verificação pode levar **até 14 dias úteis**.
+
+Os motivos de rejeição que a Meta lista:
+
+1. informação falsa ou enganosa, ou suspeita disso;
+2. tentar verificar um portfólio que não é seu;
+3. tentar burlar o sistema de análise;
+4. **site que não carrega, sem HTTPS, ou com link que leva a erro**.
+
+Reprovado, dá para **apelar** pela própria Central de Segurança.
+
+#### A armadilha que custa o ciclo inteiro
+
+> **se você editar os detalhes da sua empresa, será necessário concluir o
+> processo de verificação novamente.**
+
+Por isso o endereço, o telefone e a razão social têm de estar certos **antes**
+de enviar. Mexer depois zera a fila de 14 dias.
+
+> **Não confundir com duas coisas parecidas:** *verificação de domínio* é
+> provar que o site é seu (metatag ou registro DNS), e aqui é só um dos cinco
+> métodos de confirmação; *Meta Verified* é o selo azul pago, e a Meta avisa
+> em todas as páginas que a verificação da empresa *"não concederá a você um
+> selo de verificado"*.
 
 ### Conta de teste para o revisor
 Os guias são unânimes: o revisor precisa **entrar e ver funcionando**. Então:
@@ -298,7 +400,8 @@ Em *Facebook Login for Business → Configurações*:
 ## 5. A ordem que eu recomendo
 
 1. **Hoje:** abrir a Business Verification. É a fila mais lenta e não depende
-   de mais nada.
+   de mais nada — inclusive **não depende da zona de DNS**: na hora de
+   confirmar, escolher *telefone*, *SMS* ou *WhatsApp* em vez de e-mail.
 2. **Hoje:** conferir as três páginas públicas e me dizer se o texto está certo.
    O e-mail de contato já foi confirmado: `projetos@astartstudio.com.br`.
 3. **Antes de qualquer submissão:** apontar o subdomínio de `astartstudio.com.br`
