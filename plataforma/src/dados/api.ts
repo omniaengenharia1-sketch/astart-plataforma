@@ -19,6 +19,7 @@ import {
   conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
   conferirTokenExemplo,
   apagarPublicacaoExemplo, cancelarPublicacaoExemplo,
+  editarLeadExemplo, converterLeadExemplo, apagarLeadExemplo,
   servicosParaAdicionarExemplo, alterarServicoExemplo, adicionarServicoExemplo,
   mudarEstadoDoServicoExemplo, encerrarServicoExemplo, removerServicoExemplo,
   criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
@@ -908,6 +909,62 @@ export async function encerrarServico(id: string, fim: string | null): Promise<v
 export async function removerServico(id: string): Promise<void> {
   if (!sb) return removerServicoExemplo(id);
   const { error } = await sb.rpc('remover_servico_do_cliente', { p_cliente_servico: id });
+  if (error) throw new FalhaDados(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// O LEAD DEPOIS DE CRIADO
+//
+// A 0071 deu ao Comercial um objetivo e três verbos: criar, anotar, mover. O
+// que ficou de fora é tudo que vem DEPOIS — corrigir um telefone digitado
+// errado, dizer que o lead virou cliente, e apagar o que entrou por engano.
+// As três funções existiam no banco desde a 0071, testadas, sem caminho.
+// ---------------------------------------------------------------------------
+
+/** Nulo = não mexe. Para APAGAR um campo, o nome dele vai em `limpar`. */
+export async function editarLead(id: string, d: {
+  nome?: string | null;
+  empresa?: string | null;
+  whatsapp?: string | null;
+  origem?: string | null;
+  valorCentavos?: number | null;
+  notas?: string | null;
+  limpar?: string[];
+}): Promise<void> {
+  if (!sb) return editarLeadExemplo(id, d);
+  const { error } = await sb.rpc('editar_lead', {
+    p_lead: id,
+    p_nome: d.nome ?? null,
+    p_empresa: d.empresa ?? null,
+    p_whatsapp: d.whatsapp ?? null,
+    p_origem: d.origem ?? null,
+    p_valor_centavos: d.valorCentavos ?? null,
+    p_notas: d.notas ?? null,
+    p_score: null,
+    p_reuniao_em: null,
+    p_limpar: d.limpar ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
+ * O lead virou cliente.
+ *
+ * Não cria o cliente — a `criar_cliente` já faz isso, com contrato e módulos.
+ * Aqui só amarra os dois, para a história da venda não se perder quando o
+ * cliente começa. Por isso a tela pede um cliente que JÁ existe, e manda
+ * cadastrar antes quando não existe.
+ */
+export async function converterLead(id: string, clienteId: string): Promise<void> {
+  if (!sb) return converterLeadExemplo(id, clienteId);
+  const { error } = await sb.rpc('converter_lead', { p_lead: id, p_cliente: clienteId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/** Só a direção, e nunca um lead que virou cliente. O banco recusa os dois. */
+export async function apagarLead(id: string): Promise<void> {
+  if (!sb) return apagarLeadExemplo(id);
+  const { error } = await sb.rpc('apagar_lead', { p_lead: id });
   if (error) throw new FalhaDados(error.message);
 }
 

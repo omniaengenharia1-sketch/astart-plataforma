@@ -4,11 +4,14 @@ import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
-  agendaComercial, criarLead, funil as pedirFunil, moverLead, registrarInteracaoDoLead,
+  agendaComercial, apagarLead, converterLead, criarLead, editarLead,
+  funil as pedirFunil, listaClientes, moverLead, registrarInteracaoDoLead,
 } from '../dados/api';
 import { diaMes, haQuanto, plural, reais } from '../formato';
 import { ETAPAS_ABERTAS, ETAPA_LEAD } from '../rotulos';
-import type { AgendaComercial, EtapaLead, Funil, LeadNoFunil } from '../dados/tipos';
+import type {
+  AgendaComercial, ClienteNaLista, EtapaLead, Funil, LeadNoFunil,
+} from '../dados/tipos';
 
 const DESTINOS: EtapaLead[] = [...ETAPAS_ABERTAS, 'fechado', 'perdido'];
 
@@ -41,13 +44,34 @@ function Cartao({
   l,
   aoMover,
   aoAnotar,
+  aoEditar,
+  aoConverter,
+  aoApagar,
+  clientes,
 }: {
   l: LeadNoFunil;
   aoMover: (etapa: EtapaLead, motivo?: string) => Promise<void>;
   aoAnotar: (oque: string, proximoPasso: string, proximoEm: string) => Promise<void>;
+  aoEditar: (d: { nome: string; empresa: string; whatsapp: string; origem: string; valor: string }) => Promise<void>;
+  aoConverter: (clienteId: string) => Promise<void>;
+  aoApagar: () => Promise<void>;
+  clientes: { id: string; nome: string }[];
 }) {
   const [abrindo, setAbrindo] = useState(false);
   const [anotando, setAnotando] = useState(false);
+  // Editar, converter e apagar vieram DEPOIS da 0071, quando a dona cobrou a
+  // varredura: as tres funcoes existiam no banco, testadas, sem caminho.
+  const [editando, setEditando] = useState(false);
+  const [convertendo, setConvertendo] = useState(false);
+  const [apagando, setApagando] = useState(false);
+  const [cliente, setCliente] = useState('');
+  const [ed, setEd] = useState({
+    nome: l.nome,
+    empresa: l.empresa ?? '',
+    whatsapp: l.whatsapp ?? '',
+    origem: l.origem ?? '',
+    valor: l.valorCentavos === null ? '' : (l.valorCentavos / 100).toFixed(2).replace('.', ','),
+  });
   const [etapa, setEtapa] = useState<EtapaLead>(l.etapa);
   const [motivo, setMotivo] = useState('');
   const [oque, setOque] = useState('');
@@ -85,7 +109,7 @@ function Cartao({
     <li className={'bloco p-4 ' + (atencao ? 'border-l-2 border-l-pink' : '')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-     <div className="font-bold">{l.nome}</div>
+          <div className="font-bold">{l.nome}</div>
           {l.empresa && <div className="legenda mt-0.5">{l.empresa}</div>}
         </div>
         {l.valorCentavos !== null && (
@@ -139,6 +163,44 @@ function Cartao({
           <Botao variante="texto" tamanho="pequeno" onClick={() => setAbrindo((v) => !v)}>
             {abrindo ? 'Fechar' : 'Mover'}
           </Botao>
+          <Botao
+            variante="texto"
+            tamanho="pequeno"
+            onClick={() => {
+              // Ao ABRIR, relê do lead. O estado do formulário sobrevive ao
+              // recarregamento (o cartão é o mesmo componente, mesma key), e
+              // sem isto a segunda abertura mostraria o que foi digitado da
+              // vez anterior em vez do que está valendo — inclusive se o
+              // salvar tivesse falhado calado.
+              if (!editando) {
+                setEd({
+                  nome: l.nome,
+                  empresa: l.empresa ?? '',
+                  whatsapp: l.whatsapp ?? '',
+                  origem: l.origem ?? '',
+                  valor: l.valorCentavos === null
+                    ? ''
+                    : (l.valorCentavos / 100).toFixed(2).replace('.', ','),
+                });
+              }
+              setEditando((v) => !v);
+              setConvertendo(false);
+              setApagando(false);
+            }}
+          >
+            {editando ? 'Fechar' : 'Editar'}
+          </Botao>
+          {/* Converter só aparece em lead ABERTO: num já fechado o botão
+              seria uma pergunta sem resposta, e num perdido seria errado. */}
+          {l.etapa !== 'fechado' && l.etapa !== 'perdido' && (
+            <Botao
+              variante="texto"
+              tamanho="pequeno"
+              onClick={() => { setConvertendo((v) => !v); setEditando(false); setApagando(false); }}
+            >
+              {convertendo ? 'Fechar' : 'Virou cliente'}
+            </Botao>
+          )}
         </div>
       </div>
 
@@ -200,6 +262,98 @@ function Cartao({
         </details>
       )}
 
+      {/* EDITAR: o telefone digitado errado, o nome da empresa que faltava.
+          Sem isto, o unico jeito de corrigir era apagar e cadastrar de novo —
+          e apagar leva o historico junto. */}
+      {editando && (
+        <div className="mt-3 border-t border-linha-fraca pt-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo id={`ed-nome-${l.id}`} rotulo="Nome">
+              <Entrada
+                id={`ed-nome-${l.id}`}
+                value={ed.nome}
+                onChange={(e) => setEd({ ...ed, nome: e.target.value })}
+              />
+            </Campo>
+            <Campo id={`ed-empresa-${l.id}`} rotulo="Empresa">
+              <Entrada
+                id={`ed-empresa-${l.id}`}
+                value={ed.empresa}
+                onChange={(e) => setEd({ ...ed, empresa: e.target.value })}
+              />
+            </Campo>
+            <Campo id={`ed-whatsapp-${l.id}`} rotulo="WhatsApp" dica="com DDD">
+              <Entrada
+                id={`ed-whatsapp-${l.id}`}
+                inputMode="tel"
+                value={ed.whatsapp}
+                onChange={(e) => setEd({ ...ed, whatsapp: e.target.value })}
+              />
+            </Campo>
+            <Campo id={`ed-origem-${l.id}`} rotulo="Veio de">
+              <Entrada
+                id={`ed-origem-${l.id}`}
+                value={ed.origem}
+                onChange={(e) => setEd({ ...ed, origem: e.target.value })}
+              />
+            </Campo>
+            <Campo id={`ed-valor-${l.id}`} rotulo="Valor estimado" dica="em reais">
+              <Entrada
+                id={`ed-valor-${l.id}`}
+                inputMode="decimal"
+                value={ed.valor}
+                onChange={(e) => setEd({ ...ed, valor: e.target.value })}
+              />
+            </Campo>
+          </div>
+          <Botao
+            variante="primario"
+            tamanho="pequeno"
+            className="mt-3"
+            disabled={salvando || !ed.nome.trim()}
+            onClick={() => void (async () => {
+              setSalvando(true);
+              try { await aoEditar(ed); setEditando(false); } finally { setSalvando(false); }
+            })()}
+          >
+            {salvando ? 'Salvando…' : 'Salvar'}
+          </Botao>
+        </div>
+      )}
+
+      {/* VIROU CLIENTE: amarra o lead ao cliente, para a historia da venda
+          nao se perder quando o contrato comeca. Pede um cliente que JA
+          existe porque e isso que o banco amarra — criar cliente e outra
+          tela, com contrato e modulos. */}
+      {convertendo && (
+        <div className="mt-3 border-t border-linha-fraca pt-3">
+          <Campo id={`conv-${l.id}`} rotulo="Qual cliente" dica="cadastre antes, se ainda não existe">
+            <Escolha
+              id={`conv-${l.id}`}
+              value={cliente}
+              onChange={(e) => setCliente(e.target.value)}
+            >
+              <option value="">escolha</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </Escolha>
+          </Campo>
+          <Botao
+            variante="primario"
+            tamanho="pequeno"
+            className="mt-3"
+            disabled={salvando || !cliente}
+            onClick={() => void (async () => {
+              setSalvando(true);
+              try { await aoConverter(cliente); setConvertendo(false); } finally { setSalvando(false); }
+            })()}
+          >
+            {salvando ? 'Amarrando…' : 'Amarrar ao cliente'}
+          </Botao>
+        </div>
+      )}
+
       {abrindo && (
         <div className="mt-3 border-t border-linha-fraca pt-3">
           <Campo id={`etapa-${l.id}`} rotulo="Para onde">
@@ -240,6 +394,36 @@ function Cartao({
           </Botao>
         </div>
       )}
+
+      {/* APAGAR fica por ultimo e so para engano de cadastro. O banco recusa
+          lead que virou cliente: ele e o comeco daquele contrato. Para tirar
+          da frente o que nao vai acontecer, o caminho e "perdido" com motivo,
+          que preserva. */}
+      {!apagando ? (
+        <div className="mt-3 flex justify-end">
+          <Botao variante="texto" tamanho="pequeno" onClick={() => setApagando(true)}>
+            Apagar
+          </Botao>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+          <span className="legenda">apagar leva o histórico junto.</span>
+          <Botao
+            variante="primario"
+            tamanho="pequeno"
+            disabled={salvando}
+            onClick={() => void (async () => {
+              setSalvando(true);
+              try { await aoApagar(); } finally { setSalvando(false); setApagando(false); }
+            })()}
+          >
+            Apagar mesmo
+          </Botao>
+          <Botao variante="texto" tamanho="pequeno" onClick={() => setApagando(false)}>
+            Deixa
+          </Botao>
+        </div>
+      )}
     </li>
   );
 }
@@ -247,6 +431,8 @@ function Cartao({
 export function Comercial() {
   const [funil, setFunil] = useState<Funil | null>(null);
   const [agenda, setAgenda] = useState<AgendaComercial | null>(null);
+  // Para o "virou cliente": o banco amarra a um cliente que ja existe.
+  const [clientes, setClientes] = useState<ClienteNaLista[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [recado, setRecado] = useState<string | null>(null);
   const [novo, setNovo] = useState(false);
@@ -256,9 +442,10 @@ export function Comercial() {
   const carregar = useCallback(async () => {
     setErro(null);
     try {
-      const [f, a] = await Promise.all([pedirFunil(), agendaComercial()]);
+      const [f, a, c] = await Promise.all([pedirFunil(), agendaComercial(), listaClientes()]);
       setFunil(f);
       setAgenda(a);
+      setClientes(c);
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui abrir o comercial.');
     }
@@ -301,6 +488,69 @@ export function Comercial() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  // `editar_lead` trata null como "nao mexe" — por isso campo esvaziado
+  // entra em `limpar`, senao apagar o telefone errado seria impossivel.
+  async function editar(
+    l: LeadNoFunil,
+    d: { nome: string; empresa: string; whatsapp: string; origem: string; valor: string },
+  ) {
+    setErro(null);
+    setRecado(null);
+    const limpar: string[] = [];
+    const ou = (campo: string, v: string) => {
+      if (v.trim()) return v.trim();
+      limpar.push(campo);
+      return null;
+    };
+    const valor = d.valor.trim()
+      ? Math.round(Number(d.valor.replace(/\./g, '').replace(',', '.')) * 100)
+      : null;
+    if (valor !== null && !Number.isFinite(valor)) {
+      setErro('O valor não é um número. Use 1500,00.');
+      return;
+    }
+    if (valor === null) limpar.push('valor');
+    try {
+      await editarLead(l.id, {
+        nome: d.nome.trim() || null,
+        empresa: ou('empresa', d.empresa),
+        whatsapp: ou('whatsapp', d.whatsapp),
+        origem: ou('origem', d.origem),
+        valorCentavos: valor,
+        limpar: limpar.length ? limpar : undefined,
+      });
+      setRecado(`${d.nome.trim() || l.nome} atualizado.`);
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui salvar o lead.');
+    }
+  }
+
+  async function converter(l: LeadNoFunil, clienteId: string) {
+    setErro(null);
+    setRecado(null);
+    try {
+      await converterLead(l.id, clienteId);
+      const c = clientes.find((x) => x.id === clienteId);
+      setRecado(`${l.nome} agora é ${c ? c.nome : 'cliente'}.`);
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui amarrar o lead ao cliente.');
+    }
+  }
+
+  async function apagar(l: LeadNoFunil) {
+    setErro(null);
+    setRecado(null);
+    try {
+      await apagarLead(l.id);
+      setRecado(`${l.nome} foi apagado.`);
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui apagar o lead.');
+    }
+  }
 
   async function mover(l: LeadNoFunil, etapa: EtapaLead, motivo?: string) {
     setErro(null);
@@ -496,6 +746,10 @@ export function Comercial() {
                     l={l}
                     aoMover={(etapa, motivo) => mover(l, etapa, motivo)}
                     aoAnotar={(oque, passo, quando) => anotar(l, oque, passo, quando)}
+                    aoEditar={(d) => editar(l, d)}
+                    aoConverter={(clienteId) => converter(l, clienteId)}
+                    aoApagar={() => apagar(l)}
+                    clientes={clientes}
                   />
                 ))}
               </ul>

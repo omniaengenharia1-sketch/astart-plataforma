@@ -18,7 +18,23 @@
 //   5. o historico acumula e fica visivel;
 //   6. o WhatsApp abre com wa.me e com o 55 na frente;
 //   7. perdido pede o motivo ANTES, na tela, em vez de deixar o banco recusar;
-//   8. e quem nao cuida do dinheiro nao encontra esta tela.
+//   8. e quem nao cuida do dinheiro nao encontra esta tela;
+//   9. da para EDITAR o lead, e esvaziar um campo apaga de verdade;
+//  10. da para amarrar o lead ao cliente quando a venda fecha;
+//  11. e apagar engano de cadastro, atras de confirmacao — mas nunca um lead
+//      que virou cliente.
+//
+// Os tres ultimos entraram depois, quando a dona cobrou: "eu te falei pra
+// fazer uma varredura e dectar erros e bugs e tem todos esses erros e vc nao
+// viu". As tres funcoes existiam no banco, verdes nos testes de SQL, sem
+// nenhuma tela que as chamasse. Defeito por AUSENCIA nao levanta excecao em
+// lugar nenhum — so um roteiro que abre a tela e procura o botao pega.
+//
+// O QUE ESTE ROTEIRO NAO ALCANCA: a recusa de apagar um lead que virou
+// cliente. Ela existe no banco e tem teste de SQL, mas pela tela nao da para
+// chegar nela — lead convertido sai do funil e nao tem mais cartao. O botao
+// de converter so aparece em lead aberto pelo mesmo motivo. Deixo escrito em
+// vez de fingir que o roteiro cobre.
 //
 // O 1 e o 8 sao os que justificam o arquivo. O 1 porque e literalmente a
 // reclamacao. O 8 porque "so eu e quem eu cadastrar como financeiro" foi
@@ -180,6 +196,168 @@ await p.waitForTimeout(900);
   }
 }
 await p.screenshot({ path: `${SAIDA}/comercial-02-anotado.png`, fullPage: true });
+
+// --- 9: EDITAR o lead
+//
+// `editar_lead` existia desde a 0071, com teste de SQL verde, e nenhuma tela
+// a chamava: o telefone digitado errado so saia do funil apagando o lead
+// inteiro — e apagar leva o historico junto. Este bloco e dos que a varredura
+// deveria ter pego e nao pegou, porque o defeito era uma AUSENCIA.
+{
+  const alvo = p.locator('li.bloco', { hasText: 'Padaria do Teste' }).first();
+  const editar = alvo.getByRole('button', { name: 'Editar' });
+  if (!(await editar.count())) {
+    // Sem o botao nao da para seguir: os blocos abaixo clicariam no vazio e
+    // o roteiro morreria de timeout em vez de dizer o que faltou.
+    problemas.push('o cartao do lead nao oferece EDITAR');
+    console.log('PROBLEMAS:\n' + problemas.join('\n'));
+    process.exit(1);
+  } else {
+    await editar.click();
+    await p.waitForTimeout(300);
+    // Abrir PREENCHIDO: vazio, salvar por cima apagaria o que estava valendo.
+    const nome = alvo.locator('input[id^="ed-nome-"]');
+    const lido = await nome.inputValue();
+    if (lido !== 'Padaria do Teste') {
+      problemas.push(`o editar abre com o nome errado (leu "${lido}")`);
+    }
+    const zapLido = await alvo.locator('input[id^="ed-whatsapp-"]').inputValue();
+    if (!zapLido.includes('8888')) {
+      problemas.push(`o editar nao trouxe o whatsapp que esta valendo (leu "${zapLido}")`);
+    }
+    await alvo.locator('input[id^="ed-empresa-"]').fill('Padaria LTDA');
+    await alvo.locator('input[id^="ed-valor-"]').fill('2500,00');
+    await alvo.getByRole('button', { name: 'Salvar' }).click();
+    await p.waitForTimeout(900);
+
+    const texto = await limpo();
+    if (!texto.includes('padaria ltda')) problemas.push('a empresa editada nao apareceu no cartao');
+    if (!texto.includes('2.500,00')) problemas.push('o valor editado nao apareceu no cartao');
+  }
+}
+
+// ESVAZIAR UM CAMPO TEM DE APAGAR DE VERDADE.
+//
+// `editar_lead` trata nulo como "nao mexe": sem mandar o nome do campo em
+// `p_limpar`, apagar a empresa errada seria impossivel e a tela nao daria
+// erro nenhum. Silencioso. Cobra tambem a chave do valor, que no banco se
+// chama `valor` e nao `valor_centavos` — errar o nome nao levanta excecao.
+{
+  const alvo = p.locator('li.bloco', { hasText: 'Padaria do Teste' }).first();
+  await alvo.getByRole('button', { name: 'Editar' }).click();
+  await p.waitForTimeout(300);
+  await alvo.locator('input[id^="ed-empresa-"]').fill('');
+  await alvo.locator('input[id^="ed-valor-"]').fill('');
+  await alvo.getByRole('button', { name: 'Salvar' }).click();
+  await p.waitForTimeout(900);
+
+  const texto = await limpo();
+  if (texto.includes('padaria ltda')) {
+    problemas.push('esvaziar a empresa nao apagou nada — a convencao de limpar nao chegou');
+  }
+  if (texto.includes('2.500,00')) {
+    problemas.push('esvaziar o valor nao apagou — a chave de limpar do valor esta errada');
+  }
+}
+// DESISTIR NAO DEIXA RASCUNHO.
+//
+// O cartao e o mesmo componente entre um recarregamento e outro, entao o que
+// foi digitado sobrevive. Sem reler do lead ao abrir, quem digita e fecha sem
+// salvar encontra o rascunho na proxima vez — e o salvar seguinte gravaria
+// uma alteracao que ninguem pediu.
+{
+  const alvo = p.locator('li.bloco', { hasText: 'Padaria do Teste' }).first();
+  await alvo.getByRole('button', { name: 'Editar' }).click();
+  await p.waitForTimeout(300);
+  await alvo.locator('input[id^="ed-empresa-"]').fill('Rascunho Abandonado');
+  await alvo.getByRole('button', { name: 'Fechar' }).first().click();
+  await p.waitForTimeout(300);
+  await alvo.getByRole('button', { name: 'Editar' }).click();
+  await p.waitForTimeout(300);
+  const voltou = await alvo.locator('input[id^="ed-empresa-"]').inputValue();
+  if (voltou !== '') {
+    problemas.push(`reabrir o editar trouxe o rascunho de volta ("${voltou}")`);
+  }
+  await alvo.getByRole('button', { name: 'Fechar' }).first().click();
+  await p.waitForTimeout(300);
+}
+
+await p.screenshot({ path: `${SAIDA}/comercial-04-editado.png`, fullPage: true });
+
+// --- 10: VIROU CLIENTE
+//
+// `converter_lead` tambem estava sem porta. E a amarracao que faz a historia
+// da venda sobreviver ao comeco do contrato.
+{
+  await p.getByRole('button', { name: '+ Novo lead' }).click();
+  await p.waitForTimeout(300);
+  await p.fill('#lead-nome', 'Mercado Convertido');
+  await p.getByRole('button', { name: /Cadastrar lead/ }).click();
+  await p.waitForTimeout(900);
+
+  const m = p.locator('li.bloco', { hasText: 'Mercado Convertido' }).first();
+  const virou = m.getByRole('button', { name: 'Virou cliente' });
+  if (!(await virou.count())) {
+    problemas.push('o cartao nao oferece amarrar o lead a um cliente');
+  } else {
+    await virou.click();
+    await p.waitForTimeout(300);
+    const sel = m.locator('select[id^="conv-"]');
+    const quantos = await sel.locator('option').count();
+    if (quantos < 2) {
+      problemas.push('o seletor de cliente veio vazio — nao da para amarrar a ninguem');
+    } else {
+      await sel.selectOption({ index: 1 });
+      await m.getByRole('button', { name: 'Amarrar ao cliente' }).click();
+      await p.waitForTimeout(900);
+      if (!(await limpo()).includes('agora é')) {
+        problemas.push('a tela nao confirmou que o lead virou cliente');
+      }
+    }
+  }
+
+  // CONVERTIDO SAI DO FUNIL: `funil` so devolve lead aberto. Entao a prova
+  // de que a conversao aconteceu e dupla — a tela confirmou, e o cartao
+  // saiu da coluna. Se so sumisse, poderia ter sumido por erro.
+  // Conta CARTAO, nao texto da pagina: o recado de confirmacao tambem diz o
+  // nome do lead, e procurar no corpo inteiro daria verde de graca.
+  if (await p.locator('li.bloco', { hasText: 'Mercado Convertido' }).count()) {
+    problemas.push('o lead convertido continua no funil — a conversao nao pegou');
+  }
+  if (await p.locator('[role="alert"]').count()) {
+    problemas.push('converter deixou um erro na tela');
+  }
+}
+
+// --- 11: APAGAR engano de cadastro
+{
+  await p.getByRole('button', { name: '+ Novo lead' }).click();
+  await p.waitForTimeout(300);
+  await p.fill('#lead-nome', 'Engano De Cadastro');
+  await p.getByRole('button', { name: /Cadastrar lead/ }).click();
+  await p.waitForTimeout(900);
+
+  const e = p.locator('li.bloco', { hasText: 'Engano De Cadastro' }).first();
+  const apagar = e.getByRole('button', { name: 'Apagar', exact: true });
+  if (!(await apagar.count())) {
+    problemas.push('o cartao nao oferece apagar');
+  } else {
+    await apagar.click();
+    await p.waitForTimeout(300);
+    // Atras de confirmacao, porque leva o historico junto.
+    if (!(await e.innerText()).toLowerCase().includes('leva o histórico junto')) {
+      problemas.push('apagar nao avisa que leva o historico junto');
+    }
+    await e.getByRole('button', { name: 'Apagar mesmo' }).click();
+    await p.waitForTimeout(900);
+    if (await p.locator('li.bloco', { hasText: 'Engano De Cadastro' }).count()) {
+      problemas.push('o lead apagado continua na tela');
+    }
+    if (!(await limpo()).includes('foi apagado')) {
+      problemas.push('a tela nao confirmou que apagou');
+    }
+  }
+}
 
 // --- 7: perdido pede o motivo na TELA, nao no erro
 {

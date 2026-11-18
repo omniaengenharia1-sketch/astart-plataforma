@@ -2830,6 +2830,55 @@ export function registrarInteracaoExemplo(
   if (l.etapa === 'novo') l.etapa = 'conversando';
 }
 
+export function editarLeadExemplo(id: string, d: {
+  nome?: string | null; empresa?: string | null; whatsapp?: string | null;
+  origem?: string | null; valorCentavos?: number | null; notas?: string | null;
+  limpar?: string[];
+}): void {
+  soComercial();
+  const l = LEADS.find((x) => x.id === id);
+  if (!l) throw new Error('Lead nao encontrado.');
+  if (d.nome !== undefined && d.nome !== null && !d.nome.trim()) {
+    throw new Error('O lead precisa de um nome.');
+  }
+  if (d.valorCentavos != null && d.valorCentavos < 0) {
+    throw new Error('O valor estimado nao pode ser negativo.');
+  }
+  const limpar = new Set(d.limpar ?? []);
+  if (d.nome?.trim()) l.nome = d.nome.trim();
+  l.empresa = limpar.has('empresa') ? null : (d.empresa?.trim() || l.empresa);
+  l.whatsapp = limpar.has('whatsapp') ? null : (d.whatsapp?.trim() || l.whatsapp);
+  l.origem = limpar.has('origem') ? null : (d.origem?.trim() || l.origem);
+  l.notas = limpar.has('notas') ? null : (d.notas?.trim() || l.notas);
+  l.valorCentavos = limpar.has('valor') ? null : (d.valorCentavos ?? l.valorCentavos);
+}
+
+export function converterLeadExemplo(id: string, clienteId: string): void {
+  soComercial();
+  const l = LEADS.find((x) => x.id === id);
+  if (!l) throw new Error('Lead nao encontrado.');
+  if (!CLIENTES.some((c) => c.cliente.id === clienteId)) {
+    throw new Error(`Cliente ${clienteId} nao encontrado. Cadastre o cliente antes de converter.`);
+  }
+  l.etapa = 'fechado';
+  l.clienteId = clienteId;
+  l.convertidoEm = new Date().toISOString();
+  l.proximoPasso = null;
+  l.proximoEm = null;
+}
+
+export function apagarLeadExemplo(id: string): void {
+  soComercial();
+  if (papelDaVez !== 'admin') throw new Error('So a direcao apaga lead.');
+  const l = LEADS.find((x) => x.id === id);
+  if (!l) throw new Error('Lead nao encontrado.');
+  if (l.convertidoEm) {
+    throw new Error('Este lead virou cliente — ele e o comeco daquele contrato. Nao apague.');
+  }
+  const i = LEADS.indexOf(l);
+  LEADS.splice(i, 1);
+}
+
 export function agendaComercialExemplo(): AgendaComercial {
   soComercial();
   const abertos = LEADS.filter((l) => !FECHADAS.includes(l.etapa));
