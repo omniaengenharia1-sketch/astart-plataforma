@@ -425,6 +425,23 @@ Texto-base para o campo de justificativa (adapte, não copie cego):
 
 ---
 
+## 3.5. A exigência que faltava nesta página, e que muda a ordem
+
+> **Make at least 1 successful API call using each permission for which you
+> are requesting advanced access.** — e a chamada tem de ter acontecido
+> *"within 30 days of submitting"*.
+
+Não basta o código existir: **cada uma das seis permissões precisa ter sido
+usada de verdade, contra a Meta, nos 30 dias antes de submeter.** Para o
+`pages_manage_posts` isso quer dizer um post publicado numa Página real — que
+só passou a ser possível com o adaptador de ontem.
+
+Some-se a isto a regra do vídeo — *"Any requested permission or feature
+missing a screen recording will not be approved"* — e a ordem fica obrigatória:
+**primeiro publicar de verdade em cada destino, depois gravar, depois
+submeter.** Gravar antes de a chamada real ter acontecido é perder o ciclo
+mesmo com o vídeo perfeito.
+
 ## 4. Configuração do app, antes de submeter
 
 No painel do app, em *Configurações → Básico*:
@@ -435,8 +452,24 @@ No painel do app, em *Configurações → Básico*:
 - **URL dos termos de serviço**: `.../termos`
 - **Instruções de exclusão de dados**: `.../exclusao-de-dados`
 - **Ícone do app**: a marca da Astart, 1024×1024
-- **Categoria**: Business
-- **Modo**: o app tem de estar em **Live**, não em Desenvolvimento
+- **Categoria**: Business — a doc pede uma que *"accurately describes your app"*
+- **Domínios do app**: `app.astartstudio.com.br`
+- **Modo**: deixe em **Development**. ~~"o app tem de estar em Live"~~
+
+> **Eu estava errado, e a doc é mais forte do que a correção.** Não é só que
+> Development *não atrapalha* — é que trocar antes da hora é o erro:
+>
+> > If your app has modes, you should only switch it to **Live** mode **after**
+> > you have completed App Review.
+>
+> > you should not switch to Live mode until all of the permissions and
+> > features that your app requires have been approved
+>
+> Trocar cedo tem preço escrito: *"your app will be unable to request
+> unapproved permission from app users, and any unapproved permissions will be
+> inactive."* O Live vem **depois** da aprovação, e aí sim é obrigatório:
+> *"You must switch your app to Live mode before it can request App Review
+> approved permissions from app users who do not have a role on it."*
 
 Em *Facebook Login for Business → Configurações*:
 

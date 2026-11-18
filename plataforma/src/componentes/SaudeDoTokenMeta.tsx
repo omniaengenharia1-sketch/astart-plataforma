@@ -66,6 +66,19 @@ export function PainelSaudeDoToken({ saude }: { saude: SaudeDoToken }) {
         )}
       </div>
 
+      {/* QUAL APP DA META É ESTE.
+          A Meta devolve o `app_id` no `debug_token`, a Edge Function já o
+          repassava, e a tela jogava fora. Fez falta no dia em que a conta
+          tinha DOIS apps e a pergunta virou "qual deles é o da plataforma?" —
+          uma pergunta que só se respondia abrindo o painel da Meta e deduzindo
+          pelos produtos de cada um, enquanto a resposta já chegava aqui.
+          O id de um app é público: ele viaja em toda tela de permissão. */}
+      {saude.appId && (
+        <p className="legenda mt-2">
+          app da Meta: <span className="numeros">{saude.appId}</span>
+        </p>
+      )}
+
       <p className="mt-2 text-tinta-2">{saude.diagnostico}</p>
 
       {saude.oQueFazer && (
