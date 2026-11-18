@@ -84,7 +84,15 @@ cobrar(
 await p.getByRole('button', { name: 'Fechar' }).first().click();
 await p.getByRole('button', { name: 'Conectar conta' }).click();
 await p.getByText('o que o token da agência alcança').waitFor({ timeout: 10000 });
-await p.getByRole('button', { name: 'Ligar a este cliente' }).first().click();
+// A 0074 partiu isto em dois destinos: o Instagram vinculado a Pagina e a
+// Pagina em si. O botao unico "Ligar a este cliente" deixou de existir — e
+// ele existir sozinho era o defeito que a dona encontrou ("so da a opcao de
+// conectar no insta"), porque a Pagina nunca era oferecida.
+cobrar(
+  await p.getByRole('button', { name: 'Ligar a Página' }).count() > 0,
+  'a Pagina do Facebook tambem e oferecida, e nao so o Instagram',
+);
+await p.getByRole('button', { name: 'Ligar o Instagram' }).first().click();
 await p.waitForTimeout(700);
 
 await p.getByRole('button', { name: 'Nova publicação' }).click();

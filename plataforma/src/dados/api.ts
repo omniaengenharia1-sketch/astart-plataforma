@@ -779,21 +779,37 @@ export async function conferirTokenDaMeta(): Promise<SaudeDoToken> {
   return data as SaudeDoToken;
 }
 
+/**
+ * Liga UM destino ao cliente.
+ *
+ * `plataforma` deixou de ser chumbada em 'instagram', e essa palavra chumbada
+ * era o motivo de a Página do Facebook nunca ter sido conectável: a Edge
+ * Function já aceitava as duas desde a 0055, a tela só nunca pediu a outra.
+ * O adaptador da Página existe desde a 0072 e estava inalcançável.
+ *
+ * Uma Página descoberta vira ATÉ DOIS destinos — o Instagram vinculado a ela
+ * e ela própria — e cada um é uma chamada destas.
+ */
 export async function salvarContaSocial(
   clienteId: string,
   conta: ContaDescoberta,
+  plataforma: 'instagram' | 'facebook',
 ): Promise<void> {
   if (!sb) {
-    salvarContaSocialExemplo(clienteId, conta);
+    salvarContaSocialExemplo(clienteId, conta, plataforma);
     return;
   }
   const { error } = await sb.functions.invoke('conectar-conta', {
     body: {
       acao: 'salvar',
       clienteId,
-      plataforma: 'instagram',
-      nome: conta.igUsername ?? conta.pageName,
-      igUserId: conta.igUserId,
+      plataforma,
+      // O nome que a equipe vai ler na lista de destinos. No Instagram é o @;
+      // na Página é o nome dela, que é como ela aparece no Facebook.
+      nome: plataforma === 'instagram' ? (conta.igUsername ?? conta.pageName) : conta.pageName,
+      // A Página leva `page_id` nos dois casos: no Instagram ele é o vínculo
+      // que a Meta exige para alcançar a conta.
+      igUserId: plataforma === 'instagram' ? conta.igUserId : null,
       pageId: conta.pageId,
     },
   });

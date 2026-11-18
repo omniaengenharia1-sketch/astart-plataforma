@@ -91,11 +91,11 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
     }
   }
 
-  async function ligar(conta: ContaDescoberta) {
+  async function ligar(conta: ContaDescoberta, plataforma: 'instagram' | 'facebook') {
     setErro(null);
     setOcupado(true);
     try {
-      await salvarContaSocial(clienteId, conta);
+      await salvarContaSocial(clienteId, conta, plataforma);
       setAchadas(null);
       await ler();
     } catch (x) {
@@ -176,23 +176,64 @@ function ConectarConta({ clienteId, equipe }: { clienteId: string; equipe: boole
         <div className="mt-4 border-t border-linha-fraca pt-3">
           <div className="rotulo">o que o token da agência alcança</div>
           <ul className="mt-2 flex flex-col gap-2">
+            {/* CADA PÁGINA RENDE ATÉ DOIS DESTINOS.
+                Antes rendia um só, o Instagram, e por isso a Página do
+                Facebook nunca foi conectável — o adaptador dela existe desde
+                a 0072 e estava inalcançável pela tela. A dona encontrou
+                assim: "conectei a astart mas la so da a opcao de conectar no
+                insta".
+
+                O "já conectada" é conferido POR PLATAFORMA. A conta antiga
+                comparava só `igUserId`, que é nulo no Facebook: a primeira
+                Página ligada faria toda Página seguinte parecer já ligada. */}
             {achadas.map((a) => {
-              const jaLigada = contas.some((c) => c.igUserId === a.igUserId);
+              const igLigado = a.igUserId !== null
+                && contas.some((c) => c.plataforma === 'instagram' && c.igUserId === a.igUserId);
+              const fbLigado = contas.some(
+                (c) => c.plataforma === 'facebook' && c.pageId === a.pageId,
+              );
               return (
-                <li key={a.pageId} className="flex flex-wrap items-center gap-2.5 text-[13.5px]">
-                  <span className="font-bold">{a.igUsername ? `@${a.igUsername}` : a.pageName}</span>
-                  <span className="rotulo">{a.pageName}</span>
-                  {!a.igUserId ? (
-                    // Página sem Instagram vinculado não publica. Dizer o motivo
-                    // aqui poupa uma viagem ao Business Manager às cegas.
-                    <Marca>sem Instagram vinculado</Marca>
-                  ) : jaLigada ? (
-                    <Marca forte>já conectada</Marca>
-                  ) : (
-                    <Botao tamanho="pequeno" disabled={ocupado} onClick={() => void ligar(a)}>
-                      Ligar a este cliente
-                    </Botao>
-                  )}
+                <li key={a.pageId} className="flex flex-col gap-1.5 border-b border-linha-fraca pb-2.5 last:border-0">
+                  <div className="flex flex-wrap items-center gap-2.5 text-[13.5px]">
+                    <span className="font-bold">{a.pageName}</span>
+                    {a.igUsername && <span className="legenda">@{a.igUsername}</span>}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 text-[13.5px]">
+                    <span className="rotulo w-20 shrink-0">instagram</span>
+                    {!a.igUserId ? (
+                      // Página sem Instagram vinculado não publica no Instagram.
+                      // Dizer o motivo aqui poupa uma viagem ao Business
+                      // Manager às cegas — e não impede ligar a Página.
+                      <Marca>sem Instagram vinculado</Marca>
+                    ) : igLigado ? (
+                      <Marca forte>já conectada</Marca>
+                    ) : (
+                      <Botao
+                        tamanho="pequeno"
+                        disabled={ocupado}
+                        onClick={() => void ligar(a, 'instagram')}
+                      >
+                        Ligar o Instagram
+                      </Botao>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 text-[13.5px]">
+                    <span className="rotulo w-20 shrink-0">facebook</span>
+                    {fbLigado ? (
+                      <Marca forte>já conectada</Marca>
+                    ) : (
+                      <Botao
+                        tamanho="pequeno"
+                        disabled={ocupado}
+                        onClick={() => void ligar(a, 'facebook')}
+                      >
+                        Ligar a Página
+                      </Botao>
+                    )}
+                    <span className="legenda">foto e álbum; vídeo ainda não</span>
+                  </div>
                 </li>
               );
             })}

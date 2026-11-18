@@ -1156,15 +1156,26 @@ export function conferirTokenExemplo(): SaudeDoToken {
   };
 }
 
-export function salvarContaSocialExemplo(clienteId: string, conta: ContaDescoberta): void {
-  if (!conta.igUserId) throw new Error('Esta pagina nao tem conta de Instagram vinculada.');
+export function salvarContaSocialExemplo(
+  clienteId: string,
+  conta: ContaDescoberta,
+  plataforma: 'instagram' | 'facebook' = 'instagram',
+): void {
+  if (plataforma === 'instagram' && !conta.igUserId) {
+    throw new Error('Esta pagina nao tem conta de Instagram vinculada.');
+  }
   const lista = CONTAS_EXEMPLO.get(clienteId) ?? [];
-  if (lista.some((c) => c.igUserId === conta.igUserId)) return;
+  // Comparado POR PLATAFORMA: antes a conta era so o `igUserId`, e no Facebook
+  // ele e nulo — a primeira Pagina ligada faria toda Pagina seguinte parecer
+  // "ja conectada".
+  const ja = lista.some((c) => c.plataforma === plataforma
+    && (plataforma === 'instagram' ? c.igUserId === conta.igUserId : c.pageId === conta.pageId));
+  if (ja) return;
   lista.push({
-    id: `conta-${conta.igUserId}`,
-    plataforma: 'instagram',
-    nome: conta.igUsername ?? conta.pageName,
-    igUserId: conta.igUserId,
+    id: `conta-${plataforma}-${conta.igUserId ?? conta.pageId}`,
+    plataforma,
+    nome: plataforma === 'instagram' ? (conta.igUsername ?? conta.pageName) : conta.pageName,
+    igUserId: plataforma === 'instagram' ? conta.igUserId : null,
     pageId: conta.pageId,
     ativo: true,
     acessoParceiro: 'concedido',
