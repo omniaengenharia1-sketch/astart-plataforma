@@ -30,7 +30,9 @@ import { Botao } from './Botao';
 import { Marca } from './Bloco';
 import { Campo, Entrada } from './Campo';
 import { MidiaDaPecaPainel } from './MidiaDaPeca';
-import { agendarPublicacao, canaisDoCliente, criarPublicacao } from '../dados/api';
+import {
+  agendarPublicacao, apagarPublicacao, canaisDoCliente, cancelarPublicacao, criarPublicacao,
+} from '../dados/api';
 import { FORMATOS, ORDEM_FORMATOS, PEDE } from '../dados/formatos';
 import { midiasDaPeca } from '../dados/pecaMidia';
 import type { Canal, TipoPeca } from '../dados/tipos';
@@ -82,6 +84,9 @@ export function Compositor({
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [recado, setRecado] = useState<string | null>(null);
+  // Apagar nao tem desfazer, entao o primeiro clique so arma. Dois botoes
+  // separados seriam pior: o destrutivo ficaria do lado do comum o tempo todo.
+  const [confirmando, setConfirmando] = useState(false);
   // Agendada: o compositor NAO fecha sozinho.
   //
   // Fechava, e era um bug de experiencia: a pessoa clicava em "Postar agora",
@@ -191,6 +196,46 @@ export function Compositor({
       setRecado('Rascunho criado. Agora o arquivo.');
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui criar.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function apagar() {
+    if (!postId) return;
+    setErro(null);
+    setOcupado(true);
+    try {
+      await apagarPublicacao(postId);
+      // Fecha, nao fica "pronto": nao ha mais peca para ficar olhando.
+      aoSalvar();
+      aoFechar();
+    } catch (x) {
+      // A recusa do banco e a mensagem boa aqui: ela diz POR QUE nao da e o
+      // que fazer no lugar. Trocar por "nao consegui apagar" seria jogar fora
+      // a unica frase util.
+      setErro(x instanceof Error ? x.message : 'Não consegui apagar.');
+      setConfirmando(false);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function cancelar() {
+    if (!postId) return;
+    setErro(null);
+    setOcupado(true);
+    try {
+      const r = await cancelarPublicacao(postId);
+      setRecado(
+        r.parados > 0
+          ? 'Parou de tentar. A peça continua aqui, com o histórico.'
+          : 'Não havia nada na fila para parar.',
+      );
+      setConfirmando(false);
+      aoSalvar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui cancelar.');
     } finally {
       setOcupado(false);
     }
@@ -451,6 +496,48 @@ export function Compositor({
             <Botao disabled={ocupado || faltaMidia > 0} onClick={() => void agendar(true)}>
               Postar agora
             </Botao>
+            {/* APAGAR.
+                Ate a 0073 nao existia: dava para criar peca e nunca desfazer,
+                e a dona ficou com tres rascunhos presos na conta. Fica por
+                ultimo e em texto, longe do polegar que vai no "Agendar".
+
+                O banco recusa apagar peca que ja publicou ou que ja tem log
+                de publicacao — nesse caso a mensagem dele manda cancelar, e o
+                botao de cancelar aparece aqui ao lado. */}
+            {!confirmando ? (
+              <Botao
+                variante="texto"
+                tamanho="pequeno"
+                className="ml-auto"
+                disabled={ocupado}
+                onClick={() => { setConfirmando(true); setErro(null); setRecado(null); }}
+              >
+                Apagar
+              </Botao>
+            ) : (
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <span className="legenda">apagar não tem desfazer.</span>
+                <Botao
+                  variante="primario"
+                  tamanho="pequeno"
+                  disabled={ocupado}
+                  onClick={() => void apagar()}
+                >
+                  {ocupado ? 'Apagando…' : 'Apagar mesmo'}
+                </Botao>
+                <Botao
+                  variante="texto"
+                  tamanho="pequeno"
+                  disabled={ocupado}
+                  onClick={() => void cancelar()}
+                >
+                  Só parar de tentar
+                </Botao>
+                <Botao variante="texto" tamanho="pequeno" onClick={() => setConfirmando(false)}>
+                  Deixa
+                </Botao>
+              </div>
+            )}
             {faltaMidia > 0 && (
               <span className="legenda">
                 falta {faltaMidia} arquivo{faltaMidia > 1 ? 's' : ''} para agendar

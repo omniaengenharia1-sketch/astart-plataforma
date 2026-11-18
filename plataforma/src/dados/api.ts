@@ -18,6 +18,7 @@ import {
   canaisDoClienteExemplo,
   conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
   conferirTokenExemplo,
+  apagarPublicacaoExemplo, cancelarPublicacaoExemplo,
   criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
   desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
@@ -666,6 +667,49 @@ export async function agendarPublicacao(
   const { data, error } = await sb.rpc('agendar_publicacao', { p_post: id, p_quando: quando });
   if (error) throw new FalhaDados(error.message);
   return data as { quando: string; agora: boolean };
+}
+
+/**
+ * Apaga a peça e os arquivos dela.
+ *
+ * O banco devolve os caminhos no Storage e quem apaga os arquivos é ESTA
+ * função, com a sessão de quem clicou — o mesmo desenho da exclusão de
+ * galeria (0058). E aqui não é só estilo: o varredor de órfãos (0062) olha
+ * só o bucket `galerias`, então arquivo de peça que ficasse para trás
+ * ficaria para sempre.
+ *
+ * A remoção dos arquivos vem DEPOIS do banco e não derruba a operação se
+ * falhar: a peça já não existe, e um arquivo órfão é um incômodo, não um
+ * defeito que valha desfazer um apagar que a pessoa pediu.
+ */
+export async function apagarPublicacao(id: string): Promise<string> {
+  if (!sb) return apagarPublicacaoExemplo(id);
+  const { data, error } = await sb.rpc('apagar_publicacao', { p_post: id });
+  if (error) throw new FalhaDados(error.message);
+
+  const r = data as { titulo: string; caminhos: string[] };
+  if (r.caminhos.length > 0) {
+    try {
+      await sb.storage.from('midias-posts').remove(r.caminhos);
+    } catch {
+      /* ver o comentário acima: órfão é incômodo, não motivo de erro na tela */
+    }
+  }
+  return r.titulo;
+}
+
+/**
+ * Para de tentar publicar, sem apagar nada.
+ *
+ * É a saída para a peça que já tentou: o log de publicação é permanente por
+ * regra do banco (append-only desde a 0004), então ela não pode ser apagada —
+ * mas pode sair da fila.
+ */
+export async function cancelarPublicacao(id: string): Promise<{ parados: number }> {
+  if (!sb) return cancelarPublicacaoExemplo(id);
+  const { data, error } = await sb.rpc('cancelar_publicacao', { p_post: id });
+  if (error) throw new FalhaDados(error.message);
+  return data as { parados: number };
 }
 
 export async function publicacao(id: string): Promise<Publicacao | null> {

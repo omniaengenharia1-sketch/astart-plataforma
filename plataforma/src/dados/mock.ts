@@ -987,6 +987,46 @@ export function publicacaoExemplo(id: string): Publicacao | null {
  * discordarem, o roteiro acusa. Sem elas, a demonstracao deixaria agendar post
  * sem imagem — ensinando o contrario do que a plataforma faz.
  */
+/**
+ * Apagar peca, no modo exemplo — com as MESMAS recusas do banco.
+ *
+ * Se aqui fosse mais permissivo, o roteiro de navegador aprovaria um caminho
+ * que a producao reprova. E a licao que a `pecaMidia` ja pagou.
+ */
+export function apagarPublicacaoExemplo(id: string): string {
+  const pub = PUBLICACOES.get(id);
+  if (!pub) throw new Error('Peca nao encontrada.');
+  if (pub.status === 'publicado' || pub.status === 'publicado_parcial') {
+    throw new Error(
+      'Esta peca ja foi publicada — apagar aqui nao tira o post do ar, so apaga o ' +
+        'registro de que a agencia publicou. Se o post precisa sair, apague na conta do cliente.',
+    );
+  }
+  if (pub.status === 'publicando') {
+    throw new Error(
+      'Esta peca esta publicando agora e ainda nao se sabe se saiu. Espere o proximo ' +
+        'ciclo decidir, e apague depois se nao tiver ido ao ar.',
+    );
+  }
+  if (pub.status === 'falhou' || pub.status === 'cancelado') {
+    throw new Error(
+      'Esta peca ja tentou publicar, e o registro dessas tentativas nao pode ser apagado — ' +
+        'o log de publicacao e permanente de proposito. Use cancelar: ela para de tentar e ' +
+        'sai da fila, e o historico fica.',
+    );
+  }
+  PUBLICACOES.delete(id);
+  return pub.titulo;
+}
+
+export function cancelarPublicacaoExemplo(id: string): { parados: number } {
+  const pub = PUBLICACOES.get(id);
+  if (!pub) throw new Error('Peca nao encontrada.');
+  if (pub.status === 'publicado') return { parados: 0 };
+  pub.status = 'cancelado';
+  return { parados: 1 };
+}
+
 export function agendarPublicacaoExemplo(
   id: string,
   quando: string | null,

@@ -200,6 +200,69 @@ for (const claro of [false, true]) {
   await c2.close();
 }
 
+// ---------------------------------------------------------------------------
+// APAGAR A PECA (0073)
+//
+// A dona: "essas pecas pendentes eu nao consegui apaga". Ela nao conseguia
+// porque nao existia — nem funcao no banco, nem botao aqui. Entao o que este
+// bloco cobra nao e um detalhe de interface: e o buraco que ela encontrou.
+//
+// Tres coisas, e a segunda e a que importa:
+//   1. o botao existe e nao apaga no primeiro clique (nao tem desfazer);
+//   2. depois de confirmar, a peca SOME DA LISTA — o que prova que o
+//      compositor fechou E que o calendario atras recarregou. Conferir so o
+//      painel diria "apagou" sem a tela ter mudado;
+//   3. o atalho "so parar de tentar" esta a mao, porque a recusa do banco
+//      para peca com historico manda usar ele.
+// ---------------------------------------------------------------------------
+// O compositor ficou ABERTO com a confirmacao do "Postar agora" — e de
+// proposito, o bloco acima cobra isso. Entao fecha antes, senao o formulario
+// novo nao existe e o `fill` espera 30s por um campo que nao esta na tela.
+await p.getByRole('button', { name: 'Fechar' }).first().click();
+await p.waitForTimeout(500);
+await p.getByRole('button', { name: 'Nova publicação' }).click();
+await p.getByText('nova publicação').first().waitFor({ timeout: 10000 });
+await p.getByRole('button', { name: 'Carrossel' }).click();
+await p.getByLabel('Nome interno').fill('Peca para apagar');
+await p.getByRole('button', { name: 'Criar rascunho' }).click();
+await p.waitForTimeout(900);
+
+const apagar = p.getByRole('button', { name: 'Apagar', exact: true });
+cobrar(await apagar.count() > 0, 'o compositor oferece apagar a peca');
+
+await apagar.click();
+await p.waitForTimeout(300);
+cobrar(
+  /apagar não tem desfazer/i.test(await p.locator('body').innerText()),
+  'o primeiro clique so avisa, em vez de apagar na hora',
+);
+cobrar(
+  await p.getByRole('button', { name: 'Só parar de tentar' }).count() > 0,
+  'e oferece parar de tentar ao lado — a saida para peca que ja tem historico',
+);
+
+await p.getByRole('button', { name: 'Apagar mesmo' }).click();
+await p.waitForTimeout(1200);
+
+// O QUE SE CONFERE AQUI, E POR QUE NAO E O TEXTO DA PAGINA.
+//
+// A primeira versao disto cobrava que o nome da peca sumisse do `innerText`.
+// Sabotei o codigo — tirei o `aoFechar()` e o `aoSalvar()`, deixando o
+// compositor aberto depois de apagar — e o teste PASSOU assim mesmo: o nome
+// so existia dentro de um `input`, e valor de campo nao entra no innerText.
+// A assercao dava certo pelo motivo errado, que e pior que nao existir.
+//
+// O que de fato muda quando o codigo esta certo e o compositor FECHAR. Entao
+// e isso que se mede: o formulario tem de deixar de existir.
+cobrar(
+  (await p.getByLabel('Nome interno').count()) === 0,
+  'depois de confirmar, o compositor FECHA — e o sinal de que apagou mesmo',
+);
+cobrar(
+  (await p.getByRole('button', { name: 'Nova publicação' }).count()) > 0,
+  'e a tela volta a oferecer criar outra peca',
+);
+
 cobrar(problemas.length === 0, `nenhum erro de pagina (${problemas.length})`);
 if (problemas.length) console.log(problemas.map((x) => `    ${x}`).join('\n'));
 
