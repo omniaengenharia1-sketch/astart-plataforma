@@ -22,18 +22,26 @@ e não é problema; o caro é submeter com material incompleto e perder o ciclo.
 
 ## 1. O que já está pronto
 
-> **O domínio foi decidido, e isto tem de ser feito ANTES de submeter.** A
-> plataforma vai para um subdomínio de `astartstudio.com.br`, que a Astart já
-> tem. Os três endereços abaixo entram no formulário do App Review, e trocar o
-> domínio depois de aprovado obriga a atualizar o app na Meta — em alguns casos,
-> a passar por análise de novo. Então o domínio primeiro, as URLs depois, a
-> submissão por último.
+> **O DOMÍNIO JÁ ESTÁ NO AR, e eu também não tinha conferido.** A plataforma
+> responde em **`https://app.astartstudio.com.br`**, servida pelo Cloudflare, e
+> as três páginas públicas chegam lá com texto, sem depender de JavaScript —
+> medido em 18/11/2026 com `curl` puro, que é como a checagem automática da
+> Meta confere.
+>
+> Eu listei "apontar o subdomínio" como pendência e como o passo 1 do dia. Era
+> a segunda tarefa seguida que eu mandei fazer sem olhar se já estava feita — e
+> esta, ao contrário da Business Verification, eu PODIA ter conferido daqui: é
+> uma consulta de DNS de cinco segundos, com ferramentas que eu já tinha.
+>
+> Fica valendo a regra, para o dia em que o endereço mudar: trocar o domínio
+> depois de aprovado obriga a atualizar o app na Meta e, em alguns casos, a
+> passar por análise de novo.
 
-| item | onde (hoje, no endereço provisório) |
+| item | onde (endereço definitivo, no ar e conferido) |
 |---|---|
-| Política de privacidade | `https://astart-plataforma.pages.dev/privacidade` |
-| Termos de uso | `https://astart-plataforma.pages.dev/termos` |
-| Instruções de exclusão de dados | `https://astart-plataforma.pages.dev/exclusao-de-dados` |
+| Política de privacidade | `https://app.astartstudio.com.br/privacidade` ✅ |
+| Termos de uso | `https://app.astartstudio.com.br/termos` ✅ |
+| Instruções de exclusão de dados | `https://app.astartstudio.com.br/exclusao-de-dados` ✅ |
 | Fluxo de publicação funcionando | compositor → agendar → worker publica |
 | Fluxo de conexão de conta | botão "Conectar conta", no calendário |
 
@@ -343,7 +351,9 @@ sem corte.
 
 Roteiro, em uma gravação só, sem edição:
 
-1. Abrir `astart-plataforma.pages.dev`, fazer login com a conta de teste.
+1. Abrir `app.astartstudio.com.br`, fazer login com a conta de teste.
+   (O endereço do vídeo tem de ser o MESMO que está no formulário. Gravar no
+   `pages.dev` e submeter o outro é pedir para o revisor perguntar por quê.)
 2. Ir no cliente → aba **Calendário**.
 3. Clicar em **Conectar conta**, mostrar a lista que a Meta devolve, e ligar
    uma conta. *(Este trecho justifica `pages_show_list` e `business_management`.)*
@@ -443,9 +453,9 @@ Em *Facebook Login for Business → Configurações*:
    está ligado A ESSE portfólio — a verificação é do portfólio, não da conta.
 2. **Hoje:** conferir as três páginas públicas e me dizer se o texto está certo.
    O e-mail de contato já foi confirmado: `projetos@astartstudio.com.br`.
-3. **Antes de qualquer submissão:** apontar o subdomínio de `astartstudio.com.br`
-   para a plataforma, e trocar as três URLs. Fazer isso depois custa uma
-   atualização no app da Meta e, no pior caso, outra análise.
+3. ~~**Antes de qualquer submissão:** apontar o subdomínio.~~ **JÁ ESTÁ**, em
+   `app.astartstudio.com.br`, com as três páginas conferidas por `curl`. O que
+   resta é copiar esses três endereços para *Configurações → Básico* do app.
 4. ~~**Antes de gravar o vídeo:** escrever o adaptador do Facebook.~~
    **FEITO (0072).** A Página publica **foto e álbum de fotos**. Reel e story
    da Página continuam recusados, com o motivo na tela: vídeo sobe por

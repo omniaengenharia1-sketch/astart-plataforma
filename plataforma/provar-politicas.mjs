@@ -21,7 +21,18 @@
 // Roda sozinho (não entra no `rodar-telas.sh`): depende de rede e de deploy, e
 // misturar os dois faria uma falha de internet parecer defeito de tela.
 
-const BASE = (process.env['BASE'] ?? 'https://astart-plataforma.pages.dev').replace(/\/$/, '');
+// O ENDERECO PADRAO E O QUE VAI NO FORMULARIO DA META, nao o do Pages.
+//
+// Estava apontando para `astart-plataforma.pages.dev`, que e o endereco
+// interno do Cloudflare. O revisor nao abre esse: ele abre o que esta escrito
+// nas Configuracoes do app. Conferir um endereco e submeter outro e a mesma
+// classe de erro que este projeto ja pagou varias vezes — verificar uma coisa
+// e afirmar outra.
+//
+// O `app.astartstudio.com.br` ja existe, ja serve a plataforma e ja entrega as
+// tres paginas com texto; conferido em 18/11/2026. O de `pages.dev` continua
+// funcionando e da para conferir com BASE=... quando interessar.
+const BASE = (process.env['BASE'] ?? 'https://app.astartstudio.com.br').replace(/\/$/, '');
 
 // O endereço para onde o titular dos dados — e o revisor da Meta — escrevem.
 //
