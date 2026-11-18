@@ -19,6 +19,8 @@ import {
   conectoresExemplo, contasDoClienteExemplo, descobrirContasExemplo, salvarContaSocialExemplo,
   conferirTokenExemplo,
   apagarPublicacaoExemplo, cancelarPublicacaoExemplo,
+  servicosParaAdicionarExemplo, alterarServicoExemplo, adicionarServicoExemplo,
+  mudarEstadoDoServicoExemplo, encerrarServicoExemplo, removerServicoExemplo,
   criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
   desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
@@ -31,6 +33,8 @@ import {
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
+  ServicoDisponivel,
+  ContratoEditado,
   AgendaComercial,
   Album, AmbientesDoCliente, Canal, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao,
@@ -814,6 +818,97 @@ export async function salvarContaSocial(
     },
   });
   if (error) throw new FalhaDados(await mensagemDaFuncao(error, 'Nao consegui salvar a conta.'));
+}
+
+// ---------------------------------------------------------------------------
+// O CONTRATO DE UM CLIENTE QUE JÁ EXISTE
+//
+// O banco sabe fazer isto desde a 0052 — "o contrato de um cliente que JÁ
+// EXISTE" é o título daquela migration. Nunca houve tela. A dona pediu em voz
+// alta ("preciso ficar liberada para alterar o valor e informações de clientes
+// cadastrados"), eu construí o banco, escrevi os testes, e parei ali.
+//
+// Foi por isso que o valor da Publika teve de ser corrigido por SQL.
+// ---------------------------------------------------------------------------
+
+export async function servicosParaAdicionar(clienteId: string): Promise<ServicoDisponivel[]> {
+  if (!sb) return servicosParaAdicionarExemplo(clienteId);
+  const { data, error } = await sb.rpc('servicos_para_adicionar', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(`Nao consegui ler os servicos: ${error.message}`);
+  return (data as ServicoDisponivel[] | null) ?? [];
+}
+
+/**
+ * Muda o que já está contratado. Campo ausente = não mexe.
+ *
+ * `responsaveis` é a lista FINAL, não um acréscimo: mandar `[]` tira todo
+ * mundo. É o mesmo contrato da `definir_responsaveis_do_servico` (0070), e a
+ * razão é a mesma — a tela manda o que ficou marcado e não precisa saber o
+ * que mudou.
+ */
+export async function alterarServico(id: string, d: ContratoEditado): Promise<void> {
+  if (!sb) return alterarServicoExemplo(id, d);
+  const { error } = await sb.rpc('alterar_servico_do_cliente', {
+    p_cliente_servico: id,
+    p_valor_centavos: d.valorCentavos ?? null,
+    p_dia_vencimento: d.diaVencimento ?? null,
+    p_parcelas: d.parcelas ?? null,
+    p_entrega_em: d.entregaEm ?? null,
+    p_data_evento: d.dataEvento ?? null,
+    p_responsaveis: d.responsaveis ?? null,
+    p_observacao: d.observacao ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function adicionarServico(
+  clienteId: string,
+  d: ContratoEditado & { servico: string; formato: string; inicio: string },
+): Promise<void> {
+  if (!sb) return adicionarServicoExemplo(clienteId, d);
+  const { error } = await sb.rpc('adicionar_servico_ao_cliente', {
+    p_cliente: clienteId,
+    p_servico: d.servico,
+    p_formato: d.formato,
+    p_valor_centavos: d.valorCentavos ?? null,
+    p_dia_vencimento: d.diaVencimento ?? null,
+    p_parcelas: d.parcelas ?? null,
+    p_inicio: d.inicio,
+    p_entrega_em: d.entregaEm ?? null,
+    p_data_evento: d.dataEvento ?? null,
+    p_responsaveis: d.responsaveis ?? null,
+    p_observacao: d.observacao ?? null,
+    p_modulos: null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function mudarEstadoDoServico(
+  id: string,
+  estado: 'ativo' | 'pausado',
+): Promise<void> {
+  if (!sb) return mudarEstadoDoServicoExemplo(id, estado);
+  const { error } = await sb.rpc('mudar_estado_do_servico', {
+    p_cliente_servico: id,
+    p_estado: estado,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/** Encerrar guarda o histórico. Remover é para engano de cadastro. */
+export async function encerrarServico(id: string, fim: string | null): Promise<void> {
+  if (!sb) return encerrarServicoExemplo(id, fim);
+  const { error } = await sb.rpc('encerrar_servico_do_cliente', {
+    p_cliente_servico: id,
+    p_fim: fim,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function removerServico(id: string): Promise<void> {
+  if (!sb) return removerServicoExemplo(id);
+  const { error } = await sb.rpc('remover_servico_do_cliente', { p_cliente_servico: id });
+  if (error) throw new FalhaDados(error.message);
 }
 
 export async function conectores(): Promise<Conector[] | null> {

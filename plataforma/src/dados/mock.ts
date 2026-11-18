@@ -8,6 +8,8 @@
 // tem a sua propria verdade engana quem esta avaliando o fluxo.
 // =============================================================================
 import type {
+  ServicoDisponivel,
+  ContratoEditado,
   AgendaComercial,
   Canal, Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao, Publicacao, PublicacaoNova,
@@ -168,6 +170,11 @@ function srv(
     diaVencimento: formato === 'recorrente' ? 10 : null,
     parcelas: formato === 'recorrente' ? null : 1,
     inicio: emDias(-120),
+    // Os quatro da 0075. Sem eles o formulario de editar abriria vazio.
+    dataEvento: null,
+    observacao: null,
+    responsaveisIds: [],
+    fim: null,
     entregaEm: null,
     ...resto,
   };
@@ -1154,6 +1161,117 @@ export function conferirTokenExemplo(): SaudeDoToken {
     diagnostico: 'Token de usuário do sistema, válido e sem data de expiração. É o que se quer.',
     oQueFazer: null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// O contrato, no modo exemplo — com as MESMAS recusas do banco.
+//
+// Se aqui fosse mais permissivo, o roteiro de navegador aprovaria caminho que
+// a producao reprova. E a licao que a `pecaMidia` ja pagou.
+// ---------------------------------------------------------------------------
+function nomeDoPerfil(userId: string): string {
+  return PESSOAS.find((p) => p.userId === userId)?.nome ?? "—";
+}
+
+function acharServico(id: string): ServicoContratado | undefined {
+  for (const c of CLIENTES) {
+    const s = c.servicos.find((x) => x.id === id);
+    if (s) return s;
+  }
+  return undefined;
+}
+
+export function servicosParaAdicionarExemplo(clienteId: string): ServicoDisponivel[] {
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  const ja = new Set((c?.servicos ?? []).map((s) => s.servico));
+  return [
+    { chave: 'gestao_digital', nome: 'Gestão digital', formatos: ['recorrente'] },
+    { chave: 'audiovisual', nome: 'Audiovisual', formatos: ['pontual', 'recorrente'] },
+    { chave: 'trafego', nome: 'Tráfego pago', formatos: ['recorrente'] },
+    { chave: 'site', nome: 'Site', formatos: ['pontual'] },
+  ].filter((s) => !ja.has(s.chave as ServicoContratado['servico']));
+}
+
+export function alterarServicoExemplo(id: string, d: ContratoEditado): void {
+  const s = acharServico(id);
+  if (!s) throw new Error('Servico nao encontrado.');
+  if (s.status === 'encerrado') {
+    throw new Error('Servico encerrado nao se altera. Reative antes, se for o caso.');
+  }
+  if (d.valorCentavos != null && d.valorCentavos < 0) {
+    throw new Error('O valor nao pode ser negativo.');
+  }
+  if (d.diaVencimento != null && (d.diaVencimento < 1 || d.diaVencimento > 31)) {
+    throw new Error('O dia de vencimento vai de 1 a 31.');
+  }
+  if (d.valorCentavos != null) s.valorCentavos = d.valorCentavos;
+  if (d.diaVencimento != null) s.diaVencimento = d.diaVencimento;
+  if (d.parcelas != null) s.parcelas = d.parcelas;
+  if (d.entregaEm !== undefined) s.entregaEm = d.entregaEm;
+  if (d.dataEvento !== undefined) s.dataEvento = d.dataEvento;
+  if (d.observacao !== undefined) s.observacao = d.observacao;
+  if (d.responsaveis) {
+    s.responsaveisIds = d.responsaveis;
+    s.responsaveis = d.responsaveis.map((id2: string) => nomeDoPerfil(id2));
+  }
+}
+
+export function adicionarServicoExemplo(
+  clienteId: string,
+  d: ContratoEditado & { servico: string; formato: string; inicio: string },
+): void {
+  const c = CLIENTES.find((x) => x.cliente.id === clienteId);
+  if (!c) throw new Error('Cliente nao encontrado.');
+  if (c.servicos.some((s) => s.servico === d.servico && s.status !== 'encerrado')) {
+    throw new Error('Este servico ja esta contratado por este cliente.');
+  }
+  c.servicos.push({
+    id: `cs-novo-${d.servico}-${c.servicos.length}`,
+    clienteId,
+    servico: d.servico as ServicoContratado['servico'],
+    servicoNome: servicosParaAdicionarExemplo(clienteId).find((s) => s.chave === d.servico)?.nome
+      ?? d.servico,
+    formato: d.formato as ServicoContratado['formato'],
+    status: 'ativo',
+    responsaveis: (d.responsaveis ?? []).map((id2: string) => nomeDoPerfil(id2)),
+    responsaveisIds: d.responsaveis ?? [],
+    valorCentavos: d.valorCentavos ?? null,
+    diaVencimento: d.diaVencimento ?? null,
+    parcelas: d.parcelas ?? null,
+    inicio: d.inicio,
+    entregaEm: d.entregaEm ?? null,
+    dataEvento: d.dataEvento ?? null,
+    observacao: d.observacao ?? null,
+    fim: null,
+  });
+}
+
+export function mudarEstadoDoServicoExemplo(id: string, estado: 'ativo' | 'pausado'): void {
+  const s = acharServico(id);
+  if (!s) throw new Error('Servico nao encontrado.');
+  if (s.status === 'encerrado') throw new Error('Servico encerrado nao muda de estado.');
+  s.status = estado;
+}
+
+export function encerrarServicoExemplo(id: string, fim: string | null): void {
+  const s = acharServico(id);
+  if (!s) throw new Error('Servico nao encontrado.');
+  s.status = 'encerrado';
+  s.fim = fim ?? new Date().toISOString().slice(0, 10);
+}
+
+export function removerServicoExemplo(id: string): void {
+  const s = acharServico(id);
+  if (!s) throw new Error('Servico nao encontrado.');
+  // O banco so deixa remover o que nunca andou. Aqui a mesma recusa.
+  if (s.status !== 'ativo' || s.valorCentavos === null) {
+    throw new Error(
+      'Este servico ja tem historico. Encerre em vez de remover — remover apaga o passado.',
+    );
+  }
+  for (const c of CLIENTES) {
+    c.servicos = c.servicos.filter((x) => x.id !== id);
+  }
 }
 
 export function salvarContaSocialExemplo(

@@ -78,6 +78,35 @@ export interface ServicoContratado {
   parcelas: number | null;
   inicio: string;
   entregaEm: string | null;
+  /**
+   * Os três abaixo chegaram com a 0075, quando a tela de EDITAR nasceu.
+   *
+   * Sem eles o formulário abriria vazio e salvaria por cima do que estava
+   * valendo. Os ids de quem cuida são ids, e não nomes, porque é o que a
+   * `alterar_servico_do_cliente` recebe — e porque duas pessoas podem se
+   * chamar igual.
+   */
+  dataEvento: string | null;
+  observacao: string | null;
+  responsaveisIds: string[];
+  fim: string | null;
+}
+
+/** O que a edição de um contrato manda de volta. Nulo = não mexe. */
+export interface ContratoEditado {
+  valorCentavos?: number | null;
+  diaVencimento?: number | null;
+  parcelas?: number | null;
+  entregaEm?: string | null;
+  dataEvento?: string | null;
+  responsaveis?: string[];
+  observacao?: string | null;
+}
+
+export interface ServicoDisponivel {
+  chave: string;
+  nome: string;
+  formatos: string[];
 }
 
 export interface ItemAprovacao {

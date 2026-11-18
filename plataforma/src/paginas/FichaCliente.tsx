@@ -1,3 +1,4 @@
+import { ContratoDoCliente } from '../componentes/ContratoDoCliente';
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Link, useParams } from 'react-router-dom';
 import { Bloco, Fita, Marca } from '../componentes/Bloco';
@@ -11,8 +12,8 @@ import {
 } from '../dados/api';
 import { souAdmin, veDinheiro } from '../permissao';
 import { useSessao } from '../sessao';
-import { diaMes, haQuanto, reais } from '../formato';
-import { FORMATO, MODULO, PAPEL_CLIENTE, STATUS_SERVICO, TIPO_ITEM } from '../rotulos';
+import { haQuanto, reais } from '../formato';
+import { MODULO, PAPEL_CLIENTE, TIPO_ITEM } from '../rotulos';
 import { Ambientes } from './Ambientes';
 import { Calendario } from './Calendario';
 import { Campanhas } from './Campanhas';
@@ -23,7 +24,7 @@ import { Galeria } from './Galeria';
 import { Grid } from './Grid';
 import { Projeto } from './Projeto';
 import type {
-  ChaveModulo, FichaCliente as Ficha, PapelCliente, ServicoContratado,
+  ChaveModulo, FichaCliente as Ficha, PapelCliente,
 } from '../dados/tipos';
 
 const PAPEIS_CLIENTE: { valor: PapelCliente; rotulo: string; explica: string }[] = [
@@ -32,22 +33,6 @@ const PAPEIS_CLIENTE: { valor: PapelCliente; rotulo: string; explica: string }[]
   { valor: 'leitura', rotulo: 'Só leitura', explica: 'acompanha, não responde' },
 ];
 
-/**
- * Como o contrato é lido numa linha: formato manda no que faz sentido mostrar.
- *
- * Nulo quando quem está lendo não cuida do dinheiro — e aí a linha mostra o
- * serviço, o responsável e o prazo, que é o que ela usa para trabalhar.
- */
-function comoCobra(s: ServicoContratado): string | null {
-  if (s.valorCentavos === null) return null;
-  if (s.formato === 'recorrente') {
-    return s.diaVencimento ? `${reais(s.valorCentavos)} · todo dia ${s.diaVencimento}` : reais(s.valorCentavos);
-  }
-  if (s.parcelas && s.parcelas > 1) {
-    return `${reais(s.valorCentavos)} · ${s.parcelas}x`;
-  }
-  return `${reais(s.valorCentavos)} · à vista`;
-}
 
 export function FichaCliente() {
   const params = useParams();
@@ -349,31 +334,20 @@ export function FichaCliente() {
       <div className="mt-9 grid items-start gap-9 lg:grid-cols-[1fr_340px]">
         <div>
           <Fita>Contrato</Fita>
-          {ficha.servicos.length === 0 ? (
+          {/* ATÉ HOJE ISTO ERA SÓ LEITURA.
+              A dona: "preciso ficar liberada para alterar o valor e
+              informações de clientes cadastrados". O banco sabia fazer desde
+              a 0052 — o título daquela migration é "o contrato de um cliente
+              que JÁ EXISTE" — e nunca teve tela. Corrigir o valor da Publika
+              precisou de SQL na produção por falta deste botão. */}
+          {ficha.servicos.length === 0 && (
             <Vazio titulo="Sem contrato." explica="Adicione um serviço para liberar as abas." />
-          ) : (
-            <ul className="border-t border-linha-fraca">
-              {ficha.servicos.map((s) => (
-                <li
-                  key={s.id}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
-                >
-         <span className="w-44 shrink-0 font-bold">{s.servicoNome}</span>
-                  <Marca>{FORMATO[s.formato]}</Marca>
-                  {s.status !== 'ativo' && <Marca forte>{STATUS_SERVICO[s.status]}</Marca>}
-                  {/* `numeros` so no valor: ele alinha as casas entre linhas.
-                      Aplicado a frase inteira, deixava "todo dia 10" com cara
-                      de codigo. E o nome de quem cuida e nome proprio, nao
-                      etiqueta. */}
-                  <span className="legenda min-w-48 flex-1 text-[13px]">{comoCobra(s) ?? ''}</span>
-                  <span className="legenda w-28 shrink-0">
-                    {s.responsaveis.length ? s.responsaveis.join(', ') : 'sem responsável'}
-                  </span>
-                  {s.entregaEm && <span className="rotulo w-24 shrink-0">entrega {diaMes(s.entregaEm)}</span>}
-                </li>
-              ))}
-            </ul>
           )}
+          <ContratoDoCliente
+            clienteId={ficha.cliente.id}
+            servicos={ficha.servicos}
+            aoMudar={carregar}
+          />
 
           <div className="mt-9" />
           <Fita>Precisa de você</Fita>
