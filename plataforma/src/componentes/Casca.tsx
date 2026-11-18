@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { AvisoDeVersao } from './AvisoDeVersao';
 import { useSessao } from '../sessao';
 import { veDinheiro } from '../permissao';
 import { Logo } from './Marca';
@@ -171,6 +172,7 @@ export function CascaEquipe({ children }: { children: ReactNode }) {
       <PularParaConteudo />
       <Nameplate marca={null} sub="plataforma interna" quem={quem} />
       <Menu itens={MENU_EQUIPE} />
+      <AvisoDeVersao />
       <AvisoExemplo />
       {/* A chave e a rota: sem ela a animacao de entrada roda uma vez so, na
           primeira tela, e as outras aparecem secas. */}
@@ -217,6 +219,7 @@ export function CascaCliente({
       <PularParaConteudo />
       <Nameplate marca={nome} sub="por" quem={quem} />
       <Menu itens={itens} modulos={modulos} />
+      <AvisoDeVersao />
       <AvisoExemplo />
       <main id="conteudo" key={pathname} className="entra" tabIndex={-1}>
         {children}
