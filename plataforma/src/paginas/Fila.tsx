@@ -24,7 +24,7 @@ function Peca({ p }: { p: PecaNaFila }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Link
               to={`/clientes/${p.clienteId}`}
-              className="risca font-bold uppercase hover:text-pink-texto"
+       className="risca font-bold hover:text-pink-texto"
             >
               {p.clienteNome}
             </Link>

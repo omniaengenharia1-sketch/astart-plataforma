@@ -103,7 +103,7 @@ export function ContaDoCliente({ clienteId, equipe }: { clienteId: string; equip
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="font-bold uppercase">{l.descricao}</div>
+             <div className="font-bold">{l.descricao}</div>
                           <div className="rotulo mt-1">
                             vence {diaMes(l.vencimento)} · {nome[l.situacao]}
                           </div>

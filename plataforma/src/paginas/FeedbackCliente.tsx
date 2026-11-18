@@ -88,7 +88,7 @@ export function FeedbackCliente({ clienteId, equipe }: { clienteId: string; equi
       </div>
 
       {obrigado && (
-        <p role="status" className="rotulo-forte mt-6 text-pink-texto">
+        <p role="status" className="aviso mt-6 text-pink-texto">
           nota registrada · obrigado
         </p>
       )}

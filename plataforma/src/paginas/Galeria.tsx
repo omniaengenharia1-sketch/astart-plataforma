@@ -206,7 +206,7 @@ function Cartao({
                       <img src={i.miniatura} alt={i.nome} loading="lazy" className="size-full object-cover" />
                     ) : (
                       <span className="aurora grid size-full place-items-center px-1 text-center">
-                        <span className="rotulo truncate">{i.nome}</span>
+                        <span className="legenda truncate">{i.nome}</span>
                       </span>
                     )}
                     {i.tipo === 'video' && (
@@ -669,7 +669,7 @@ export function Galeria({
                   )}
 
                   {recado && (
-                    <p role="status" className="rotulo-forte mt-4">
+                    <p role="status" className="aviso mt-4">
                       {recado}
                     </p>
                   )}

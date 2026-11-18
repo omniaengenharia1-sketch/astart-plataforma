@@ -25,7 +25,7 @@ function Quadro({ i, equipe }: { i: ItemDoGrid; equipe: boolean }) {
         // Sem capa a peça continua existindo: mostra o título, não um ícone de
         // imagem partida.
         <div className="flex h-full w-full items-center justify-center p-3">
-          <span className="rotulo text-center">{i.titulo}</span>
+          <span className="legenda text-center">{i.titulo}</span>
         </div>
       )}
 

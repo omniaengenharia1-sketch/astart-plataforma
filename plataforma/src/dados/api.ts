@@ -21,6 +21,7 @@ import {
   criarPublicacaoExemplo, atualizarPublicacaoExemplo, agendarPublicacaoExemplo, publicacaoExemplo,
   desativarClienteExemplo, enviosExemplo, revogarLinkAprovacaoExemplo,
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
+  agendaComercialExemplo, criarLeadExemplo, registrarInteracaoExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
   revogarLinkExemplo,
@@ -29,6 +30,7 @@ import {
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
 } from './mock';
 import type {
+  AgendaComercial,
   Album, AmbientesDoCliente, Canal, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao,
   Publicacao, PublicacaoNova,
@@ -1803,4 +1805,59 @@ export async function tirarAnexoDaTarefa(arquivoId: string): Promise<void> {
   if (error) throw new FalhaDados(error.message);
   const caminho = data as string | null;
   if (caminho) await sb.storage.from(BALDE_TAREFAS).remove([caminho]);
+}
+
+
+// ---------------------------------------------------------------------------
+// O comercial que deixa trabalhar (0071)
+//
+// A dona: "eu nao consigo mexer em nada. (...) ela tem que ter um fundamento,
+// um objetivo". O objetivo e responder "com quem eu preciso falar hoje, e o
+// que eu combinei da ultima vez" — e tudo aqui serve a essa pergunta.
+// ---------------------------------------------------------------------------
+
+/** O que vence hoje, o que atrasou, e quem ficou SEM proxima data. */
+export async function agendaComercial(): Promise<AgendaComercial> {
+  if (!sb) return agendaComercialExemplo();
+  const { data, error } = await sb.rpc('agenda_comercial');
+  if (error) throw new FalhaDados(`Não consegui abrir a agenda: ${error.message}`);
+  return exija(data as AgendaComercial | null, 'A agenda do comercial');
+}
+
+/** Pede só o nome. Formulário de dez campos é formulário que não se preenche. */
+export async function criarLead(d: {
+  nome: string; empresa?: string | null; whatsapp?: string | null;
+  origem?: string | null; valorCentavos?: number | null;
+  proximoPasso?: string | null; proximoEm?: string | null;
+}): Promise<string> {
+  if (!sb) return criarLeadExemplo(d);
+  const { data, error } = await sb.rpc('criar_lead', {
+    p_nome: d.nome,
+    p_empresa: d.empresa ?? null,
+    p_whatsapp: d.whatsapp ?? null,
+    p_origem: d.origem ?? null,
+    p_valor_centavos: d.valorCentavos ?? null,
+    p_proximo_passo: d.proximoPasso ?? null,
+    p_proximo_em: d.proximoEm ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return data as string;
+}
+
+/**
+ * Anota o que foi conversado, carimba a data e marca o proximo passo — as tres
+ * de uma vez, de proposito. Separadas, a terceira nunca e feita, e lead sem
+ * proximo passo e lead esquecido.
+ */
+export async function registrarInteracaoDoLead(
+  leadId: string, oque: string, proximoPasso?: string | null, proximoEm?: string | null,
+): Promise<void> {
+  if (!sb) { registrarInteracaoExemplo(leadId, oque, proximoPasso, proximoEm); return; }
+  const { error } = await sb.rpc('registrar_interacao_do_lead', {
+    p_lead: leadId,
+    p_oque: oque,
+    p_proximo_passo: proximoPasso ?? null,
+    p_proximo_em: proximoEm ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
 }

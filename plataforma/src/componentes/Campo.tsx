@@ -106,7 +106,7 @@ export function Segmento<T extends string>({
             aria-pressed={ativo}
             onClick={() => aoEscolher(o.valor)}
             className={
-              'min-h-9 rounded-full px-4 font-mono text-[10px] font-semibold tracking-[0.14em] ' +
+              'min-h-9 rounded-full px-4 text-[11.5px] font-semibold tracking-[0.06em] ' +
               'uppercase transition-colors duration-150 ' +
               (ativo
                 ? 'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink shadow-[0_8px_20px_-10px_rgb(255_61_154/0.9)]'

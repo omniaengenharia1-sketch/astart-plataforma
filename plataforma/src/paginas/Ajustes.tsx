@@ -368,7 +368,7 @@ export function Ajustes() {
       )}
 
       {recado && (
-        <p role="status" className="rotulo-forte mt-6">
+        <p role="status" className="aviso mt-6">
           {recado}
         </p>
       )}
@@ -383,7 +383,7 @@ export function Ajustes() {
                 key={c.id}
                 className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3"
               >
-                <span className="w-44 shrink-0 font-bold uppercase">{c.nome ?? '—'}</span>
+        <span className="w-44 shrink-0 font-bold">{c.nome ?? '—'}</span>
                 <span className="min-w-48 flex-1 font-mono text-[12.5px] break-all">{c.email}</span>
                 <Marca>
                   {c.destino === 'equipe'
@@ -417,7 +417,7 @@ export function Ajustes() {
                 (p.ativo ? '' : 'text-tinta-3')
               }
             >
-              <span className="w-44 shrink-0 font-bold uppercase">{p.nome ?? '—'}</span>
+       <span className="w-44 shrink-0 font-bold">{p.nome ?? '—'}</span>
               <span className="min-w-44 flex-1 font-mono text-[12.5px] break-all">
                 {p.email ?? 'sem e-mail'}
               </span>
@@ -491,7 +491,7 @@ export function Ajustes() {
                 <article key={c.id} className="bloco p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-bold uppercase">{c.nome}</div>
+           <div className="font-bold">{c.nome}</div>
                       <p className="legenda mt-1">{c.paraQue}</p>
                     </div>
                     {!c.construida ? (

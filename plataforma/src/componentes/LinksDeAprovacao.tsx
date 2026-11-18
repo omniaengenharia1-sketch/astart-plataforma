@@ -110,7 +110,7 @@ export function LinksDeAprovacao({ clienteId }: { clienteId: string }) {
             return (
               <li key={e.id} className="border-b border-linha-fraca py-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="font-bold uppercase">
+         <span className="font-bold">
                     {plural(e.itens, 'item', 'itens')}
                   </span>
                   {e.fechadoEm ? (

@@ -139,7 +139,7 @@ export function Aprovar() {
                       setConfirmado(true);
                     }}
                     className="mt-4 min-h-11 w-full rounded-full bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))]
- px-5 font-mono text-[10.5px] font-semibold tracking-[0.14em] uppercase text-sobre-pink
+ px-5 text-[12.5px] font-semibold tracking-[0.05em] uppercase text-sobre-pink
  disabled:pointer-events-none disabled:opacity-40"
                   >
                     Começar

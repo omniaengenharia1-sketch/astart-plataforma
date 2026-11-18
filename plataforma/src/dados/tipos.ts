@@ -790,16 +790,31 @@ export interface NpsDoCliente {
   respondidas: { competencia: string; nota: number; comentario: string | null; quando: string }[];
 }
 
+/**
+ * Seis etapas, e cada uma significa uma AÇÃO diferente sua (0071).
+ *
+ * Eram treze. Duas (`aguardando_aprovacao`, `aguardando_edicao`) eram de
+ * aprovação de conteúdo e tinham vindo parar no módulo errado, e vários pares
+ * ninguém distinguia na prática. Etapa que não muda o que você faz não é
+ * etapa: é decoração que atrasa o cadastro.
+ */
 export type EtapaLead =
-  | 'novo_lead' | 'pronto_abordar' | 'aguardando_aprovacao' | 'aguardando_edicao'
-  | 'contato_feito' | 'em_conversa' | 'qualificado' | 'reuniao_agendada'
-  | 'proposta_enviada' | 'negociacao' | 'fechado' | 'perdido' | 'descartado';
+  | 'novo' | 'conversando' | 'reuniao' | 'proposta' | 'fechado' | 'perdido';
 
 export interface LeadNoFunil {
   id: string;
   nome: string;
   empresa: string | null;
   etapa: EtapaLead;
+  /** Só dígitos ou como foi digitado; a tela monta o link do WhatsApp. */
+  whatsapp?: string | null;
+  notas?: string | null;
+  /** Append, uma linha por conversa, com data e quem falou. Nunca sobrescrito. */
+  historico?: string | null;
+  motivo?: string | null;
+  clienteId?: string | null;
+  convertidoEm?: string | null;
+  reuniaoEm?: string | null;
   valorCentavos: number | null;
   origem: string | null;
   proximoPasso: string | null;
@@ -939,4 +954,19 @@ export interface TarefaNova {
   clienteId?: string | null;
   prazo?: string | null;
   detalhe?: string | null;
+}
+
+
+/**
+ * "Com quem eu preciso falar hoje" — a pergunta que o comercial existe para
+ * responder (0071).
+ *
+ * `semFollowup` é a lista que ninguém pensa em fazer, e é exatamente onde o
+ * lead morre: sem ninguém decidir que morreu.
+ */
+export interface AgendaComercial {
+  atrasados: LeadNoFunil[];
+  hoje: LeadNoFunil[];
+  semana: LeadNoFunil[];
+  semFollowup: LeadNoFunil[];
 }

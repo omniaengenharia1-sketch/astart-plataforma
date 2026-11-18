@@ -358,7 +358,7 @@ export function FichaCliente() {
                   key={s.id}
                   className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
                 >
-                  <span className="w-44 shrink-0 font-bold uppercase">{s.servicoNome}</span>
+         <span className="w-44 shrink-0 font-bold">{s.servicoNome}</span>
                   <Marca>{FORMATO[s.formato]}</Marca>
                   {s.status !== 'ativo' && <Marca forte>{STATUS_SERVICO[s.status]}</Marca>}
                   {/* `numeros` so no valor: ele alinha as casas entre linhas.
@@ -471,7 +471,7 @@ export function FichaCliente() {
           )}
 
           {recado && (
-            <p role="status" className="rotulo-forte mt-3">
+            <p role="status" className="aviso mt-3">
               {recado}
             </p>
           )}
@@ -489,7 +489,7 @@ export function FichaCliente() {
               {ficha.contatos.map((c) => (
                 <li key={c.email} className="border-b border-linha-fraca py-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold uppercase">{c.nome}</span>
+          <span className="font-bold">{c.nome}</span>
                     {!c.ativo && <Marca>sem acesso</Marca>}
                   </div>
                   <div className="mt-0.5 font-mono text-[11.5px] break-all text-tinta-2">{c.email}</div>

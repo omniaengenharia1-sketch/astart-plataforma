@@ -60,7 +60,7 @@ export function Clientes() {
           <>
             <Link
               to={`/clientes/${c.id}`}
-              className="risca rounded-sm font-bold uppercase hover:text-pink-texto"
+       className="risca rounded-sm font-bold hover:text-pink-texto"
               onClick={(e) => e.stopPropagation()}
             >
               {c.nome}
@@ -184,7 +184,7 @@ export function Clientes() {
                   <div className="flex items-start justify-between gap-3">
                     <Link
                       to={`/clientes/${c.id}`}
-                      className="font-bold uppercase"
+           className="font-bold"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {c.nome}

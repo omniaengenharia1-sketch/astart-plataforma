@@ -667,7 +667,7 @@ export function Calendario({ clienteId, equipe }: { clienteId: string; equipe: b
       )}
 
       {recado && (
-        <p role="status" className="rotulo-forte mt-6">
+        <p role="status" className="aviso mt-6">
           {recado}
         </p>
       )}

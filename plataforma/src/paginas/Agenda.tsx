@@ -151,7 +151,7 @@ export function Agenda() {
                     </span>
                     <Link
                       to={`/clientes/${e.clienteId}`}
-                      className="risca w-40 shrink-0 font-bold uppercase hover:text-pink-texto"
+           className="risca w-40 shrink-0 font-bold hover:text-pink-texto"
                     >
                       {e.clienteNome}
                     </Link>

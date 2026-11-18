@@ -216,7 +216,7 @@ export function Financeiro() {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <SeloSituacao l={l} />
                       <span className="rotulo">vence {diaMes(l.vencimento)}</span>
-                      {l.clienteNome && <span className="rotulo">· {l.clienteNome}</span>}
+                      {l.clienteNome && <span className="legenda">· {l.clienteNome}</span>}
                     </div>
                   </div>
                 )}
@@ -236,7 +236,7 @@ export function Financeiro() {
                   <div className="flex items-baseline justify-between gap-3">
                     <Link
                       to={`/clientes/${c.clienteId}`}
-                      className="risca font-bold uppercase hover:text-pink-texto"
+           className="risca font-bold hover:text-pink-texto"
                     >
                       {c.clienteNome}
                     </Link>

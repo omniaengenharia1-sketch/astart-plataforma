@@ -748,7 +748,7 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
                           />
                         ) : (
                           <span className="aurora flex size-full items-center justify-center">
-                            <span className="rotulo">{item.nome}</span>
+                            <span className="legenda">{item.nome}</span>
                           </span>
                         )}
                       </button>

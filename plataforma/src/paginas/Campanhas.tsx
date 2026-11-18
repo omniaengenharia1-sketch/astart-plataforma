@@ -89,7 +89,7 @@ export function Campanhas({ clienteId, equipe }: { clienteId: string; equipe: bo
                   <li key={c.nome} className="bloco p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-bold uppercase">{c.nome}</div>
+            <div className="font-bold">{c.nome}</div>
                         <div className="rotulo mt-1">
                           {c.plataforma}
                           {c.objetivo && ` · ${c.objetivo}`}
@@ -123,7 +123,7 @@ export function Campanhas({ clienteId, equipe }: { clienteId: string; equipe: bo
                     key={r.id}
                     className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
                   >
-                    <span className="w-36 shrink-0 font-bold uppercase">{periodo(r)}</span>
+          <span className="w-36 shrink-0 font-bold">{periodo(r)}</span>
                     <span className="legenda min-w-48 flex-1 break-words">
                       {r.arquivo ??
                         r.metricas.map((m) => `${m.rotulo}: ${comoNumero(m.valor)}`).join(' · ')}

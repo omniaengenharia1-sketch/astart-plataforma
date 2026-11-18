@@ -173,6 +173,29 @@ html {
   background: var(--papel);
 }
 
+/*
+ * O MENU GRUDADO NAO COBRE O QUE VOCE ACABOU DE ALCANCAR.
+ *
+ * O menu de secoes e `sticky top-0`: ocupa uns 54px no alto, sempre. Quando o
+ * navegador rola um elemento "para dentro da tela", ele para assim que a borda
+ * de cima entra — ou seja, DEBAIXO do menu. Quem navega por teclado tabula
+ * para um botao e o botao fica escondido; quem clica num link de ancora cai
+ * numa secao cujo titulo esta coberto.
+ *
+ * `scroll-margin-top` e a folga que o navegador respeita nessa conta. Entra
+ * aqui, no elemento alcancavel, e nao em cada tela: a casca e a mesma em todas.
+ *
+ * Isto apareceu como roteiro INSTAVEL: o `olhar.mjs` clicava em "Pedir ajuste",
+ * o Playwright rolava o botao para o topo, o selo do menu ficava em cima dele e
+ * o clique era interceptado — mesmo codigo passando e falhando alternadamente,
+ * dependendo de onde o item caia na pagina. O teste piscando era o sintoma; o
+ * defeito era de uso, e de quem usa teclado.
+ */
+:where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])) {
+  scroll-margin-top: 4.5rem;
+  scroll-margin-bottom: 1.5rem;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
@@ -315,6 +338,26 @@ body::before {
   letter-spacing: 0;
   text-transform: none;
   color: var(--tinta-2);
+}
+
+/**
+ * Aviso: a frase que a tela responde depois de uma acao.
+ *
+ * "Anotado em Padaria do Teste." e uma FRASE, com um nome proprio dentro.
+ * Estava saindo em `rotulo-forte` — caixa alta e espacada — em oito telas, que
+ * e o pior lugar possivel para caixa alta: nome proprio em versal perde a
+ * silhueta justo no momento em que a pessoa quer conferir se o sistema fez o
+ * que ela pediu, e no cliente certo.
+ *
+ * E `legenda` com peso e cor de quem fala mais alto: le-se, nao se etiqueta.
+ */
+@utility aviso {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tinta);
 }
 
 @utility numeros {

@@ -71,7 +71,7 @@ function Linha({
       <span className="min-w-48 flex-1 font-medium">{e.titulo}</span>
       <Marca forte={ajuste}>{(equipe ? ESTADO : ESTADO_CLIENTE)[e.estado]}</Marca>
       {e.versaoAtual !== null && <span className="rotulo">v{e.versaoAtual}</span>}
-      {equipe && <span className="rotulo w-24 shrink-0">{e.responsavelNome ?? '—'}</span>}
+      {equipe && <span className="legenda w-24 shrink-0">{e.responsavelNome ?? '—'}</span>}
       <span className="rotulo w-24 shrink-0">
         {e.respondidoEm
           ? haQuanto(e.respondidoEm)
@@ -214,7 +214,7 @@ export function Projeto({ clienteId, equipe }: { clienteId: string; equipe: bool
       })}
 
       {recado && (
-        <p role="status" className="rotulo-forte mt-6">
+        <p role="status" className="aviso mt-6">
           {recado}
         </p>
       )}

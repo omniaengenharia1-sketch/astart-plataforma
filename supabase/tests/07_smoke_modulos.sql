@@ -264,7 +264,7 @@ declare ok boolean := false;
 begin
   begin
     insert into public.leads (nome, etapa, cliente_id, convertido_em)
-    values ('Em conversa que virou cliente', 'em_conversa',
+    values ('Em conversa que virou cliente', 'conversando',
             'a0000000-0000-0000-0000-00000000000a', now());
   exception when others then ok := true;
   end;

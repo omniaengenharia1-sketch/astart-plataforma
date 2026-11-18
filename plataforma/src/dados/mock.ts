@@ -8,6 +8,7 @@
 // tem a sua propria verdade engana quem esta avaliando o fluxo.
 // =============================================================================
 import type {
+  AgendaComercial,
   Canal, Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
   ContaDescoberta, ContaSocial, Decisao, Publicacao, PublicacaoNova,
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
@@ -1905,36 +1906,36 @@ export function responderNpsExemplo(pesquisaId: string, nota: number, comentario
 // ---------------------------------------------------------------------------
 // Comercial — o funil
 // ---------------------------------------------------------------------------
-const FECHADAS: EtapaLead[] = ['fechado', 'perdido', 'descartado'];
+const FECHADAS: EtapaLead[] = ['fechado', 'perdido'];
 
 const LEADS: (LeadNoFunil & { convertidoEm: string | null })[] = [
   {
-    id: 'ld-1', nome: 'Renata Alves', empresa: 'Clínica Viva', etapa: 'proposta_enviada',
+    id: 'ld-1', nome: 'Renata Alves', empresa: 'Clínica Viva', etapa: 'proposta',
     valorCentavos: 450_000, origem: 'indicação', proximoPasso: 'Ligar para fechar',
     proximoEm: emDias(1), responsavelNome: 'Raquel', ultimaEm: emDias(-2), convertidoEm: null,
   },
   {
-    id: 'ld-2', nome: 'Diego Matos', empresa: 'Matos Advocacia', etapa: 'reuniao_agendada',
+    id: 'ld-2', nome: 'Diego Matos', empresa: 'Matos Advocacia', etapa: 'reuniao',
     valorCentavos: 320_000, origem: 'Instagram', proximoPasso: 'Reunião às 15h',
     proximoEm: emDias(2), responsavelNome: 'Layana', ultimaEm: emDias(-1), convertidoEm: null,
   },
   {
-    id: 'ld-3', nome: 'Juliana Prado', empresa: 'Doce Ponto', etapa: 'em_conversa',
+    id: 'ld-3', nome: 'Juliana Prado', empresa: 'Doce Ponto', etapa: 'conversando',
     valorCentavos: 190_000, origem: 'Google', proximoPasso: 'Mandar portfólio de food',
     proximoEm: hoje, responsavelNome: 'Raquel', ultimaEm: emDias(-4), convertidoEm: null,
   },
   {
-    id: 'ld-4', nome: 'Sérgio Lima', empresa: 'Lima Construções', etapa: 'qualificado',
+    id: 'ld-4', nome: 'Sérgio Lima', empresa: 'Lima Construções', etapa: 'conversando',
     valorCentavos: 1_200_000, origem: 'indicação', proximoPasso: 'Levantar escopo do site',
     proximoEm: emDias(3), responsavelNome: 'Layana', ultimaEm: emDias(-6), convertidoEm: null,
   },
   {
-    id: 'ld-5', nome: 'Camila Rocha', empresa: null, etapa: 'novo_lead',
+    id: 'ld-5', nome: 'Camila Rocha', empresa: null, etapa: 'novo',
     valorCentavos: null, origem: 'WhatsApp', proximoPasso: 'Primeiro contato',
     proximoEm: hoje, responsavelNome: null, ultimaEm: null, convertidoEm: null,
   },
   {
-    id: 'ld-6', nome: 'Fábio Nunes', empresa: 'Nunes Pneus', etapa: 'negociacao',
+    id: 'ld-6', nome: 'Fábio Nunes', empresa: 'Nunes Pneus', etapa: 'proposta',
     valorCentavos: 280_000, origem: 'Instagram', proximoPasso: 'Responder contraproposta',
     proximoEm: emDias(-1), responsavelNome: 'Raquel', ultimaEm: emDias(-3), convertidoEm: null,
   },
@@ -2608,4 +2609,69 @@ export function tirarAnexoExemplo(arquivoId: string): void {
   for (const t of TAREFAS_EXEMPLO) {
     t.arquivos = t.arquivos.filter((a) => a.id !== arquivoId);
   }
+}
+
+
+// ---------------------------------------------------------------------------
+// O comercial que deixa trabalhar (0071)
+//
+// A dona: "eu nao consigo mexer em nada". Em exemplo valem as MESMAS regras do
+// banco — senao o roteiro de navegador aprova um caminho que a producao
+// reprova, que e o erro que a `pecaMidia` ja pagou.
+// ---------------------------------------------------------------------------
+function soComercial(): void {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') {
+    throw new Error('O comercial é de quem cuida do dinheiro da agência.');
+  }
+}
+
+export function criarLeadExemplo(d: {
+  nome: string; empresa?: string | null; whatsapp?: string | null;
+  origem?: string | null; valorCentavos?: number | null;
+  proximoPasso?: string | null; proximoEm?: string | null;
+}): string {
+  soComercial();
+  if (!d.nome.trim()) throw new Error('O lead precisa de um nome.');
+  const id = `lead-${LEADS.length + 1}-${Math.random().toString(36).slice(2, 7)}`;
+  LEADS.unshift({
+    id, nome: d.nome.trim(), empresa: d.empresa?.trim() || null, etapa: 'novo',
+    valorCentavos: d.valorCentavos ?? null, origem: d.origem?.trim() || null,
+    whatsapp: d.whatsapp?.trim() || null, notas: null, historico: null, motivo: null,
+    clienteId: null, convertidoEm: null, reuniaoEm: null,
+    proximoPasso: d.proximoPasso?.trim() || null, proximoEm: d.proximoEm ?? null,
+    responsavelNome: (papelDaVez === 'admin' ? PERFIL_DONO.nome : PERFIL_EXEMPLO.nome), ultimaEm: null,
+  } as LeadNoFunil & { convertidoEm: string | null });
+  return id;
+}
+
+export function registrarInteracaoExemplo(
+  leadId: string, oque: string, proximoPasso?: string | null, proximoEm?: string | null,
+): void {
+  soComercial();
+  if (!oque.trim()) throw new Error('Escreva o que foi conversado.');
+  const l = LEADS.find((x) => x.id === leadId);
+  if (!l) throw new Error('Lead não encontrado.');
+  const dia = new Date().toLocaleDateString('pt-BR');
+  const linha = `${dia} · ${(papelDaVez === 'admin' ? PERFIL_DONO.nome : PERFIL_EXEMPLO.nome)}: ${oque.trim()}`;
+  l.historico = l.historico ? `${l.historico}\n${linha}` : linha;
+  l.ultimaEm = hoje;
+  if (proximoPasso?.trim()) l.proximoPasso = proximoPasso.trim();
+  if (proximoEm) l.proximoEm = proximoEm;
+  // Falou: sai de "novo" sozinho, como o banco faz.
+  if (l.etapa === 'novo') l.etapa = 'conversando';
+}
+
+export function agendaComercialExemplo(): AgendaComercial {
+  soComercial();
+  const abertos = LEADS.filter((l) => !FECHADAS.includes(l.etapa));
+  const emDiasISO = (n: number) => {
+    const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10);
+  };
+  const seteDias = emDiasISO(7);
+  return {
+    atrasados: abertos.filter((l) => l.proximoEm && l.proximoEm < hoje),
+    hoje: abertos.filter((l) => l.proximoEm === hoje),
+    semana: abertos.filter((l) => l.proximoEm && l.proximoEm > hoje && l.proximoEm <= seteDias),
+    semFollowup: abertos.filter((l) => !l.proximoEm),
+  };
 }

@@ -120,7 +120,7 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
                       key={s.id}
                       className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-linha-fraca px-3 py-3.5"
                     >
-                      <span className="w-44 shrink-0 font-bold uppercase">{s.servicoNome}</span>
+           <span className="w-44 shrink-0 font-bold">{s.servicoNome}</span>
                       <Marca>{STATUS_SERVICO[s.status]}</Marca>
                       <span className="numeros min-w-48 flex-1 text-[13px]">
                         {s.valorCentavos === null ? '' : reais(s.valorCentavos)}
@@ -150,7 +150,7 @@ export function Contrato({ clienteId, equipe }: { clienteId: string; equipe: boo
                   .filter((c) => c.ativo)
                   .map((c) => (
                     <li key={c.email} className="border-b border-linha-fraca py-3">
-                      <div className="font-bold uppercase">{c.nome}</div>
+           <div className="font-bold">{c.nome}</div>
                       <div className="mt-0.5 font-mono text-[11.5px] break-all text-tinta-2">
                         {c.email}
                       </div>

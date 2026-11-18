@@ -132,7 +132,7 @@ end $$;
 -- ---------------------------------------------------------------------------
 set "teste.uid" = '10000000-0000-0000-0000-000000000003';
 insert into public.leads (nome, empresa, etapa, valor_estimado_centavos)
-values ('Marina', 'Doce Ponto', 'proposta_enviada', 450000);
+values ('Marina', 'Doce Ponto', 'proposta', 450000);
 
 do $$ begin
   perform public.afirma((public.funil()->>'abertos')::int = 1, 'o financeiro ve o funil');
@@ -147,7 +147,7 @@ begin
   perform public.afirma(
     not exists (select 1 from public.leads), 'e nao alcanca a tabela: o RLS esconde a linha');
   begin
-    perform public.mover_lead(current_setting('teste.lead')::uuid, 'negociacao');
+    perform public.mover_lead(current_setting('teste.lead')::uuid, 'proposta');
     raise exception 'FALHOU: operacao moveu o lead';
   exception when others then
     if position('cuida do dinheiro' in sqlerrm) = 0 then raise; end if;

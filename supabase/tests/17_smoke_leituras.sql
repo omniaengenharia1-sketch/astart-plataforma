@@ -65,7 +65,7 @@ insert into public.nps_respostas (pesquisa_id, nota, comentario, autor_nome)
 values ('d3000000-0000-0000-0000-000000000001', 10, 'Time sensacional.', 'Bruna');
 
 insert into public.leads (nome, empresa, etapa, valor_estimado_centavos, proximo_passo)
-values ('Marina', 'Café Central', 'proposta_enviada', 450000, 'Ligar na quinta'),
+values ('Marina', 'Café Central', 'proposta', 450000, 'Ligar na quinta'),
        ('Joana', 'Studio J', 'fechado', 300000, null);
 
 set role authenticated;
@@ -274,7 +274,7 @@ declare v_lead uuid;
 begin
   v_lead := current_setting('teste.lead', true)::uuid;
   begin
-    perform public.mover_lead(v_lead, 'qualificado');
+    perform public.mover_lead(v_lead, 'conversando');
     raise exception 'FALHOU: operacao moveu lead';
   exception when others then
     if position('cuida do dinheiro' in sqlerrm) = 0 then raise; end if;

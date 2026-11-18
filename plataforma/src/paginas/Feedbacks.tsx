@@ -122,12 +122,12 @@ export function Feedbacks() {
                         {u.clienteId ? (
                           <Link
                             to={`/clientes/${u.clienteId}`}
-                            className="risca font-bold uppercase hover:text-pink-texto"
+              className="risca font-bold hover:text-pink-texto"
                           >
                             {u.clienteNome}
                           </Link>
                         ) : (
-                          <span className="font-bold uppercase">{u.clienteNome}</span>
+             <span className="font-bold">{u.clienteNome}</span>
                         )}
                         <span className="rotulo">{haQuanto(u.quando)}</span>
                       </div>
@@ -151,7 +151,7 @@ export function Feedbacks() {
                     key={`${s.clienteNome}-${s.competencia}-${i}`}
                     className="flex items-baseline justify-between gap-3 border-b border-linha-fraca py-3"
                   >
-                    <span className="font-bold uppercase">{s.clienteNome}</span>
+          <span className="font-bold">{s.clienteNome}</span>
                     <span className="rotulo shrink-0">{s.competencia.slice(0, 7)}</span>
                   </li>
                 ))}

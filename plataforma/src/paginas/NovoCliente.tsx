@@ -348,7 +348,7 @@ export function NovoCliente() {
             type="button"
             onClick={() => setAba(chave)}
             className={
-              'px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-[0.16em] uppercase ' +
+              'px-2.5 py-1.5 text-[11.5px] font-semibold tracking-[0.06em] uppercase ' +
               (aba === chave ? 'bg-tinta text-papel' : 'text-tinta-3 hover:bg-superficie-2 hover:text-tinta')
             }
           >
@@ -484,7 +484,7 @@ export function NovoCliente() {
                             onClick={() => adicionar(s.chave)}
                             className="flex w-full items-center justify-between gap-3 border-b border-linha-fraca px-4 py-3 text-left last:border-0 hover:bg-pink hover:text-sobre-pink"
                           >
-                            <span className="font-bold uppercase">{s.nome}</span>
+              <span className="font-bold">{s.nome}</span>
                             <span className="rotulo">
                               {s.formatoPadrao === 'recorrente'
                                 ? 'por mês'

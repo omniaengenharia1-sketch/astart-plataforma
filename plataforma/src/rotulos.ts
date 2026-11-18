@@ -114,25 +114,17 @@ export const SITUACAO_CLIENTE: Record<SituacaoLancamento, string> = {
 };
 
 export const ETAPA_LEAD: Record<EtapaLead, string> = {
-  novo_lead: 'novo',
-  pronto_abordar: 'pronto para abordar',
-  aguardando_aprovacao: 'esperando aprovação',
-  aguardando_edicao: 'esperando edição',
-  contato_feito: 'contato feito',
-  em_conversa: 'em conversa',
-  qualificado: 'qualificado',
-  reuniao_agendada: 'reunião marcada',
-  proposta_enviada: 'proposta enviada',
-  negociacao: 'negociando',
+  novo: 'novo',
+  conversando: 'conversando',
+  reuniao: 'reunião marcada',
+  proposta: 'proposta enviada',
   fechado: 'fechado',
   perdido: 'perdido',
-  descartado: 'descartado',
 };
 
 /** As etapas na ordem do funil, como a tela empilha as colunas. */
 export const ETAPAS_ABERTAS: EtapaLead[] = [
-  'novo_lead', 'pronto_abordar', 'contato_feito', 'em_conversa', 'qualificado',
-  'reuniao_agendada', 'proposta_enviada', 'negociacao',
+  'novo', 'conversando', 'reuniao', 'proposta',
 ];
 
 export const NATUREZA: Record<string, string> = {

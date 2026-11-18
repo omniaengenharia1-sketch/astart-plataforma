@@ -7,7 +7,7 @@
 // A ordem: CHROME no ambiente, depois o que estiver em PLAYWRIGHT_BROWSERS_PATH,
 // depois nada — e aí o playwright usa o caminho dele e falha com a mensagem
 // dele, que e melhor que uma nossa.
-import { readdirSync, existsSync, readFileSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 
@@ -57,6 +57,56 @@ function acharChrome() {
  * Servidor que nao responde nao e tratado como erro: ha roteiro que nao usa
  * preview, e quem precisa dele falha sozinho ao navegar.
  */
+/**
+ * O `dist` e mais novo que o codigo-fonte?
+ *
+ * O buraco que esta funcao fecha: a conferencia de baixo compara o que o
+ * servidor entrega com o que o `dist` aponta. Quando o BUILD FALHA, nenhum dos
+ * dois se move — e os dois concordam, em cima do bundle anterior. O roteiro
+ * fica verde contra codigo que nunca compilou.
+ *
+ * Nao e teoria, de novo: foi o que aconteceu ao sabotar a lista "sem data
+ * marcada" de proposito para provar que o roteiro do comercial morde. O
+ * typecheck recusou a sabotagem, o `&&` cortou o resto da linha, o preview
+ * velho continuou no ar, e o roteiro imprimiu "tudo o que foi checado passou".
+ * A sabotagem nao chegou a existir, mas o aviso tambem nao — e no dia em que a
+ * sabotagem compilar, o verde vai estar mentindo.
+ *
+ * Entao: o arquivo mais novo em `src`, mais o `index.html` e as configuracoes
+ * de build, contra o `dist/index.html`. Fonte mais nova = build velho.
+ */
+function conferirIdade() {
+  const nascimento = (p) => (existsSync(p) ? statSync(p).mtimeMs : 0);
+
+  const maisNovo = (dir) => {
+    let q = 0;
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const caminho = join(dir, e.name);
+      q = Math.max(q, e.isDirectory() ? maisNovo(caminho) : nascimento(caminho));
+    }
+    return q;
+  };
+
+  const dist = nascimento('dist/index.html');
+  if (!dist) return;
+
+  const fonte = Math.max(
+    existsSync('src') ? maisNovo('src') : 0,
+    ...['index.html', 'vite.config.ts', 'tailwind.config.ts', 'package.json'].map(nascimento),
+  );
+  // Um segundo de folga: build e escrita de arquivo nao sao instantaneos.
+  if (fonte <= dist + 1000) return;
+
+  const atraso = Math.round((fonte - dist) / 1000);
+  console.log(
+    'PARE: o `dist` e mais velho que o codigo-fonte.\n' +
+      `  a fonte mudou ${atraso}s depois do ultimo build\n` +
+      'O build provavelmente FALHOU (typecheck?). Rode `npm run build:exemplo` e\n' +
+      'leia a saida: rodar assim testa o bundle anterior e fica verde de mentira.',
+  );
+  process.exit(1);
+}
+
 async function conferirPreview() {
   if (!existsSync('dist/index.html')) return;
 
@@ -84,6 +134,7 @@ async function conferirPreview() {
 }
 
 export async function abrirNavegador() {
+  conferirIdade();
   await conferirPreview();
   const executablePath = acharChrome();
   return chromium.launch({

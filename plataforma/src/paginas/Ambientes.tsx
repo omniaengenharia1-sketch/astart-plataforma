@@ -89,7 +89,7 @@ export function Ambientes({ clienteId, equipe }: { clienteId: string; equipe: bo
       </div>
 
       {recado && (
-        <p role="status" className="rotulo-forte mt-6 text-pink-texto">
+        <p role="status" className="aviso mt-6 text-pink-texto">
           {recado}
         </p>
       )}
@@ -119,7 +119,7 @@ export function Ambientes({ clienteId, equipe }: { clienteId: string; equipe: bo
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold uppercase">{a.nome}</span>
+            <span className="font-bold">{a.nome}</span>
                         <Marca forte={!a.noAr}>{a.noAr ? 'no ar' : 'fora do ar'}</Marca>
                       </div>
                       {a.url && (

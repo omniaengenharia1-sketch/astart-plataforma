@@ -78,7 +78,7 @@ export function InicioEquipe() {
                     (p.urgente ? 'border-l-2 border-l-pink' : '')
                   }
                 >
-                  <span className="w-40 shrink-0 font-bold uppercase">{p.clienteNome}</span>
+         <span className="w-40 shrink-0 font-bold">{p.clienteNome}</span>
                   <span className="min-w-48 flex-1">{p.oQue}</span>
                   <span className="rotulo w-24 shrink-0">{haQuanto(p.quando)}</span>
                   <Botao tamanho="pequeno" onClick={() => navegar(`/${p.rota}`)}>
@@ -118,7 +118,7 @@ export function InicioEquipe() {
                     {c.data.slice(8, 10)}/{c.data.slice(5, 7)}
                   </span>
                   <span className="flex-1">{c.titulo}</span>
-                  <span className="rotulo">{c.responsavelNome ?? '—'}</span>
+                  <span className="legenda">{c.responsavelNome ?? '—'}</span>
                 </li>
               ))}
             </ul>

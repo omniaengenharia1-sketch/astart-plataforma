@@ -20,7 +20,7 @@ function Linha({ item, aoAbrir }: { item: ItemNaFila; aoAbrir: () => void }) {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-bold uppercase">{item.clienteNome}</span>
+      <span className="font-bold">{item.clienteNome}</span>
             <Marca>{TIPO_ITEM[item.tipo]}</Marca>
             <span className="rotulo">
               {ajuste ? haQuanto(item.respondidoEm) : `enviado ${haQuanto(item.enviadoEm)}`}
