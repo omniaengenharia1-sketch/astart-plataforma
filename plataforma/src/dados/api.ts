@@ -27,6 +27,7 @@ import {
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   agendaComercialExemplo, criarLeadExemplo, registrarInteracaoExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
+  contratosACobrarExemplo, gerarCobrancasDoMesExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
   revogarLinkExemplo,
   enviarExemplo, equipeEConvitesExemplo, fichaExemplo, filaExemplo, itemDoEntregavelExemplo,
@@ -44,6 +45,7 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
+  RodadaDeCobranca,
   QuadroDeTarefas, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
   TarefaNova, TipoPeca,
 } from './tipos';
@@ -1438,6 +1440,28 @@ export async function urlsDosOriginais(
 // ---------------------------------------------------------------------------
 
 /** `mes` é qualquer dia do mês, AAAA-MM-DD. Omitido, é o mês corrente. */
+/**
+ * Quantos contratos entram na rodada do mes. Nulo quando quem le nao cuida
+ * do dinheiro — nulo e "nao te mostro", nao "sao zero".
+ */
+export async function contratosACobrar(mes?: string): Promise<number | null> {
+  if (!sb) return contratosACobrarExemplo(mes);
+  const { data, error } = await sb.rpc('contratos_a_cobrar', { p_competencia: mes ?? null });
+  if (error) throw new FalhaDados(`Não consegui contar os contratos: ${error.message}`);
+  return (data as number | null) ?? null;
+}
+
+/**
+ * Lanca as mensalidades do mes. Idempotente: apertar duas vezes nao cobra
+ * duas vezes, e o resultado diz quantas ja existiam.
+ */
+export async function gerarCobrancasDoMes(mes?: string): Promise<RodadaDeCobranca> {
+  if (!sb) return gerarCobrancasDoMesExemplo(mes);
+  const { data, error } = await sb.rpc('gerar_cobrancas_do_mes', { p_competencia: mes ?? null });
+  if (error) throw new FalhaDados(`Não consegui gerar as cobranças: ${error.message}`);
+  return exija(data as RodadaDeCobranca | null, 'O resultado da cobrança');
+}
+
 export async function painelFinanceiro(mes?: string): Promise<PainelFinanceiro> {
   if (!sb) return painelFinanceiroExemplo(mes);
   const { data, error } = await sb.rpc('painel_financeiro', { p_mes: mes ?? null });

@@ -21,6 +21,7 @@ import type {
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
   DocumentoDoCliente, TipoDocumento,
   PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps,
+  RodadaDeCobranca,
   SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
@@ -1817,6 +1818,119 @@ export function painelFinanceiroExemplo(mes?: string): PainelFinanceiro {
       .sort((a, b) => (a.vencimento ?? '').localeCompare(b.vencimento ?? '')),
     porCliente: [...porCliente.values()].sort((a, b) => b.receitaCentavos - a.receitaCentavos),
   };
+}
+
+// ---------------------------------------------------------------------------
+// GERAR AS COBRANCAS DO MES (0076)
+//
+// Espelha a funcao do banco, inclusive nas recusas. Repare que o modo exemplo
+// SEMPRE teve mensalidade na tela: `mensalidadesDo` as inventa a partir dos
+// contratos. Foi por isso que a ausencia do gerador passou meses sem ser
+// notada — a tela de exemplo parecia certa, e so a producao estava vazia.
+// Aqui as mensalidades passam a nascer do mesmo caminho da producao.
+// ---------------------------------------------------------------------------
+const competenciaDe = (mes?: string) => (mes ? `${mes.slice(0, 7)}-01` : mesAtual);
+
+/** Os contratos ativos em vigor no mes — a conta que o botao mostra antes. */
+function contratosEmVigor(competencia: string) {
+  const [ano, m] = competencia.split('-').map(Number) as [number, number];
+  const fimDoMes = `${ano}-${String(m).padStart(2, '0')}-${String(new Date(ano, m, 0).getDate()).padStart(2, '0')}`;
+  return CLIENTES.flatMap((c) =>
+    ativos(c)
+      .filter((s) => s.inicio <= fimDoMes && (!s.fim || s.fim >= competencia))
+      .map((s) => ({ c, s })),
+  );
+}
+
+export function contratosACobrarExemplo(mes?: string): number | null {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') return null;
+  return contratosEmVigor(competenciaDe(mes)).length;
+}
+
+export function gerarCobrancasDoMesExemplo(mes?: string): RodadaDeCobranca {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') {
+    throw new Error('Gerar cobrança é de quem cuida do dinheiro da agência.');
+  }
+  const competencia = competenciaDe(mes);
+  const [ano, m] = competencia.split('-').map(Number) as [number, number];
+  const rotulo = (comp: string) => `${comp.slice(5, 7)}/${comp.slice(0, 4)}`;
+
+  const linhas: RodadaDeCobranca['linhas'] = [];
+  let criadas = 0;
+  let jaExistiam = 0;
+  let erros = 0;
+
+  for (const { c, s } of contratosEmVigor(competencia)) {
+    // Projeto e pontual: a fila de parcelas nasce no mes de INICIO.
+    const comp = s.formato === 'recorrente' ? competencia : `${s.inicio.slice(0, 7)}-01`;
+    const linha = {
+      cliente: c.cliente.nome,
+      servico: s.servicoNome,
+      formato: s.formato,
+      competencia: rotulo(comp),
+      criadas: 0,
+      erro: null as string | null,
+    };
+
+    // Mesma recusa da tabela: lancamento exige valor maior que zero, e
+    // contrato de cortesia e aceito com zero. Um nao derruba os outros.
+    if (!s.valorCentavos) {
+      linha.erro = 'O valor do lançamento precisa ser maior que zero.';
+      erros += 1;
+      linhas.push(linha);
+      continue;
+    }
+
+    if (s.formato === 'recorrente') {
+      const descricao = `${s.servicoNome} — ${rotulo(comp)}`;
+      if (LANCAMENTOS.some((l) => l.clienteId === c.cliente.id && l.competencia === comp
+        && l.descricao === descricao)) {
+        jaExistiam += 1;
+        linhas.push(linha);
+        continue;
+      }
+      LANCAMENTOS.push(lanc(comp, descricao, s.valorCentavos, {
+        clienteId: c.cliente.id,
+        clienteNome: c.cliente.nome,
+        vencimento: diaDe(comp, s.diaVencimento ?? 10),
+      }));
+      criadas += 1;
+      linha.criadas = 1;
+      linhas.push(linha);
+      continue;
+    }
+
+    // Parcelas: uma fila, criada de uma vez so, e nunca recriada.
+    if (LANCAMENTOS.some((l) => l.clienteId === c.cliente.id
+      && l.descricao.startsWith(`${s.servicoNome} — parcela`))) {
+      jaExistiam += 1;
+      linhas.push(linha);
+      continue;
+    }
+    const n = s.parcelas ?? 1;
+    const base = s.valorCentavos;
+    for (let i = 1; i <= n; i += 1) {
+      const d = new Date(ano, m - 1, 1);
+      d.setMonth(Number(comp.slice(5, 7)) - 1 + (i - 1));
+      const compI = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      LANCAMENTOS.push(lanc(
+        compI,
+        `${s.servicoNome} — parcela ${i} de ${n}`,
+        // A ultima parcela absorve o centavo que a divisao deixou.
+        i < n ? Math.floor(base / n) : base - Math.floor(base / n) * (n - 1),
+        {
+          clienteId: c.cliente.id,
+          clienteNome: c.cliente.nome,
+          vencimento: diaDe(compI, 15),
+        },
+      ));
+    }
+    criadas += n;
+    linha.criadas = n;
+    linhas.push(linha);
+  }
+
+  return { competencia: rotulo(competencia), contratos: linhas.length, criadas, jaExistiam, erros, linhas };
 }
 
 export function financeiroDoClienteExemplo(clienteId: string): FinanceiroDoCliente {

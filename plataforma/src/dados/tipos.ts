@@ -744,6 +744,30 @@ export interface PainelFinanceiro {
   porCliente: { clienteId: string; clienteNome: string; receitaCentavos: number; atrasadoCentavos: number }[];
 }
 
+/**
+ * O que uma rodada de cobranca fez, linha por linha.
+ *
+ * Existe porque a rodada pode dar certo pela metade: um contrato de cortesia
+ * (valor zero) e recusado pela tabela de lancamentos enquanto os outros sete
+ * passam. Resultado que so diz "pronto" esconderia isso.
+ */
+export interface RodadaDeCobranca {
+  /** MM/AAAA, como a tela mostra. */
+  competencia: string;
+  contratos: number;
+  criadas: number;
+  jaExistiam: number;
+  erros: number;
+  linhas: {
+    cliente: string;
+    servico: string;
+    formato: string;
+    competencia: string;
+    criadas: number;
+    erro: string | null;
+  }[];
+}
+
 export interface ContaDoCliente {
   id: string;
   descricao: string;
