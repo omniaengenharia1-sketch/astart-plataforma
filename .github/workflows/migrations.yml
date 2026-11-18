@@ -29,6 +29,13 @@ on:
       - 'supabase/tests/**'
       - 'scripts/aplicar-migrations.mjs'
       - '.github/workflows/migrations.yml'
+      # As duas copias de codigo da regra de formato. Elas entram aqui porque
+      # `provar-canais --producao` roda no fim desta esteira: mexer numa copia
+      # sem mexer no banco tem de acender a luz, e so acende se esta esteira
+      # correr.
+      - 'scripts/provar-canais.mjs'
+      - 'supabase/functions/_shared/meta/formatos.ts'
+      - 'plataforma/src/dados/formatos.ts'
   workflow_dispatch:
 
 concurrency:
@@ -99,3 +106,19 @@ jobs:
 
       - name: Aplicar
         run: node scripts/aplicar-migrations.mjs
+
+      # A REGRA DE FORMATO MORA EM TRES LUGARES, E ESTE E O UNICO MOMENTO EM
+      # QUE DA PARA PERGUNTAR SE ELES CONCORDAM.
+      #
+      # Este passo vivia na `funcoes.yml`, e de la ele ficou vermelho num
+      # commit correto: as duas esteiras disparam JUNTAS no mesmo push, e a
+      # `funcoes` leu o banco de producao antes de a `migrations` ter aplicado
+      # a 0072. O codigo dizia "Facebook publica foto", o banco ainda dizia
+      # que nao, e o prover — certissimo — acusou os dois.
+      #
+      # Nao e defeito do prover; e lugar errado. Ele compara codigo com o
+      # BANCO DE PRODUCAO, entao o unico instante em que a resposta vale e
+      # depois de aplicar. Aqui embaixo, a corrida deixa de existir: nao ha
+      # duas esteiras, ha uma ordem.
+      - name: Provar que a regra de formato concorda nos tres lados
+        run: node scripts/provar-canais.mjs --producao
