@@ -451,7 +451,12 @@ No painel do app, em *Configurações → Básico*:
 - **URL da política de privacidade**: `.../privacidade`
 - **URL dos termos de serviço**: `.../termos`
 - **Instruções de exclusão de dados**: `.../exclusao-de-dados`
-- **Ícone do app**: a marca da Astart, 1024×1024
+- **Ícone do app**: ✅ pronto em `plataforma/public/marca/astart-app-icone-1024.png`
+  — 1024×1024 exatos, sRGB, **sem canal alfa** e sem metadado. Gerado do
+  original de 1080×1080 que a dona mandou, com reamostragem Lanczos para a
+  tipografia não borrar na redução. Ícone com transparência fica com fundo
+  imprevisível nas telas da Meta; este tem o degradê chapado.
+  No ar em `https://app.astartstudio.com.br/marca/astart-app-icone-1024.png`
 - **Categoria**: Business — a doc pede uma que *"accurately describes your app"*
 - **Domínios do app**: `app.astartstudio.com.br`
 - **Modo**: deixe em **Development**. ~~"o app tem de estar em Live"~~
