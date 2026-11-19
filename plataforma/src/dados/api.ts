@@ -29,7 +29,8 @@ import {
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
   apagarCompromissoExemplo, apagarLancamentoExemplo, cancelarLancamentoExemplo,
   categoriasFinanceirasExemplo, compromissoExemplo, criarCompromissoExemplo,
-  editarCompromissoExemplo,
+  desligarAgendaGoogleExemplo, editarCompromissoExemplo, ligarAgendaGoogleExemplo,
+  minhaAgendaGoogleExemplo,
   contratosACobrarExemplo, criarLancamentoExemplo, editarLancamentoExemplo,
   estornarLancamentoExemplo, gerarCobrancasDoMesExemplo, liquidarLancamentoExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
@@ -49,7 +50,7 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
-  CategoriaFinanceira, CompromissoNaFicha, CompromissoNovo, LancamentoNovo,
+  AgendaGoogle, CategoriaFinanceira, CompromissoNaFicha, CompromissoNovo, LancamentoNovo,
   RodadaDeCobranca,
   QuadroDeTarefas, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
   TarefaNova, TipoPeca,
@@ -1599,6 +1600,26 @@ function instante(dia: string, hora: string | null, fuso: string): string {
 }
 
 const FUSO_PADRAO = 'America/Sao_Paulo';
+
+/** O estado da ponte com o Google, para a tela de Ajustes. */
+export async function minhaAgendaGoogle(): Promise<AgendaGoogle> {
+  if (!sb) return minhaAgendaGoogleExemplo();
+  const { data, error } = await sb.rpc('minha_agenda_google');
+  if (error) throw new FalhaDados(`Não consegui ver a ligação com o Google: ${error.message}`);
+  return (data as AgendaGoogle | null) ?? { ligada: false };
+}
+
+export async function ligarAgendaGoogle(calendarId: string): Promise<void> {
+  if (!sb) return ligarAgendaGoogleExemplo(calendarId);
+  const { error } = await sb.rpc('ligar_agenda_google', { p_calendar_id: calendarId });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function desligarAgendaGoogle(): Promise<void> {
+  if (!sb) return desligarAgendaGoogleExemplo();
+  const { error } = await sb.rpc('desligar_agenda_google');
+  if (error) throw new FalhaDados(error.message);
+}
 
 export async function criarCompromisso(c: CompromissoNovo): Promise<string> {
   if (!sb) return criarCompromissoExemplo(c);

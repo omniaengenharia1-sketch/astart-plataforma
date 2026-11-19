@@ -5,14 +5,15 @@ import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou } from '../componentes/Estado';
 import {
   apagarArquivosOrfaos, arquivosOrfaos,
-  conectores, conferirTokenDaMeta, convidar, equipeEConvites, FalhaDaMeta, mudarAcesso, mudarPapel,
+  conectores, conferirTokenDaMeta, convidar, desligarAgendaGoogle, equipeEConvites, FalhaDaMeta,
+  ligarAgendaGoogle, minhaAgendaGoogle, mudarAcesso, mudarPapel,
   revogarConvite,
 } from '../dados/api';
 import { haQuanto } from '../formato';
 import { useSessao } from '../sessao';
 import { PainelSaudeDoToken } from '../componentes/SaudeDoTokenMeta';
 import type {
-  ChaveDeConector, Conector, EquipeEConvites, PapelEquipe, SaudeDoToken,
+  AgendaGoogle, ChaveDeConector, Conector, EquipeEConvites, PapelEquipe, SaudeDoToken,
 } from '../dados/tipos';
 
 const PAPEIS: { valor: PapelEquipe; rotulo: string; explica: string }[] = [
@@ -197,6 +198,183 @@ function ArquivosSemDono() {
   );
 }
 
+/**
+ * A ponte com o Google Agenda (0079).
+ *
+ * NAO E "ENTRAR COM O GOOGLE", e isso aparece na tela de propósito. Os
+ * e-mails da agência são de cPanel, não de Google Workspace, e nesse caso o
+ * Google só libera o acesso à agenda depois de uma análise de semanas — ou a
+ * autorização expira a cada sete dias e cada pessoa religa toda semana.
+ *
+ * O caminho que evita isso: a pessoa compartilha a própria agenda com o
+ * endereço robô da plataforma, uma vez, dentro do Google Agenda. Por isso a
+ * tela ensina o passo lá antes de pedir o endereço aqui — pedir primeiro e
+ * explicar depois é o jeito de a pessoa colar o e-mail errado e achar que
+ * ligou.
+ */
+function PonteComGoogle({ robo }: { robo: string }) {
+  const [estado, setEstado] = useState<AgendaGoogle | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [recado, setRecado] = useState<string | null>(null);
+  const [calendario, setCalendario] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      setEstado(await minhaAgendaGoogle());
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui ver a ligação.');
+    }
+  }, []);
+
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  async function ligar() {
+    setSalvando(true);
+    setErro(null);
+    setRecado(null);
+    try {
+      await ligarAgendaGoogle(calendario);
+      setRecado('Agenda ligada. A primeira sincronização sai em alguns minutos.');
+      setCalendario('');
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui ligar.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function desligar() {
+    setSalvando(true);
+    setErro(null);
+    try {
+      await desligarAgendaGoogle();
+      setRecado('Agenda desligada. O que já foi para lá continua lá.');
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui desligar.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <section className="mt-10">
+      <Fita>Minha agenda do Google</Fita>
+
+      <div className="bloco mt-3 p-4 sm:p-5">
+        {estado?.ligada ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <Marca forte>ligada</Marca>
+              <span className="numeros text-[14px] font-semibold">{estado.calendarId}</span>
+            </div>
+            <p className="legenda mt-2">
+              {estado.ultimaEm
+                ? `última sincronização ${haQuanto(estado.ultimaEm)}`
+                : 'ainda não sincronizou — a primeira rodada sai em alguns minutos'}
+              {typeof estado.quantos === 'number' && estado.quantos > 0
+                && ` · ${estado.quantos} compromisso${estado.quantos > 1 ? 's' : ''} com par no Google`}
+            </p>
+
+            {/* Falha silenciosa é proibida: se a ponte parou, a pessoa vê aqui
+                o motivo em português, e não descobre pela ausência. */}
+            {estado.ultimoErro && (
+              <div role="alert" className="bloco mt-3 bg-alerta-fundo p-3.5">
+                <span className="rotulo-forte text-pink-texto">a sincronização parou</span>
+                <p className="mt-1 text-[13.5px] font-medium">{estado.ultimoErro}</p>
+                {estado.erroEm && <p className="legenda mt-1">{haQuanto(estado.erroEm)}</p>}
+              </div>
+            )}
+
+            <Botao
+              variante="texto"
+              tamanho="pequeno"
+              className="mt-3"
+              disabled={salvando}
+              onClick={() => void desligar()}
+            >
+              Desligar
+            </Botao>
+          </>
+        ) : (
+          <>
+            <p className="text-[14px] font-medium">
+              Para ligar, você compartilha a sua agenda com o robô da plataforma — dentro do
+              Google Agenda, uma vez só. Não é “entrar com o Google”.
+            </p>
+            <ol className="mt-3 flex list-decimal flex-col gap-1.5 pl-5 text-[13.5px]">
+              <li>No Google Agenda, abra Configurações e escolha a sua agenda.</li>
+              <li>
+                Em <strong>Compartilhar com pessoas específicas</strong>, cole o endereço abaixo.
+              </li>
+              <li>
+                Escolha <strong>Fazer alterações e ver todos os detalhes dos eventos</strong> —
+                sem isso a ponte só funciona de um lado.
+              </li>
+              <li>
+                Volte em <strong>Integrar agenda</strong>, copie o <strong>ID da agenda</strong> e
+                cole aqui embaixo.
+              </li>
+            </ol>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <code className="numeros break-all rounded bg-superficie-2 px-2 py-1 text-[13px]">
+                {robo}
+              </code>
+              <Botao
+                tamanho="pequeno"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(robo).then(
+                    () => setCopiado(true),
+                    () => setCopiado(false),
+                  );
+                }}
+              >
+                {copiado ? 'copiado' : 'copiar'}
+              </Botao>
+            </div>
+
+            <div className="mt-4 max-w-md">
+              <Campo
+                id="g-calendario"
+                rotulo="ID da agenda"
+                dica="o seu e-mail, ou o código comprido da agenda"
+              >
+                <Entrada
+                  id="g-calendario"
+                  value={calendario}
+                  placeholder="nome@gmail.com"
+                  onChange={(e) => setCalendario(e.target.value)}
+                />
+              </Campo>
+              <Botao
+                variante="primario"
+                tamanho="pequeno"
+                className="mt-3"
+                disabled={salvando || !calendario.trim()}
+                onClick={() => void ligar()}
+              >
+                {salvando ? 'Ligando…' : 'Ligar minha agenda'}
+              </Botao>
+            </div>
+          </>
+        )}
+
+        {recado && <p role="status" className="aviso mt-3">{recado}</p>}
+        {erro && (
+          <div role="alert" className="bloco mt-3 bg-alerta-fundo p-3.5">
+            <span className="rotulo-forte text-pink-texto">não deu certo</span>
+            <p className="mt-1 text-[13.5px] font-medium">{erro}</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function Ajustes() {
   const [dados, setDados] = useState<EquipeEConvites | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -373,6 +551,8 @@ export function Ajustes() {
         </p>
       )}
       {erro && dados && <Falhou mensagem={erro} />}
+
+      <PonteComGoogle robo="agenda-astart@astart-propostas.iam.gserviceaccount.com" />
 
       {dados.convites.length > 0 && (
         <section className="mt-9">

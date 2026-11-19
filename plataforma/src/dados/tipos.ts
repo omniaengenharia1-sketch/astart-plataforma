@@ -849,6 +849,18 @@ export interface EventoNaAgenda {
   detalhe: string;
 }
 
+/** O estado da ponte com o Google, na tela de Ajustes de cada pessoa. */
+export interface AgendaGoogle {
+  ligada: boolean;
+  calendarId?: string;
+  ligadoEm?: string;
+  ultimaEm?: string | null;
+  ultimoErro?: string | null;
+  erroEm?: string | null;
+  /** Quantos compromissos desta pessoa já têm par no Google. */
+  quantos?: number;
+}
+
 /** A ficha de um compromisso, como o formulário precisa dela. */
 export interface CompromissoNaFicha {
   id: string;

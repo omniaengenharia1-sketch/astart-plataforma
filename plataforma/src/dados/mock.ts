@@ -21,7 +21,7 @@ import type {
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
   DocumentoDoCliente, TipoDocumento,
   PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps,
-  CategoriaFinanceira, CompromissoNaFicha, CompromissoNovo, LancamentoNovo,
+  AgendaGoogle, CategoriaFinanceira, CompromissoNaFicha, CompromissoNovo, LancamentoNovo,
   RodadaDeCobranca,
   SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
@@ -2331,6 +2331,35 @@ export function apagarCompromissoExemplo(id: string): void {
   const i = COMPROMISSOS.findIndex((x) => x.id === id);
   if (i < 0) throw new Error('Compromisso não encontrado.');
   COMPROMISSOS.splice(i, 1);
+}
+
+// A ponte com o Google (0079), em modo exemplo. Guarda so o vinculo: a
+// sincronizacao de verdade e da Edge Function, que nao roda aqui.
+let AGENDA_GOOGLE: AgendaGoogle = { ligada: false };
+
+export function minhaAgendaGoogleExemplo(): AgendaGoogle {
+  if (papelDaVez === 'cliente') return { ligada: false };
+  return AGENDA_GOOGLE;
+}
+
+export function ligarAgendaGoogleExemplo(calendarId: string): void {
+  if (papelDaVez === 'cliente') throw new Error('Sem permissão para ligar agenda.');
+  if (!calendarId.trim()) {
+    throw new Error('Diga qual é a sua agenda do Google (normalmente o seu e-mail).');
+  }
+  AGENDA_GOOGLE = {
+    ligada: true,
+    calendarId: calendarId.trim().toLowerCase(),
+    ligadoEm: new Date().toISOString(),
+    ultimaEm: null,
+    ultimoErro: null,
+    quantos: 0,
+  };
+}
+
+export function desligarAgendaGoogleExemplo(): void {
+  if (!AGENDA_GOOGLE.ligada) throw new Error('Você não tem agenda ligada.');
+  AGENDA_GOOGLE = { ...AGENDA_GOOGLE, ligada: false };
 }
 
 export function agendaExemplo(de: string, ate: string): EventoNaAgenda[] {
