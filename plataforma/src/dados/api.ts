@@ -27,7 +27,9 @@ import {
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   agendaComercialExemplo, criarLeadExemplo, registrarInteracaoExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
-  contratosACobrarExemplo, gerarCobrancasDoMesExemplo,
+  apagarLancamentoExemplo, cancelarLancamentoExemplo, categoriasFinanceirasExemplo,
+  contratosACobrarExemplo, criarLancamentoExemplo, editarLancamentoExemplo,
+  estornarLancamentoExemplo, gerarCobrancasDoMesExemplo, liquidarLancamentoExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
   revogarLinkExemplo,
   enviarExemplo, equipeEConvitesExemplo, fichaExemplo, filaExemplo, itemDoEntregavelExemplo,
@@ -45,7 +47,7 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
-  RodadaDeCobranca,
+  CategoriaFinanceira, LancamentoNovo, RodadaDeCobranca,
   QuadroDeTarefas, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
   TarefaNova, TipoPeca,
 } from './tipos';
@@ -1440,6 +1442,80 @@ export async function urlsDosOriginais(
 // ---------------------------------------------------------------------------
 
 /** `mes` é qualquer dia do mês, AAAA-MM-DD. Omitido, é o mês corrente. */
+/** A arvore de categorias, para o formulario de lançamento ter o que oferecer. */
+export async function categoriasFinanceiras(): Promise<CategoriaFinanceira[]> {
+  if (!sb) return categoriasFinanceirasExemplo();
+  const { data, error } = await sb.rpc('categorias_financeiras');
+  if (error) throw new FalhaDados(`Não consegui carregar as categorias: ${error.message}`);
+  return (data as CategoriaFinanceira[] | null) ?? [];
+}
+
+export async function criarLancamento(d: LancamentoNovo): Promise<string> {
+  if (!sb) return criarLancamentoExemplo(d);
+  const { data, error } = await sb.rpc('criar_lancamento', {
+    p_descricao: d.descricao,
+    p_subcategoria: d.subcategoriaId,
+    p_valor_centavos: d.valorCentavos,
+    p_vencimento: d.vencimento,
+    p_competencia: d.competencia,
+    p_cliente: d.clienteId,
+    p_contraparte: d.contraparte,
+    p_forma: d.forma,
+    p_liquidado_em: d.liquidadoEm,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as string | null, 'O lançamento criado');
+}
+
+/** O dinheiro andou. Duas vezes e recusado pelo banco, dizendo a data da primeira. */
+export async function liquidarLancamento(
+  id: string, em?: string | null, forma?: string | null,
+): Promise<void> {
+  if (!sb) return liquidarLancamentoExemplo(id, em ?? null, forma ?? null);
+  const { error } = await sb.rpc('liquidar_lancamento', {
+    p_lancamento: id, p_em: em ?? null, p_forma: forma ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function estornarLancamento(id: string): Promise<void> {
+  if (!sb) return estornarLancamentoExemplo(id);
+  const { error } = await sb.rpc('estornar_lancamento', { p_lancamento: id });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function cancelarLancamento(id: string): Promise<void> {
+  if (!sb) return cancelarLancamentoExemplo(id);
+  const { error } = await sb.rpc('cancelar_lancamento', { p_lancamento: id });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function editarLancamento(
+  id: string, d: Partial<LancamentoNovo> & { limpar?: string[] },
+): Promise<void> {
+  if (!sb) return editarLancamentoExemplo(id, d);
+  const { error } = await sb.rpc('editar_lancamento', {
+    p_lancamento: id,
+    p_descricao: d.descricao ?? null,
+    p_subcategoria: d.subcategoriaId ?? null,
+    p_valor_centavos: d.valorCentavos ?? null,
+    p_vencimento: d.vencimento ?? null,
+    p_competencia: d.competencia ?? null,
+    p_cliente: d.clienteId ?? null,
+    p_contraparte: d.contraparte ?? null,
+    p_forma: d.forma ?? null,
+    p_limpar: d.limpar ?? null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/** Só a direção, e nunca linha liquidada: dinheiro que andou é história. */
+export async function apagarLancamento(id: string): Promise<void> {
+  if (!sb) return apagarLancamentoExemplo(id);
+  const { error } = await sb.rpc('apagar_lancamento', { p_lancamento: id });
+  if (error) throw new FalhaDados(error.message);
+}
+
 /**
  * Quantos contratos entram na rodada do mes. Nulo quando quem le nao cuida
  * do dinheiro — nulo e "nao te mostro", nao "sao zero".

@@ -5,10 +5,17 @@ import { Botao } from '../componentes/Botao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import { Tabela } from '../componentes/Tabela';
 import type { Coluna } from '../componentes/Tabela';
-import { contratosACobrar, gerarCobrancasDoMes, painelFinanceiro } from '../dados/api';
+import {
+  apagarLancamento, cancelarLancamento, categoriasFinanceiras, contratosACobrar,
+  criarLancamento, editarLancamento, estornarLancamento, gerarCobrancasDoMes,
+  liquidarLancamento, listaClientes, painelFinanceiro,
+} from '../dados/api';
 import { diaMes, reais, valor } from '../formato';
 import { NATUREZA, SITUACAO } from '../rotulos';
-import type { LancamentoNaLista, PainelFinanceiro, RodadaDeCobranca } from '../dados/tipos';
+import type {
+  CategoriaFinanceira, ClienteNaLista, LancamentoNaLista, PainelFinanceiro, RodadaDeCobranca,
+} from '../dados/tipos';
+import { Campo, Entrada, Escolha } from '../componentes/Campo';
 
 const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -33,6 +40,254 @@ function SeloSituacao({ l }: { l: LancamentoNaLista }) {
   return <Marca forte={l.situacao === 'atrasado'}>{SITUACAO[l.situacao]}</Marca>;
 }
 
+const paraCentavos = (s: string): number | null => {
+  const n = Number(s.replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? Math.round(n * 100) : null;
+};
+const paraReais = (c: number) => (c / 100).toFixed(2).replace('.', ',');
+
+const FORMAS = ['pix', 'boleto', 'cartao', 'transferencia', 'dinheiro'] as const;
+const NOME_DA_FORMA: Record<string, string> = {
+  pix: 'pix', boleto: 'boleto', cartao: 'cartão',
+  transferencia: 'transferência', dinheiro: 'dinheiro',
+};
+
+/**
+ * Lançar e corrigir, no mesmo formulário.
+ *
+ * Dois formulários com os mesmos oito campos divergem no terceiro ajuste:
+ * um ganha a forma de pagamento e o outro não, e aí o que foi lançado não
+ * pode ser corrigido inteiro. Um só, com um campo a mais na criação.
+ */
+function FormLancamento({
+  categorias, clientes, lancamento, ocupado, aoCriar, aoEditar, aoFechar, aoCancelar, aoApagar,
+}: {
+  categorias: CategoriaFinanceira[];
+  clientes: ClienteNaLista[];
+  /** Nulo = está criando. */
+  lancamento: LancamentoNaLista | null;
+  ocupado: boolean;
+  aoCriar: (d: {
+    descricao: string; subcategoriaId: string; valorCentavos: number;
+    vencimento: string | null; clienteId: string | null; contraparte: string | null;
+    forma: string | null; liquidadoEm: string | null;
+  }) => void;
+  aoEditar: (d: {
+    descricao: string; subcategoriaId: string; valorCentavos: number;
+    vencimento: string | null; clienteId: string | null; forma: string | null;
+    limpar: string[];
+  }) => void;
+  aoFechar: () => void;
+  aoCancelar: () => void;
+  aoApagar: () => void;
+}) {
+  const l = lancamento;
+  // A lista traz os NOMES, não o id da subcategoria. A trinca grupo +
+  // categoria + subcategoria é única, então ela acha a folha certa.
+  const daLinha = l
+    ? categorias.find((c) => c.grupo === l.grupo && c.categoria === l.categoria
+        && c.subcategoria === l.subcategoria)
+    : undefined;
+
+  const [f, setF] = useState({
+    descricao: l?.descricao ?? '',
+    categoria: daLinha?.id ?? '',
+    valor: l ? paraReais(l.valorCentavos) : '',
+    vencimento: l?.vencimento ?? '',
+    cliente: l?.clienteId ?? '',
+    contraparte: '',
+    forma: l?.forma ?? '',
+    jaFoi: false,
+    quando: new Date().toISOString().slice(0, 10),
+  });
+  const [confirmandoApagar, setConfirmandoApagar] = useState(false);
+
+  const centavos = paraCentavos(f.valor);
+  const pronto = f.descricao.trim() !== '' && f.categoria !== ''
+    && centavos !== null && centavos > 0;
+
+  function salvar() {
+    if (!pronto || centavos === null) return;
+    if (l) {
+      const limpar: string[] = [];
+      if (!f.vencimento) limpar.push('vencimento');
+      if (!f.cliente) limpar.push('cliente');
+      if (!f.forma) limpar.push('forma');
+      aoEditar({
+        descricao: f.descricao.trim(),
+        subcategoriaId: f.categoria,
+        valorCentavos: centavos,
+        vencimento: f.vencimento || null,
+        clienteId: f.cliente || null,
+        forma: f.forma || null,
+        limpar,
+      });
+      return;
+    }
+    aoCriar({
+      descricao: f.descricao.trim(),
+      subcategoriaId: f.categoria,
+      valorCentavos: centavos,
+      vencimento: f.vencimento || null,
+      clienteId: f.cliente || null,
+      contraparte: f.contraparte.trim() || null,
+      forma: f.forma || null,
+      liquidadoEm: f.jaFoi ? f.quando : null,
+    });
+  }
+
+  return (
+    <div className="bloco mt-4 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Campo id="l-descricao" rotulo="O quê">
+          <Entrada
+            id="l-descricao"
+            value={f.descricao}
+            placeholder="anúncio do mês, freela de edição…"
+            onChange={(e) => setF({ ...f, descricao: e.target.value })}
+          />
+        </Campo>
+        {/* A CATEGORIA É QUEM DIZ SE É ENTRADA OU SAÍDA. Não há campo de
+            sinal nem de tipo: valor negativo é recusado pelo banco de
+            propósito, porque "-500 em Receita" seria duas verdades brigando. */}
+        <Campo id="l-categoria" rotulo="Categoria" dica="é ela que diz se entra ou sai">
+          <Escolha
+            id="l-categoria"
+            value={f.categoria}
+            onChange={(e) => setF({ ...f, categoria: e.target.value })}
+          >
+            <option value="">escolha</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>{c.rotulo}</option>
+            ))}
+          </Escolha>
+        </Campo>
+        <Campo id="l-valor" rotulo="Valor" dica="em reais">
+          <Entrada
+            id="l-valor"
+            inputMode="decimal"
+            value={f.valor}
+            placeholder="1500,00"
+            onChange={(e) => setF({ ...f, valor: e.target.value })}
+          />
+        </Campo>
+        <Campo id="l-vencimento" rotulo="Vence em">
+          <Entrada
+            id="l-vencimento"
+            type="date"
+            value={f.vencimento}
+            onChange={(e) => setF({ ...f, vencimento: e.target.value })}
+          />
+        </Campo>
+        <Campo id="l-cliente" rotulo="De qual cliente" dica="deixe vazio se for da casa">
+          <Escolha
+            id="l-cliente"
+            value={f.cliente}
+            onChange={(e) => setF({ ...f, cliente: e.target.value })}
+          >
+            <option value="">da casa</option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </Escolha>
+        </Campo>
+        <Campo id="l-forma" rotulo="Forma">
+          <Escolha
+            id="l-forma"
+            value={f.forma}
+            onChange={(e) => setF({ ...f, forma: e.target.value })}
+          >
+            <option value="">não sei ainda</option>
+            {FORMAS.map((x) => (
+              <option key={x} value={x}>{NOME_DA_FORMA[x]}</option>
+            ))}
+          </Escolha>
+        </Campo>
+        {!l && (
+          <Campo id="l-contraparte" rotulo="Para quem" dica="fornecedor, freela — quando não é cliente">
+            <Entrada
+              id="l-contraparte"
+              value={f.contraparte}
+              onChange={(e) => setF({ ...f, contraparte: e.target.value })}
+            />
+          </Campo>
+        )}
+      </div>
+
+      {/* JÁ FOI PAGO: o caso do dia a dia é registrar o que já saiu da conta,
+          não prever. Separar em "criar" e depois "marcar como pago" seriam
+          dois passos para um fato só. */}
+      {!l && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-[14px]">
+            <input
+              id="l-ja-foi"
+              type="checkbox"
+              checked={f.jaFoi}
+              onChange={(e) => setF({ ...f, jaFoi: e.target.checked })}
+              className="size-4"
+            />
+            já entrou / já saiu
+          </label>
+          {f.jaFoi && (
+            <label className="flex items-center gap-2 text-[14px]">
+              <span className="rotulo">quando</span>
+              <input
+                id="l-quando"
+                type="date"
+                value={f.quando}
+                onChange={(e) => setF({ ...f, quando: e.target.value })}
+                className="min-h-10 border border-linha-fraca bg-superficie-2 px-2 text-[14px] text-tinta"
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Botao variante="primario" tamanho="pequeno" disabled={ocupado || !pronto} onClick={salvar}>
+          {ocupado ? 'Salvando…' : l ? 'Salvar' : 'Lançar'}
+        </Botao>
+        <Botao variante="texto" tamanho="pequeno" onClick={aoFechar}>Fechar</Botao>
+
+        {l && (
+          <>
+            <span className="ml-auto" />
+            {/* Cancelar tira das contas e GUARDA; apagar some. A diferença
+                importa: saber que existiu e foi cancelado vale mais que a
+                linha sumir do mês. */}
+            {l.situacao !== 'cancelado' && (
+              <Botao variante="texto" tamanho="pequeno" disabled={ocupado} onClick={aoCancelar}>
+                Não vai acontecer
+              </Botao>
+            )}
+            {!confirmandoApagar ? (
+              <Botao
+                variante="texto"
+                tamanho="pequeno"
+                className="text-pink-texto"
+                onClick={() => setConfirmandoApagar(true)}
+              >
+                Apagar
+              </Botao>
+            ) : (
+              <>
+                <span className="legenda">apagar não deixa rastro.</span>
+                <Botao variante="primario" tamanho="pequeno" disabled={ocupado} onClick={aoApagar}>
+                  Apagar mesmo
+                </Botao>
+                <Botao variante="texto" tamanho="pequeno" onClick={() => setConfirmandoApagar(false)}>
+                  Deixa
+                </Botao>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Financeiro() {
   const [mes, setMes] = useState(mesDeHoje);
   const [painel, setPainel] = useState<PainelFinanceiro | null>(null);
@@ -45,16 +300,29 @@ export function Financeiro() {
   const [perguntando, setPerguntando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [rodada, setRodada] = useState<RodadaDeCobranca | null>(null);
+  // Lançar na mão (0077). Antes disto nao havia NENHUMA funcao que
+  // escrevesse em `lancamentos`: so entrava mensalidade de contrato.
+  const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
+  const [clientes, setClientes] = useState<ClienteNaLista[]>([]);
+  const [lancando, setLancando] = useState(false);
+  const [editando, setEditando] = useState<LancamentoNaLista | null>(null);
+  const [mexendo, setMexendo] = useState(false);
+  const [recado, setRecado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setErro(null);
     setPainel(null);
     setPerguntando(false);
     setRodada(null);
+    setRecado(null);
     try {
-      const [p, n] = await Promise.all([painelFinanceiro(mes), contratosACobrar(mes)]);
+      const [p, n, cs, cl] = await Promise.all([
+        painelFinanceiro(mes), contratosACobrar(mes), categoriasFinanceiras(), listaClientes(),
+      ]);
       setPainel(p);
       setContratos(n);
+      setCategorias(cs);
+      setClientes(cl);
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui abrir o financeiro.');
     }
@@ -104,6 +372,50 @@ export function Financeiro() {
         render: (l) => <Marca>{NATUREZA[l.natureza] ?? l.natureza}</Marca>,
       },
       {
+        // O QUE FAZER COM ESTA LINHA.
+        //
+        // O botao principal muda com a situacao, porque a pergunta muda: numa
+        // linha prevista a pergunta e "ja entrou?", numa recebida e "foi
+        // engano?". Mostrar os dois sempre seria pedir para alguem estornar
+        // sem querer.
+        chave: 'acoes',
+        titulo: 'O que fazer',
+        larguraMin: '12rem',
+        render: (l) => (
+          <div className="flex flex-wrap items-center gap-1">
+            {(l.situacao === 'previsto' || l.situacao === 'atrasado') && (
+              <Botao
+                tamanho="pequeno"
+                variante="primario"
+                disabled={mexendo}
+                onClick={() => void mexer(
+                  () => liquidarLancamento(l.id),
+                  `${l.descricao}: ${l.natureza === 'receita' ? 'recebido' : 'pago'}.`,
+                )}
+              >
+                {l.natureza === 'receita' ? 'Recebi' : 'Paguei'}
+              </Botao>
+            )}
+            {(l.situacao === 'recebido' || l.situacao === 'pago' || l.situacao === 'cancelado') && (
+              <Botao
+                tamanho="pequeno"
+                variante="texto"
+                disabled={mexendo}
+                onClick={() => void mexer(
+                  () => estornarLancamento(l.id),
+                  `${l.descricao} voltou para previsto.`,
+                )}
+              >
+                Desfazer
+              </Botao>
+            )}
+            <Botao tamanho="pequeno" variante="texto" onClick={() => setEditando(l)}>
+              Editar
+            </Botao>
+          </div>
+        ),
+      },
+      {
         chave: 'vencimento',
         titulo: 'Vence',
         render: (l) => <span className="numeros">{diaMes(l.vencimento)}</span>,
@@ -123,11 +435,37 @@ export function Financeiro() {
     [],
   );
 
-  if (erro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
+  // SO troca a tela inteira quando nao HA tela: erro ao carregar. Depois que
+  // o painel existe, a recusa do banco pertence ao lado da acao que a causou.
+  // Antes disto, apagar um lançamento pago substituia a pagina pelo erro e
+  // levava junto o formulario aberto e o que a pessoa tinha digitado.
+  if (erro && !painel) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!painel) return <Carregando oQue="o financeiro" />;
 
   const sobra = painel.receitaCentavos - painel.custoCentavos;
   const aReceber = painel.receitaCentavos - painel.recebidoCentavos;
+
+  /** Uma acao qualquer sobre um lançamento: faz, recarrega, e nunca cala o erro. */
+  async function mexer(fn: () => Promise<unknown>, oQue: string): Promise<boolean> {
+    setMexendo(true);
+    setErro(null);
+    setRecado(null);
+    try {
+      await fn();
+      setRecado(oQue);
+      const [p, n] = await Promise.all([painelFinanceiro(mes), contratosACobrar(mes)]);
+      setPainel(p);
+      setContratos(n);
+      return true;
+    } catch (x) {
+      // Erro NAO fecha o formulario: a recusa do banco fica na tela e o que
+      // foi digitado continua la para ser corrigido.
+      setErro(x instanceof Error ? x.message : 'Não consegui.');
+      return false;
+    } finally {
+      setMexendo(false);
+    }
+  }
 
   async function gerar() {
     setGerando(true);
@@ -221,7 +559,17 @@ export function Financeiro() {
             Uma rodada pode dar certo pela metade: contrato de cortesia tem
             valor zero e a tabela de lançamentos recusa. Os outros passam, e
             o que falhou aparece aqui com o motivo em vez de sumir. */}
-        {rodada && (
+          {recado && (
+          <p role="status" className="aviso mt-4">{recado}</p>
+        )}
+        {erro && (
+          <div role="alert" className="bloco mt-4 bg-alerta-fundo p-3.5">
+            <span className="rotulo-forte text-pink-texto">não deu certo</span>
+            <p className="mt-1 text-[13.5px] font-medium">{erro}</p>
+          </div>
+        )}
+
+      {rodada && (
           <div
             role="status"
             className={'bloco mt-4 p-3.5 ' + (rodada.erros > 0 ? 'bg-alerta-fundo' : '')}
@@ -285,6 +633,15 @@ export function Financeiro() {
           <Fita
             acao={
               <div className="flex flex-wrap gap-2">
+                {/* LANÇAR NA MÃO. Antes da 0077 nao existia: so entrava
+                    mensalidade de contrato, e custo nenhum. */}
+                <Botao
+                  tamanho="pequeno"
+                  variante={lancando ? 'secundario' : 'primario'}
+                  onClick={() => { setLancando((v) => !v); setEditando(null); }}
+                >
+                  {lancando ? 'Fechar' : '+ Lançar'}
+                </Botao>
                 {([
                   ['tudo', 'Tudo'],
                   ['aberto', 'Em aberto'],
@@ -306,13 +663,54 @@ export function Financeiro() {
             Lançamentos
           </Fita>
 
+          {lancando && (
+            <FormLancamento
+              categorias={categorias}
+              clientes={clientes}
+              lancamento={null}
+              ocupado={mexendo}
+              aoCriar={(d) => void mexer(
+                () => criarLancamento({ ...d, competencia: null }),
+                `${d.descricao} lançado.`,
+              ).then((deu) => { if (deu) setLancando(false); })}
+              aoEditar={() => {}}
+              aoFechar={() => setLancando(false)}
+              aoCancelar={() => {}}
+              aoApagar={() => {}}
+            />
+          )}
+
+          {editando && (
+            <FormLancamento
+              key={editando.id}
+              categorias={categorias}
+              clientes={clientes}
+              lancamento={editando}
+              ocupado={mexendo}
+              aoCriar={() => {}}
+              aoEditar={(d) => void mexer(
+                () => editarLancamento(editando.id, { ...d, competencia: null }),
+                `${d.descricao} corrigido.`,
+              ).then((deu) => { if (deu) setEditando(null); })}
+              aoFechar={() => setEditando(null)}
+              aoCancelar={() => void mexer(
+                () => cancelarLancamento(editando.id),
+                `${editando.descricao} saiu das contas do mês.`,
+              ).then((deu) => { if (deu) setEditando(null); })}
+              aoApagar={() => void mexer(
+                () => apagarLancamento(editando.id),
+                `${editando.descricao} foi apagado.`,
+              ).then((deu) => { if (deu) setEditando(null); })}
+            />
+          )}
+
           {painel.lancamentos.length === 0 ? (
             <Vazio
               titulo="Mês sem lançamento."
               explica={
                 contratos && contratos > 0
-                  ? 'Use "gerar mensalidades" aqui em cima para lançar os contratos ativos deste mês.'
-                  : 'Nenhum contrato ativo em vigor neste mês.'
+                  ? 'Use "gerar mensalidades" aqui em cima para os contratos ativos, ou "+ lançar" para um custo ou uma entrada avulsa.'
+                  : 'Use "+ lançar" para registrar uma entrada ou uma saída.'
               }
             />
           ) : (

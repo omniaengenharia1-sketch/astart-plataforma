@@ -734,6 +734,31 @@ export interface LancamentoNaLista {
   sugestao: string | null;
 }
 
+/** Uma folha da arvore grupo > categoria > subcategoria, com o rotulo pronto. */
+export interface CategoriaFinanceira {
+  id: string;
+  natureza: string;
+  grupo: string;
+  categoria: string;
+  subcategoria: string;
+  /** "Custo · Freela · Design" — montado no banco, para nao remontar em cada tela. */
+  rotulo: string;
+}
+
+/** O que a tela manda ao criar ou corrigir um lançamento. */
+export interface LancamentoNovo {
+  descricao: string;
+  subcategoriaId: string;
+  valorCentavos: number;
+  vencimento: string | null;
+  competencia: string | null;
+  clienteId: string | null;
+  contraparte: string | null;
+  forma: string | null;
+  /** Preenchido quando o dinheiro JÁ andou: nasce liquidado, num passo só. */
+  liquidadoEm: string | null;
+}
+
 export interface PainelFinanceiro {
   mes: string;
   receitaCentavos: number;

@@ -21,7 +21,7 @@ import type {
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
   DocumentoDoCliente, TipoDocumento,
   PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps,
-  RodadaDeCobranca,
+  CategoriaFinanceira, LancamentoNovo, RodadaDeCobranca,
   SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
@@ -1660,6 +1660,14 @@ export async function registrarItemExemplo(
 // ---------------------------------------------------------------------------
 interface LancamentoExemplo extends LancamentoNaLista {
   competencia: string;
+  /**
+   * O estado GUARDADO, que no banco e a coluna `status`. A `situacao` que a
+   * tela mostra nasce dele mais a data de vencimento — e a conta que a view
+   * `lancamentos_com_situacao` faz. Antes da 0077 o exemplo so tinha a
+   * situacao final, porque nada aqui mudava de estado: nao havia como.
+   */
+  status: 'previsto' | 'liquidado' | 'cancelado';
+  liquidadoEm: string | null;
 }
 
 const primeiroDoMes = (d: Date) =>
@@ -1683,7 +1691,7 @@ function lanc(
   resto: Partial<LancamentoExemplo> = {},
 ): LancamentoExemplo {
   seqLanc += 1;
-  return {
+  const l: LancamentoExemplo = {
     id: `l-${seqLanc}`,
     descricao,
     clienteNome: null,
@@ -1698,8 +1706,21 @@ function lanc(
     forma: 'pix',
     sugestao: null,
     competencia,
+    status: 'previsto',
+    liquidadoEm: null,
     ...resto,
   };
+  // O estado guardado SAI da situacao, e nao o contrario. Os lancamentos de
+  // exemplo sao escritos pela situacao que a tela mostra ("recebido"); se o
+  // `status` ficasse em 'previsto' neles, a tela ofereceria "recebi" num
+  // lancamento ja recebido — e o banco de verdade recusaria.
+  l.status = l.situacao === 'cancelado' ? 'cancelado'
+    : (l.situacao === 'recebido' || l.situacao === 'pago') ? 'liquidado'
+    : 'previsto';
+  l.liquidadoEm = l.status === 'liquidado'
+    ? (l.liquidadoEm ?? l.vencimento ?? competencia)
+    : null;
+  return l;
 }
 
 /** A mensalidade de cada contrato recorrente ativo, no mês pedido. */
@@ -1818,6 +1839,181 @@ export function painelFinanceiroExemplo(mes?: string): PainelFinanceiro {
       .sort((a, b) => (a.vencimento ?? '').localeCompare(b.vencimento ?? '')),
     porCliente: [...porCliente.values()].sort((a, b) => b.receitaCentavos - a.receitaCentavos),
   };
+}
+
+// ---------------------------------------------------------------------------
+// LANCAR PAGAMENTO (0077)
+//
+// A dona: "aqui tbm eu nao consigo lançar pagamentos". Nao havia NENHUMA
+// funcao que escrevesse em `lancamentos` — o financeiro era leitura de uma
+// tabela que ninguem conseguia preencher. Estes espelhos repetem as recusas
+// do banco palavra por palavra, porque e a recusa que a tela mostra.
+// ---------------------------------------------------------------------------
+const CATEGORIAS: CategoriaFinanceira[] = [
+  ['receita', 'Receita', 'Contrato', 'Recorrente'],
+  ['receita', 'Receita', 'Contrato', 'Projeto'],
+  ['receita', 'Receita', 'Contrato', 'Pontual'],
+  ['receita', 'Receita', 'Outros', 'Reembolso'],
+  ['receita', 'Receita', 'Outros', 'Diversos'],
+  ['custo', 'Custo', 'Freela', 'Audiovisual'],
+  ['custo', 'Custo', 'Freela', 'Design'],
+  ['custo', 'Custo', 'Freela', 'Redação'],
+  ['custo', 'Custo', 'Freela', 'Desenvolvimento'],
+  ['custo', 'Custo', 'Equipe', 'Salário'],
+  ['custo', 'Custo', 'Equipe', 'Pró-labore'],
+  ['custo', 'Custo', 'Equipe', 'Benefício'],
+  ['custo', 'Custo', 'Aplicativo', 'Assinatura'],
+  ['custo', 'Custo', 'Aplicativo', 'Mídia'],
+  ['custo', 'Custo', 'Transporte', 'Combustível'],
+  ['custo', 'Custo', 'Transporte', 'Aplicativo'],
+  ['custo', 'Custo', 'Alimentação', 'Equipe'],
+  ['custo', 'Custo', 'Alimentação', 'Cliente'],
+  ['custo', 'Custo', 'Cartão Agência', 'Diversos'],
+  ['custo', 'Custo', 'Outro', 'Diversos'],
+].map(([natureza, grupo, categoria, subcategoria], i) => ({
+  id: `sub-${i + 1}`,
+  natureza: natureza as string,
+  grupo: grupo as string,
+  categoria: categoria as string,
+  subcategoria: subcategoria as string,
+  rotulo: `${grupo} · ${categoria} · ${subcategoria}`,
+}));
+
+export function categoriasFinanceirasExemplo(): CategoriaFinanceira[] {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') return [];
+  return CATEGORIAS;
+}
+
+function soDinheiro(): void {
+  if (!veDinheiroExemplo() || papelDaVez === 'cliente') {
+    throw new Error('O financeiro é de quem cuida do dinheiro da agência.');
+  }
+}
+
+const achaLanc = (id: string) => {
+  const l = LANCAMENTOS.find((x) => x.id === id);
+  if (!l) throw new Error('Lançamento não encontrado.');
+  return l;
+};
+
+/** A mesma conta da view do banco: cancelado, pago/recebido, atrasado, previsto. */
+function situacaoDe(l: LancamentoExemplo): SituacaoLancamento {
+  if (l.status === 'cancelado') return 'cancelado';
+  if (l.status === 'liquidado') return l.natureza === 'receita' ? 'recebido' : 'pago';
+  if (l.vencimento && l.vencimento < hoje) return 'atrasado';
+  return 'previsto';
+}
+
+export function criarLancamentoExemplo(d: LancamentoNovo): string {
+  soDinheiro();
+  if (!d.descricao.trim()) throw new Error('O lançamento precisa de uma descrição.');
+  if (!d.valorCentavos || d.valorCentavos <= 0) throw new Error('O valor precisa ser maior que zero.');
+  const cat = CATEGORIAS.find((c) => c.id === d.subcategoriaId);
+  if (!cat) throw new Error('Escolha uma categoria.');
+  const base = d.competencia ?? d.vencimento ?? d.liquidadoEm ?? hoje;
+  const competencia = `${base.slice(0, 7)}-01`;
+  const cliente = CLIENTES.find((c) => c.cliente.id === d.clienteId);
+  seqLanc += 1;
+  const novo: LancamentoExemplo = {
+    id: `l-novo-${seqLanc}`,
+    descricao: d.descricao.trim(),
+    clienteId: d.clienteId,
+    clienteNome: cliente ? cliente.cliente.nome : null,
+    natureza: cat.natureza as LancamentoExemplo['natureza'],
+    grupo: cat.grupo,
+    categoria: cat.categoria,
+    subcategoria: cat.subcategoria,
+    valorCentavos: d.valorCentavos,
+    vencimento: d.vencimento,
+    situacao: 'previsto',
+    forma: (d.forma ?? null) as LancamentoExemplo['forma'],
+    sugestao: null,
+    competencia,
+    status: d.liquidadoEm ? 'liquidado' : 'previsto',
+    liquidadoEm: d.liquidadoEm,
+  };
+  novo.situacao = situacaoDe(novo);
+  LANCAMENTOS.push(novo);
+  return novo.id;
+}
+
+export function liquidarLancamentoExemplo(
+  id: string, em: string | null, forma: string | null,
+): void {
+  soDinheiro();
+  const l = achaLanc(id);
+  // A recusa diz QUANDO foi a primeira vez: dois cliques trocariam a data
+  // do pagamento em silêncio.
+  if (l.status === 'liquidado') {
+    const d = (l.liquidadoEm ?? hoje).split('-');
+    throw new Error(`Este lançamento já foi liquidado em ${d[2]}/${d[1]}/${d[0]}.`);
+  }
+  if (l.status === 'cancelado') {
+    throw new Error('Este lançamento está cancelado. Reabra antes de liquidar.');
+  }
+  l.status = 'liquidado';
+  l.liquidadoEm = em ?? hoje;
+  if (forma) l.forma = forma as LancamentoExemplo['forma'];
+  l.situacao = situacaoDe(l);
+}
+
+export function estornarLancamentoExemplo(id: string): void {
+  soDinheiro();
+  const l = achaLanc(id);
+  l.status = 'previsto';
+  l.liquidadoEm = null;
+  l.situacao = situacaoDe(l);
+}
+
+export function cancelarLancamentoExemplo(id: string): void {
+  soDinheiro();
+  const l = achaLanc(id);
+  l.status = 'cancelado';
+  l.liquidadoEm = null;
+  l.situacao = situacaoDe(l);
+}
+
+export function editarLancamentoExemplo(
+  id: string, d: Partial<LancamentoNovo> & { limpar?: string[] },
+): void {
+  soDinheiro();
+  const l = achaLanc(id);
+  if (d.descricao !== undefined && d.descricao !== null && !d.descricao.trim()) {
+    throw new Error('O lançamento precisa de uma descrição.');
+  }
+  if (d.valorCentavos != null && d.valorCentavos <= 0) {
+    throw new Error('O valor precisa ser maior que zero.');
+  }
+  const limpar = new Set(d.limpar ?? []);
+  if (d.descricao?.trim()) l.descricao = d.descricao.trim();
+  if (d.valorCentavos != null) l.valorCentavos = d.valorCentavos;
+  if (d.subcategoriaId) {
+    const cat = CATEGORIAS.find((c) => c.id === d.subcategoriaId);
+    if (!cat) throw new Error('Categoria não encontrada.');
+    l.natureza = cat.natureza as LancamentoExemplo['natureza'];
+    l.grupo = cat.grupo;
+    l.categoria = cat.categoria;
+    l.subcategoria = cat.subcategoria;
+  }
+  l.vencimento = limpar.has('vencimento') ? null : (d.vencimento ?? l.vencimento);
+  if (limpar.has('cliente')) { l.clienteId = null; l.clienteNome = null; }
+  else if (d.clienteId) {
+    const c = CLIENTES.find((x) => x.cliente.id === d.clienteId);
+    l.clienteId = d.clienteId;
+    l.clienteNome = c ? c.cliente.nome : null;
+  }
+  if (d.competencia) l.competencia = `${d.competencia.slice(0, 7)}-01`;
+  l.situacao = situacaoDe(l);
+}
+
+export function apagarLancamentoExemplo(id: string): void {
+  soDinheiro();
+  if (papelDaVez !== 'admin') throw new Error('Só a direção apaga lançamento.');
+  const l = achaLanc(id);
+  if (l.status === 'liquidado') {
+    throw new Error('Este lançamento já foi liquidado — o dinheiro andou. Estorne ou cancele.');
+  }
+  LANCAMENTOS.splice(LANCAMENTOS.indexOf(l), 1);
 }
 
 // ---------------------------------------------------------------------------
