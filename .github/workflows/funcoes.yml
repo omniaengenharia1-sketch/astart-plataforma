@@ -126,13 +126,13 @@ jobs:
           fi
           echo "Todas as funcoes do disco estao declaradas."
 
-      # Quem autoriza estas cinco nao e o JWT:
-      #   publicar-tick, renovar-tokens
-      #   e avisar-tarefa      — o header x-tick-secret, que o cron manda
+      # Quem autoriza estas seis nao e o JWT:
+      #   publicar-tick, renovar-tokens, avisar-tarefa
+      #   e agenda-google      — o header x-tick-secret, que o cron manda
       #   galeria e aprovar    — o token do link, conferido no banco
       - name: Publicar as que nao usam JWT
         run: |
-          for f in publicar-tick renovar-tokens avisar-tarefa galeria aprovar; do
+          for f in publicar-tick renovar-tokens avisar-tarefa agenda-google galeria aprovar; do
             echo "::group::$f"
             supabase functions deploy "$f" --project-ref "$REF" --no-verify-jwt --yes
             echo "::endgroup::"
