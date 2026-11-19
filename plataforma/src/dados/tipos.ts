@@ -832,12 +832,52 @@ export interface PecaNaFila {
 }
 
 export interface EventoNaAgenda {
-  tipo: 'publicacao' | 'captacao' | 'marco' | 'cobranca';
+  tipo: 'publicacao' | 'captacao' | 'marco' | 'cobranca' | 'compromisso';
+  /** O dia, já no fuso de quem é o evento — nunca o do navegador. */
   quando: string;
-  clienteId: string;
-  clienteNome: string;
+  /** "14:00", ou nulo quando o evento não tem hora (dia inteiro, prazo). */
+  hora: string | null;
+  id: string;
+  /**
+   * Só o compromisso. Os outros quatro pertencem ao módulo que os criou:
+   * editar uma peça agendada daqui seria mentir sobre o que o botão faz.
+   */
+  editavel: boolean;
+  clienteId: string | null;
+  clienteNome: string | null;
   oQue: string;
   detalhe: string;
+}
+
+/** A ficha de um compromisso, como o formulário precisa dela. */
+export interface CompromissoNaFicha {
+  id: string;
+  titulo: string;
+  /** AAAA-MM-DD no fuso do compromisso. */
+  dia: string;
+  hora: string | null;
+  horaFim: string | null;
+  diaInteiro: boolean;
+  fuso: string;
+  clienteId: string | null;
+  responsavelId: string | null;
+  local: string | null;
+  observacao: string | null;
+  origem: string;
+  /** Já tem par no Google Agenda (fase 2 da integração). */
+  noGoogle: boolean;
+}
+
+export interface CompromissoNovo {
+  titulo: string;
+  dia: string;
+  hora: string | null;
+  horaFim: string | null;
+  diaInteiro: boolean;
+  clienteId: string | null;
+  responsavelId: string | null;
+  local: string | null;
+  observacao: string | null;
 }
 
 export interface ItemDoGrid {

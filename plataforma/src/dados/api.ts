@@ -27,7 +27,9 @@ import {
   financeiroDoClienteExemplo, mudarPapelExemplo, reativarClienteExemplo, removerClienteExemplo,
   agendaComercialExemplo, criarLeadExemplo, registrarInteracaoExemplo,
   filaPublicacaoExemplo, funilExemplo, galeriasExemplo, gridExemplo, moverLeadExemplo,
-  apagarLancamentoExemplo, cancelarLancamentoExemplo, categoriasFinanceirasExemplo,
+  apagarCompromissoExemplo, apagarLancamentoExemplo, cancelarLancamentoExemplo,
+  categoriasFinanceirasExemplo, compromissoExemplo, criarCompromissoExemplo,
+  editarCompromissoExemplo,
   contratosACobrarExemplo, criarLancamentoExemplo, editarLancamentoExemplo,
   estornarLancamentoExemplo, gerarCobrancasDoMesExemplo, liquidarLancamentoExemplo,
   npsDoClienteExemplo, npsResumoExemplo, painelFinanceiroExemplo, responderNpsExemplo,
@@ -47,7 +49,8 @@ import type {
   FinanceiroDoCliente, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria, ItemNaFila, MesDeConteudo, NpsDoCliente,
   PainelCliente, PainelEquipe, PainelFinanceiro, PapelEquipe, PecaNaFila, PedidoDeConvite, Perfil,
-  CategoriaFinanceira, LancamentoNovo, RodadaDeCobranca,
+  CategoriaFinanceira, CompromissoNaFicha, CompromissoNovo, LancamentoNovo,
+  RodadaDeCobranca,
   QuadroDeTarefas, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps, SaudeDoToken, ServicoEscolhido, ServicoNoProjeto, Sessao,
   TarefaNova, TipoPeca,
 } from './tipos';
@@ -1572,6 +1575,85 @@ export async function filaPublicacao(): Promise<PecaNaFila[]> {
   const { data, error } = await sb.rpc('fila_publicacao');
   if (error) throw new FalhaDados(`Não consegui carregar a fila: ${error.message}`);
   return exija(data as PecaNaFila[] | null, 'A fila de publicação');
+}
+
+/**
+ * Monta o instante a partir do dia + hora LOCAL e do fuso do compromisso.
+ *
+ * Deixar `new Date('2026-11-20T09:00')` resolver sozinho usa o fuso do
+ * NAVEGADOR: a mesma gravação marcada de outro lugar nasceria em outra hora.
+ * Aqui o fuso é dito, e é o do compromisso.
+ */
+function instante(dia: string, hora: string | null, fuso: string): string {
+  const [a, m, d] = dia.split('-').map(Number) as [number, number, number];
+  const [h, min] = (hora ?? '00:00').split(':').map(Number) as [number, number];
+  // Descobre o deslocamento do fuso NAQUELE dia (horário de verão muda).
+  const chute = Date.UTC(a, m - 1, d, h, min);
+  const comoLa = new Date(
+    new Date(chute).toLocaleString('en-US', { timeZone: fuso }),
+  ).getTime();
+  const comoUtc = new Date(
+    new Date(chute).toLocaleString('en-US', { timeZone: 'UTC' }),
+  ).getTime();
+  return new Date(chute + (comoUtc - comoLa)).toISOString();
+}
+
+const FUSO_PADRAO = 'America/Sao_Paulo';
+
+export async function criarCompromisso(c: CompromissoNovo): Promise<string> {
+  if (!sb) return criarCompromissoExemplo(c);
+  const { data, error } = await sb.rpc('criar_compromisso', {
+    p_titulo: c.titulo,
+    p_quando: instante(c.dia, c.diaInteiro ? '00:00' : c.hora, FUSO_PADRAO),
+    p_termina_em: c.diaInteiro || !c.horaFim ? null : instante(c.dia, c.horaFim, FUSO_PADRAO),
+    p_dia_inteiro: c.diaInteiro,
+    p_cliente: c.clienteId,
+    p_responsavel: c.responsavelId,
+    p_local: c.local,
+    p_observacao: c.observacao,
+    p_fuso: FUSO_PADRAO,
+  });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as string | null, 'O compromisso criado');
+}
+
+export async function compromisso(id: string): Promise<CompromissoNaFicha> {
+  if (!sb) return compromissoExemplo(id);
+  const { data, error } = await sb.rpc('compromisso', { p_compromisso: id });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as CompromissoNaFicha | null, 'O compromisso');
+}
+
+export async function editarCompromisso(
+  id: string, c: CompromissoNovo & { fuso?: string },
+): Promise<void> {
+  if (!sb) return editarCompromissoExemplo(id, c);
+  const fuso = c.fuso ?? FUSO_PADRAO;
+  const limpar: string[] = [];
+  if (c.diaInteiro || !c.horaFim) limpar.push('fim');
+  if (!c.clienteId) limpar.push('cliente');
+  if (!c.responsavelId) limpar.push('responsavel');
+  if (!c.local) limpar.push('local');
+  if (!c.observacao) limpar.push('observacao');
+  const { error } = await sb.rpc('editar_compromisso', {
+    p_compromisso: id,
+    p_titulo: c.titulo,
+    p_quando: instante(c.dia, c.diaInteiro ? '00:00' : c.hora, fuso),
+    p_termina_em: c.diaInteiro || !c.horaFim ? null : instante(c.dia, c.horaFim, fuso),
+    p_dia_inteiro: c.diaInteiro,
+    p_cliente: c.clienteId,
+    p_responsavel: c.responsavelId,
+    p_local: c.local,
+    p_observacao: c.observacao,
+    p_limpar: limpar,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+export async function apagarCompromisso(id: string): Promise<void> {
+  if (!sb) return apagarCompromissoExemplo(id);
+  const { error } = await sb.rpc('apagar_compromisso', { p_compromisso: id });
+  if (error) throw new FalhaDados(error.message);
 }
 
 export async function agenda(de: string, ate: string): Promise<EventoNaAgenda[]> {

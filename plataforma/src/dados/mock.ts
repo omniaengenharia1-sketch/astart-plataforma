@@ -21,7 +21,8 @@ import type {
   PainelEquipe, PainelFinanceiro, PecaNaFila, PecaNoMes, Perfil,
   DocumentoDoCliente, TipoDocumento,
   PapelEquipe, PedidoDeConvite, PessoaDaEquipe, RelatorioDeCampanha, ResumoDaRemocao, ResumoNps,
-  CategoriaFinanceira, LancamentoNovo, RodadaDeCobranca,
+  CategoriaFinanceira, CompromissoNaFicha, CompromissoNovo, LancamentoNovo,
+  RodadaDeCobranca,
   SaudeDoToken,
   ServicoContratado, ServicoEscolhido, ServicoNoProjeto,
   Sessao, SituacaoLancamento, StatusPublicacao, TipoPeca,
@@ -2222,6 +2223,116 @@ const CAPTACOES: CaptacaoExemplo[] = [
 const nomeDe = (clienteId: string) =>
   CLIENTES.find((c) => c.cliente.id === clienteId)?.cliente.nome ?? '';
 
+// ---------------------------------------------------------------------------
+// COMPROMISSOS (0078) — o unico tipo que a propria Agenda cria
+//
+// Os outros quatro nascem em outro modulo; a Agenda so os mostra. Por isso
+// `editavel` so e verdadeiro aqui.
+// ---------------------------------------------------------------------------
+interface CompromissoExemplo {
+  id: string;
+  titulo: string;
+  dia: string;
+  hora: string | null;
+  horaFim: string | null;
+  diaInteiro: boolean;
+  clienteId: string | null;
+  responsavelId: string | null;
+  local: string | null;
+  observacao: string | null;
+}
+
+let seqComp = 0;
+const COMPROMISSOS: CompromissoExemplo[] = [
+  {
+    id: 'k-1', titulo: 'Reunião de pauta', dia: emDias(2), hora: '10:00',
+    horaFim: '11:00', diaInteiro: false, clienteId: null, responsavelId: null,
+    local: 'Sala da agência', observacao: null,
+  },
+  {
+    id: 'k-2', titulo: 'Gravação Mor Marcas', dia: emDias(5), hora: '14:00',
+    horaFim: '18:00', diaInteiro: false, clienteId: CLIENTE_EXEMPLO.id,
+    responsavelId: null, local: 'Estúdio da Vila', observacao: null,
+  },
+];
+
+function soEquipeAgenda(): void {
+  if (papelDaVez === 'cliente') {
+    throw new Error('A agenda interna é da equipe.');
+  }
+}
+
+export function criarCompromissoExemplo(c: CompromissoNovo): string {
+  soEquipeAgenda();
+  if (!c.titulo.trim()) throw new Error('O compromisso precisa de um título.');
+  if (!c.dia) throw new Error('O compromisso precisa de uma data.');
+  if (!c.diaInteiro && c.hora && c.horaFim && c.horaFim <= c.hora) {
+    throw new Error('O fim do compromisso tem de ser depois do começo.');
+  }
+  seqComp += 1;
+  const id = `k-novo-${seqComp}`;
+  COMPROMISSOS.push({
+    id,
+    titulo: c.titulo.trim(),
+    dia: c.dia,
+    hora: c.diaInteiro ? null : (c.hora || null),
+    horaFim: c.diaInteiro ? null : (c.horaFim || null),
+    diaInteiro: c.diaInteiro,
+    clienteId: c.clienteId,
+    responsavelId: c.responsavelId,
+    local: c.local?.trim() || null,
+    observacao: c.observacao?.trim() || null,
+  });
+  return id;
+}
+
+export function compromissoExemplo(id: string): CompromissoNaFicha {
+  soEquipeAgenda();
+  const k = COMPROMISSOS.find((x) => x.id === id);
+  if (!k) throw new Error('Compromisso não encontrado.');
+  return {
+    id: k.id,
+    titulo: k.titulo,
+    dia: k.dia,
+    hora: k.hora,
+    horaFim: k.horaFim,
+    diaInteiro: k.diaInteiro,
+    fuso: 'America/Sao_Paulo',
+    clienteId: k.clienteId,
+    responsavelId: k.responsavelId,
+    local: k.local,
+    observacao: k.observacao,
+    origem: 'astart',
+    noGoogle: false,
+  };
+}
+
+export function editarCompromissoExemplo(id: string, c: CompromissoNovo): void {
+  soEquipeAgenda();
+  const k = COMPROMISSOS.find((x) => x.id === id);
+  if (!k) throw new Error('Compromisso não encontrado.');
+  if (!c.titulo.trim()) throw new Error('O compromisso precisa de um título.');
+  if (!c.diaInteiro && c.hora && c.horaFim && c.horaFim <= c.hora) {
+    throw new Error('O fim do compromisso tem de ser depois do começo.');
+  }
+  k.titulo = c.titulo.trim();
+  k.dia = c.dia;
+  k.diaInteiro = c.diaInteiro;
+  k.hora = c.diaInteiro ? null : (c.hora || null);
+  k.horaFim = c.diaInteiro ? null : (c.horaFim || null);
+  k.clienteId = c.clienteId;
+  k.responsavelId = c.responsavelId;
+  k.local = c.local?.trim() || null;
+  k.observacao = c.observacao?.trim() || null;
+}
+
+export function apagarCompromissoExemplo(id: string): void {
+  soEquipeAgenda();
+  const i = COMPROMISSOS.findIndex((x) => x.id === id);
+  if (i < 0) throw new Error('Compromisso não encontrado.');
+  COMPROMISSOS.splice(i, 1);
+}
+
 export function agendaExemplo(de: string, ate: string): EventoNaAgenda[] {
   const dentro = (dia: string) => dia >= de && dia <= ate;
   const eventos: EventoNaAgenda[] = [];
@@ -2229,14 +2340,16 @@ export function agendaExemplo(de: string, ate: string): EventoNaAgenda[] {
   for (const p of PECAS) {
     if (!dentro(p.dia)) continue;
     eventos.push({
-      tipo: 'publicacao', quando: p.dia, clienteId: p.clienteId,
+      tipo: 'publicacao', id: p.id, editavel: false, hora: p.hora ?? null,
+      quando: p.dia, clienteId: p.clienteId,
       clienteNome: nomeDe(p.clienteId), oQue: p.titulo, detalhe: p.tipo,
     });
   }
   for (const c of CAPTACOES) {
     if (!dentro(c.data)) continue;
     eventos.push({
-      tipo: 'captacao', quando: c.data, clienteId: c.clienteId,
+      tipo: 'captacao', id: `cap-${c.clienteId}-${c.data}`, editavel: false, hora: null,
+      quando: c.data, clienteId: c.clienteId,
       clienteNome: nomeDe(c.clienteId), oQue: c.titulo, detalhe: c.local,
     });
   }
@@ -2245,7 +2358,8 @@ export function agendaExemplo(de: string, ate: string): EventoNaAgenda[] {
       for (const m of s.marcos) {
         if (m.concluidoEm || !dentro(m.prazo)) continue;
         eventos.push({
-          tipo: 'marco', quando: m.prazo, clienteId: cliente.cliente.id,
+          tipo: 'marco', id: m.id, editavel: false, hora: null,
+          quando: m.prazo, clienteId: cliente.cliente.id,
           clienteNome: cliente.cliente.nome, oQue: m.titulo, detalhe: s.servicoNome,
         });
       }
@@ -2256,12 +2370,28 @@ export function agendaExemplo(de: string, ate: string): EventoNaAgenda[] {
     if (l.situacao !== 'previsto' && l.situacao !== 'atrasado') continue;
     if (!dentro(l.vencimento)) continue;
     eventos.push({
-      tipo: 'cobranca', quando: l.vencimento, clienteId: l.clienteId,
+      tipo: 'cobranca', id: l.id, editavel: false, hora: null,
+      quando: l.vencimento, clienteId: l.clienteId,
       clienteNome: l.clienteNome ?? '', oQue: l.descricao, detalhe: l.situacao,
     });
   }
+  // O cliente NAO ve a agenda interna: e nela que aparece o nome dos outros.
+  if (papelDaVez !== 'cliente') {
+    for (const k of COMPROMISSOS) {
+      if (!dentro(k.dia)) continue;
+      eventos.push({
+        tipo: 'compromisso', id: k.id, editavel: true,
+        hora: k.diaInteiro ? null : k.hora,
+        quando: k.dia, clienteId: k.clienteId,
+        clienteNome: k.clienteId ? nomeDe(k.clienteId) : null,
+        oQue: k.titulo, detalhe: k.local ?? '',
+      });
+    }
+  }
 
-  return eventos.sort((a, b) => a.quando.localeCompare(b.quando) || a.oQue.localeCompare(b.oQue, 'pt-BR'));
+  return eventos.sort((a, b) => a.quando.localeCompare(b.quando)
+    || (a.hora ?? '').localeCompare(b.hora ?? '')
+    || a.oQue.localeCompare(b.oQue, 'pt-BR'));
 }
 
 // ---------------------------------------------------------------------------
