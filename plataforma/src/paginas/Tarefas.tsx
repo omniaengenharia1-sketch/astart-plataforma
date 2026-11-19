@@ -11,16 +11,32 @@
  *    cartoes do periodo. Quadro por semana cria tarefa orfa toda segunda: o
  *    que nao foi feito fica no quadro da semana passada, que ninguem abre.
  *
- * 2. ARRASTAR USA O HTML, NAO UMA BIBLIOTECA. `draggable` nativo resolve o
- *    gesto no computador em vinte linhas. No celular, onde `draggable` nao
- *    existe, o cartao tem um seletor de coluna — gesto que nao funciona no
- *    telefone e pior que botao que funciona, e a dona trabalha do telefone.
+ * 2. ARRASTAR USA EVENTOS DE PONTEIRO, NAO `draggable`.
+ *
+ *    Era `draggable` nativo, e a dona cobrou: "aqui eu queria poder arrastar
+ *    as tarefas entre os kanbans". Ela usa Safari. Rodei o mesmo gesto nos
+ *    dois motores com o Playwright: no Chromium sai `dragstart`, `dragover`,
+ *    `drop` e o cartao muda de coluna; no WebKit, que e o motor do Safari,
+ *    NENHUM evento dispara. O recurso estava morto para ela desde sempre, e
+ *    eu nunca testei fora do Chromium.
+ *
+ *    `pointerdown`/`pointermove`/`pointerup` sao os mesmos nos dois. So
+ *    comeca a arrastar depois de 6px de movimento, senao todo clique para
+ *    abrir o cartao viraria um arrasto.
+ *
+ *    No TOQUE o arrasto continua de fora, de proposito: para arrastar com o
+ *    dedo seria preciso travar a rolagem da pagina, e o quadro rola de lado
+ *    no celular. La o cartao tem o seletor de coluna, que e o mesmo gesto em
+ *    forma de botao. O mesmo seletor esta no cartao aberto, em qualquer
+ *    tamanho de tela: e o caminho de quem usa teclado, que arrastar nunca
+ *    atende.
  *
  * 3. QUEM RENUMERA É O BANCO. A tela manda "este cartao, nesta coluna, nesta
  *    posicao" e recarrega. Duas pessoas arrastando ao mesmo tempo com a tela
  *    decidindo os numeros dariam duas ordens diferentes para o mesmo quadro.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PointerEvent as PointerEventoReact } from 'react';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
@@ -75,22 +91,25 @@ function urgencia(t: Tarefa): 'atrasada' | 'hoje' | null {
 }
 
 function Cartao({
-  t, colunas, equipe, aoMover, aoAbrir,
+  t, colunas, equipe, aoMover, aoAbrir, aoPegar, fantasma,
 }: {
   t: Tarefa;
   colunas: ColunaDeTarefa[];
   equipe: PessoaDaEquipe[];
   aoMover: (colunaId: string) => void;
   aoAbrir: () => void;
+  aoPegar: (e: PointerEventoReact) => void;
+  /** Este cartao e o que esta sendo arrastado agora. */
+  fantasma: boolean;
 }) {
   const estado = urgencia(t);
   return (
     <article
-      draggable
-      onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
+      onPointerDown={aoPegar}
       className={
-        'bloco cursor-pointer p-3 transition-shadow hover:shadow-lg ' +
-        (estado === 'atrasada' ? 'border-pink' : '')
+        'bloco cursor-grab p-3 transition-shadow hover:shadow-lg ' +
+        (estado === 'atrasada' ? 'border-pink ' : '') +
+        (fantasma ? 'opacity-40' : '')
       }
       onClick={aoAbrir}
     >
@@ -178,6 +197,23 @@ export function Tarefas() {
    * continua aberto.
    */
   const [abertaId, setAbertaId] = useState<string | null>(null);
+
+  /**
+   * ARRASTAR, com ponteiro.
+   *
+   * Tres refs e dois estados. As refs porque os ouvintes sao registrados uma
+   * vez so, na montagem, e leriam estado congelado; os estados porque o que
+   * aparece na tela — o cartao fantasma e a coluna acesa — precisa redesenhar.
+   */
+  const pegado = useRef<{ id: string; coluna: string; x: number; y: number } | null>(null);
+  const sobreRef = useRef<string | null>(null);
+  /** Virou arrasto de verdade? Serve para o clique seguinte NAO abrir o cartao. */
+  const arrastou = useRef(false);
+  const [arrastando, setArrastando] = useState<{ id: string; titulo: string } | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const [onde, setOnde] = useState({ x: 0, y: 0 });
+  /** Para o ouvinte chamar o `mover` de agora, nao o da montagem. */
+  const moverRef = useRef<(id: string, coluna: string) => void>(() => {});
   const [novaColuna, setNovaColuna] = useState('');
 
   const carregar = useCallback(async () => {
@@ -264,6 +300,66 @@ export function Tarefas() {
       setErro(x instanceof Error ? x.message : 'Não consegui mexer na coluna.');
     }
   }
+
+  // Espelhos do que o ouvinte precisa ler. Atribuidos a cada desenho, entao
+  // o ouvinte, que e registrado uma vez so, sempre le o de agora.
+  const quadroRef = useRef<QuadroDeTarefas | null>(quadro);
+  quadroRef.current = quadro;
+  moverRef.current = (id, col) => void mover(id, col);
+
+  /** O ponteiro encostou num cartao. Ainda nao e arrasto: pode ser clique. */
+  function pegar(e: PointerEventoReact, t: Tarefa) {
+    // So mouse e caneta. No dedo, arrastar exigiria travar a rolagem — e o
+    // quadro rola de lado no celular. La o caminho e o seletor de coluna.
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+    if (e.button !== 0) return;
+    arrastou.current = false;
+    pegado.current = { id: t.id, coluna: t.colunaId, x: e.clientX, y: e.clientY };
+  }
+
+  useEffect(() => {
+    function andou(e: PointerEvent) {
+      const p = pegado.current;
+      if (!p) return;
+      if (!arrastou.current) {
+        // Seis pixels de folga: sem isso, a mao tremida de um clique ja
+        // arrastaria o cartao para outra coluna.
+        if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
+        arrastou.current = true;
+        const t = quadroRef.current?.tarefas.find((x) => x.id === p.id);
+        setArrastando({ id: p.id, titulo: t?.titulo ?? '' });
+        document.body.style.userSelect = 'none';
+      }
+      setOnde({ x: e.clientX, y: e.clientY });
+      // Quem esta embaixo do ponteiro. O fantasma nao atrapalha porque e
+      // `pointer-events-none`.
+      const alvo = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-coluna]');
+      const col = alvo ? alvo.getAttribute('data-coluna') : null;
+      sobreRef.current = col;
+      setSobre(col);
+    }
+    function soltou() {
+      const p = pegado.current;
+      const col = sobreRef.current;
+      pegado.current = null;
+      sobreRef.current = null;
+      document.body.style.userSelect = '';
+      setArrastando(null);
+      setSobre(null);
+      // Soltar na mesma coluna nao e mover: seria uma ida ao banco e um
+      // recarregamento para nada.
+      if (arrastou.current && p && col && col !== p.coluna) moverRef.current(p.id, col);
+    }
+    window.addEventListener('pointermove', andou);
+    window.addEventListener('pointerup', soltou);
+    window.addEventListener('pointercancel', soltou);
+    return () => {
+      window.removeEventListener('pointermove', andou);
+      window.removeEventListener('pointerup', soltou);
+      window.removeEventListener('pointercancel', soltou);
+      document.body.style.userSelect = '';
+    };
+  }, []);
 
   if (erro && !quadro) return <Falhou mensagem={erro} tentar={() => void carregar()} />;
   if (!quadro) return <Carregando oQue="o quadro" />;
@@ -378,13 +474,11 @@ export function Tarefas() {
           return (
             <section
               key={c.id}
-              className="w-[min(86vw,300px)] shrink-0"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const id = e.dataTransfer.getData('text/plain');
-                if (id) void mover(id, c.id);
-              }}
+              data-coluna={c.id}
+              className={
+                'w-[min(86vw,300px)] shrink-0 rounded-xl transition-colors '
+                + (arrastando && sobre === c.id ? 'bg-pink/10 outline outline-2 outline-pink' : '')
+              }
             >
               <header className="mb-3 flex items-center justify-between gap-2">
                 <button
@@ -429,7 +523,11 @@ export function Tarefas() {
                       colunas={quadro.colunas}
                       equipe={equipe}
                       aoMover={(col) => void mover(t.id, col)}
-                      aoAbrir={() => setAbertaId(t.id)}
+                      // Depois de arrastar NAO abre: o clique vem logo atras
+                      // do soltar, e abrir o cartao seria uma surpresa.
+                      aoAbrir={() => { if (!arrastou.current) setAbertaId(t.id); }}
+                      aoPegar={(e) => pegar(e, t)}
+                      fantasma={arrastando?.id === t.id}
                     />
                   ))
                 )}
@@ -480,9 +578,22 @@ export function Tarefas() {
         />
       )}
 
+      {/* O cartao que segue o ponteiro. `pointer-events-none` e obrigatorio:
+          sem isso ele seria o elemento embaixo do cursor e nenhuma coluna
+          seria encontrada. */}
+      {arrastando && (
+        <div
+          className="pointer-events-none fixed z-50 max-w-[240px] rounded-lg border border-pink bg-superficie px-3 py-2 text-[13.5px] font-bold shadow-lg"
+          style={{ left: onde.x + 14, top: onde.y + 14 }}
+        >
+          {arrastando.titulo}
+        </div>
+      )}
+
       {aberta && (
         <Detalhe
           t={aberta}
+          colunas={quadro.colunas}
           equipe={equipe}
           euSou={sessao.tipo === 'equipe' ? sessao.perfil.userId : ''}
           aoFechar={() => setAbertaId(null)}
@@ -505,9 +616,10 @@ export function Tarefas() {
  * entrega.
  */
 function Detalhe({
-  t, equipe, euSou, aoFechar, aoMudar, aoApagar, aoFalhar,
+  t, colunas, equipe, euSou, aoFechar, aoMudar, aoApagar, aoFalhar,
 }: {
   t: Tarefa;
+  colunas: ColunaDeTarefa[];
   equipe: PessoaDaEquipe[];
   euSou: string;
   aoFechar: () => void;
@@ -699,6 +811,28 @@ function Detalhe({
           <p className="legenda mt-1.5 text-tinta-3">
             até 200 MB · imagem, PDF, Word, Excel, PowerPoint, CSV ou vídeo
           </p>
+        </div>
+
+        {/* MOVER DAQUI, EM QUALQUER TELA.
+            No quadro, o seletor de coluna só aparece no celular — no
+            computador o gesto é arrastar. Mas arrastar não atende quem usa
+            teclado, e o cartão aberto é onde essa pessoa chega com Enter.
+            Então aqui o seletor existe sempre. */}
+        <div className="mt-6 border-t border-linha-fraca pt-4">
+          <label className="block">
+            <span className="rotulo">Coluna</span>
+            <select
+              value={t.colunaId}
+              aria-label={`Coluna de ${t.titulo}`}
+              disabled={salvando}
+              onChange={(e) => void tentar(() => moverTarefa(t.id, e.target.value))}
+              className="mt-1.5 min-h-11 w-full border border-linha-fraca bg-superficie-2 px-2 text-[14px] text-tinta"
+            >
+              {colunas.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {/* Apagar é de quem criou. Quem recebeu move e conclui; sumir com o
