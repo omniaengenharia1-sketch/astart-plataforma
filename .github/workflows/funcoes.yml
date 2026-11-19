@@ -106,7 +106,7 @@ jobs:
       - name: Conferir que toda funcao esta declarada
         working-directory: supabase/functions
         run: |
-          SEM_JWT="publicar-tick renovar-tokens avisar-tarefa galeria aprovar"
+          SEM_JWT="publicar-tick renovar-tokens avisar-tarefa agenda-google galeria aprovar"
           COM_JWT="convidar conectar-conta"
           faltam=""
           for d in */; do
