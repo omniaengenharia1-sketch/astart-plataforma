@@ -294,4 +294,24 @@ begin
       'public.registrar_evento_de_cobranca(text, text, text, jsonb, date, bigint, text)',
       'execute'),
     'mas o service role, que e quem recebe o webhook, pode');
+
+  -- O COFRE NAO E LIDO PELA TELA, NEM PELA API.
+  --
+  -- A primeira versao da Edge Function tentava `sb.schema('vault')` e levou
+  -- "Invalid schema: vault" na primeira chamada de verdade. Nao e falta de
+  -- configuracao: o PostgREST nao expoe o cofre de proposito, e expor seria
+  -- abrir a porta dos segredos para qualquer chave de leitura. Quem le e uma
+  -- funcao do banco, e so o service role a executa.
+  perform public.afirma(
+    not has_function_privilege('authenticated', 'public.config_asaas()', 'execute'),
+    'a chave da Asaas nao e alcancavel pela tela');
+  perform public.afirma(
+    not has_function_privilege('anon', 'public.config_asaas()', 'execute'),
+    'nem por quem nao entrou');
+  perform public.afirma(
+    not has_function_privilege('authenticated', 'public.token_do_webhook_asaas()', 'execute'),
+    'nem o token do webhook');
+  perform public.afirma(
+    has_function_privilege('service_role', 'public.config_asaas()', 'execute'),
+    'so o service role, que e quem roda a emissao');
 end $$;

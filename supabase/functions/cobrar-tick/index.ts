@@ -164,31 +164,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!url || !servico) return json(500, { ok: false, erro: 'Function mal configurada.' });
   const sb = createClient(url, servico, { auth: { persistSession: false } });
 
-  // A chave e o endereço vivem no Vault, lidos aqui com service role e nunca
-  // devolvidos na resposta.
-  const { data: segredos, error: eSeg } = await sb
-    .schema('vault')
-    .from('decrypted_secrets')
-    .select('name, decrypted_secret')
-    .in('name', ['asaas_api_key', 'asaas_base_url']);
+  // A chave e o endereço vivem no Vault, e o Vault NÃO é lido daqui direto:
+  // `sb.schema('vault')` devolve "Invalid schema: vault", porque o PostgREST
+  // só expõe os schemas configurados — e expor o cofre na API seria abrir a
+  // porta dos segredos para qualquer chave de leitura. Quem lê é uma função
+  // `security definer` do banco, liberada só para o service role (0083).
+  const { data: cfg, error: eSeg } = await sb.rpc('config_asaas');
   if (eSeg) return json(500, { ok: false, erro: `Não consegui ler o cofre: ${eSeg.message}` });
 
-  const mapa = new Map((segredos ?? []).map((s: { name: string; decrypted_secret: string }) =>
-    [s.name, s.decrypted_secret]));
-  const chave = mapa.get('asaas_api_key');
-  const base = (mapa.get('asaas_base_url') ?? '').replace(/\/+$/, '');
-  if (!chave || !base) {
+  const conf = (Array.isArray(cfg) ? cfg[0] : cfg) as
+    { chave: string; base_url: string; ambiente: string } | undefined;
+  if (!conf?.chave || !conf?.base_url) {
     return json(500, {
       ok: false,
       erro: 'Faltam `asaas_api_key` e/ou `asaas_base_url` no Vault. '
         + 'Sem elas não há como emitir cobrança.',
     });
   }
-
-  // O ambiente sai do PRÓPRIO endereço, e não de uma variável à parte: duas
-  // fontes para a mesma verdade divergem, e a que erra é sempre a que
-  // ninguém lembra de mudar.
-  const ambiente = base.includes('sandbox') ? 'sandbox' : 'producao';
+  const chave = conf.chave;
+  const base = conf.base_url;
+  const ambiente = conf.ambiente;
 
   const { data, error } = await sb.rpc('cobrancas_para_emitir', {
     p_ambiente: ambiente, p_dias_antes: DIAS_ANTES, p_limite: 50,

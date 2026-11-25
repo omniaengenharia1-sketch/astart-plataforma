@@ -60,15 +60,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!url || !servico) return json(500, { ok: false, erro: 'Function mal configurada.' });
   const sb = createClient(url, servico, { auth: { persistSession: false } });
 
-  const { data: segredo, error: eSeg } = await sb
-    .schema('vault')
-    .from('decrypted_secrets')
-    .select('decrypted_secret')
-    .eq('name', 'asaas_webhook_token')
-    .maybeSingle();
+  // O cofre não é lido daqui direto: o PostgREST não expõe o schema `vault`,
+  // e expor seria abrir a porta dos segredos. Quem lê é uma função do banco,
+  // `security definer`, liberada só para o service role (0083). Esta função
+  // recebe SÓ o token do webhook — a chave da API ela não precisa, e dar o
+  // que não se precisa é como vazamento começa.
+  const { data: segredo, error: eSeg } = await sb.rpc('token_do_webhook_asaas');
   if (eSeg) return json(500, { ok: false, erro: `Não consegui ler o cofre: ${eSeg.message}` });
 
-  const esperado = (segredo as { decrypted_secret?: string } | null)?.decrypted_secret;
+  const esperado = segredo as string | null;
   if (!esperado) {
     // Sem o segredo cadastrado, aceitar qualquer POST seria deixar a porta
     // do dinheiro aberta. Melhor recusar e dizer o que falta.
