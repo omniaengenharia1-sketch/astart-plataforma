@@ -138,10 +138,22 @@ begin
   perform set_config('teste.uid', '10000000-0000-0000-0000-000000000001', false);
   v := public.estado_dos_conectores();
 
+  -- A ASAAS VIROU CONSTRUIDA NA 0082, e esta assercao mudou junto.
+  --
+  -- `construida` separa "falta a chave" de "falta eu escrever o codigo". Na
+  -- 0081 eu marquei a Asaas como construida cedo demais e este teste me
+  -- derrubou, com razao: so existia o banco. Agora existem as duas Edge
+  -- Functions, a que emite e a que recebe o aviso de pagamento, entao a
+  -- tela pode dizer a verdade — e a Anthropic continua sendo so schema.
+  perform public.afirma(
+    (select (x->>'construida')::boolean from jsonb_array_elements(v) x
+      where x->>'id' = 'asaas'),
+    'a Asaas aparece como construida: as duas Edge Functions existem'
+  );
   perform public.afirma(
     (select count(*) from jsonb_array_elements(v) x
-      where x->>'id' in ('asaas', 'anthropic') and not (x->>'construida')::boolean) = 2,
-    'Asaas e Anthropic aparecem como ainda nao construidas'
+      where x->>'id' = 'anthropic' and not (x->>'construida')::boolean) = 1,
+    'e a Anthropic continua sendo so schema'
   );
 end $$;
 

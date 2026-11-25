@@ -106,7 +106,7 @@ jobs:
       - name: Conferir que toda funcao esta declarada
         working-directory: supabase/functions
         run: |
-          SEM_JWT="publicar-tick renovar-tokens avisar-tarefa agenda-google galeria aprovar"
+          SEM_JWT="publicar-tick renovar-tokens avisar-tarefa agenda-google cobrar-tick asaas-webhook galeria aprovar"
           COM_JWT="convidar conectar-conta"
           faltam=""
           for d in */; do
@@ -129,10 +129,13 @@ jobs:
       # Quem autoriza estas seis nao e o JWT:
       #   publicar-tick, renovar-tokens, avisar-tarefa
       #   e agenda-google      — o header x-tick-secret, que o cron manda
+      #   cobrar-tick          — idem
+      #   asaas-webhook        — o header asaas-access-token, conferido no Vault
+      #                          (quem chama e a Asaas, que nao tem conta aqui)
       #   galeria e aprovar    — o token do link, conferido no banco
       - name: Publicar as que nao usam JWT
         run: |
-          for f in publicar-tick renovar-tokens avisar-tarefa agenda-google galeria aprovar; do
+          for f in publicar-tick renovar-tokens avisar-tarefa agenda-google cobrar-tick asaas-webhook galeria aprovar; do
             echo "::group::$f"
             supabase functions deploy "$f" --project-ref "$REF" --no-verify-jwt --yes
             echo "::endgroup::"
