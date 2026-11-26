@@ -106,6 +106,38 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   if (lateral.includes('integrações')) problemas.push(`[${nome}] o resumo liga modulo que nao foi contratado`);
   await p.screenshot({ path: `${SAIDA}/${nome}-04-preenchido.png`, fullPage: true });
 
+  // CPF/CNPJ (0086).
+  //
+  // A dona: "na tela do cliente quando for cadastrar precisa do campo do
+  // cnpj/cpf pra eu cadastrar". Nao e capricho de formulario: a fila da
+  // cobranca so olha cliente com documento (`c.cnpj_cpf is not null` em
+  // `cobrancas_para_emitir`), e quem nasce sem ele nunca e cobrado — sem erro,
+  // sem log, sem nada. Cliente invisivel para o dinheiro.
+  //
+  // O digito verificador e conferido AQUI porque a Asaas recusa documento
+  // invalido horas depois, numa rodada de madrugada, longe de quem digitou.
+  await p.fill('#documento', '12345678000190'); // CNPJ com digito errado
+  await p.waitForTimeout(150);
+  const comDocErrado = (await p.locator('body').innerText()).toLowerCase();
+  if (!comDocErrado.includes('não fecha')) {
+    problemas.push(`[${nome}] aceitou CNPJ com digito errado sem reclamar`);
+  }
+  if (!(await enviar.isDisabled())) {
+    problemas.push(`[${nome}] deixou cadastrar com o documento invalido`);
+  }
+  await p.screenshot({ path: `${SAIDA}/${nome}-04b-documento-invalido.png`, fullPage: true });
+
+  // A mascara monta sozinha: quem digita so numero ve a pontuacao aparecer.
+  await p.fill('#documento', '');
+  await p.locator('#documento').type('11222333000181');
+  const doc = await p.locator('#documento').inputValue();
+  if (doc !== '11.222.333/0001-81') problemas.push(`[${nome}] a mascara do CNPJ saiu "${doc}"`);
+  await p.fill('#email-cobranca', 'financeiro@cafedobairro.com.br');
+  await p.locator('#telefone').type('11988887777');
+  const tel = await p.locator('#telefone').inputValue();
+  if (tel !== '(11) 98888-7777') problemas.push(`[${nome}] a mascara do telefone saiu "${tel}"`);
+  await p.waitForTimeout(150);
+
   if (await enviar.isDisabled()) problemas.push(`[${nome}] o botao continua travado com tudo preenchido`);
   await enviar.click();
   await p.waitForTimeout(600);
@@ -114,6 +146,10 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   const ficha = (await p.locator('body').innerText()).toLowerCase().replace(/\u00a0/g, ' ');
   for (const esperado of ['café do bairro', 'gestão digital', 'audiovisual', 'r$ 1.950,00']) {
     if (!ficha.includes(esperado)) problemas.push(`[${nome}] a ficha nova nao mostra "${esperado}"`);
+  }
+  // O documento chegou na ficha, e a direcao le de volta (0087).
+  for (const esperado of ['para cobrar', '11.222.333/0001-81', 'financeiro@cafedobairro.com.br']) {
+    if (!ficha.includes(esperado)) problemas.push(`[${nome}] a ficha nao mostra "${esperado}"`);
   }
   await p.screenshot({ path: `${SAIDA}/${nome}-05-ficha-nova.png`, fullPage: true });
 
@@ -154,6 +190,14 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   await p.getByRole('button', { name: /escolher serviço/i }).click();
   await p.getByRole('button', { name: 'Gestão Digital por mês' }).click();
   await p.locator('#srv-gestao_digital-valor').type('250000');
+  // A operacao TEM o campo do documento: se ela cadastra o cliente, e ela que
+  // tem o contrato na mao. Sem isto, todo cliente que a operacao cadastra
+  // nasce fora da cobranca.
+  if ((await p.locator('#documento').count()) !== 1) {
+    problemas.push('[cad-operacao] a operacao nao tem onde digitar o CPF/CNPJ');
+  }
+  await p.locator('#documento').type('11144477735'); // CPF valido de teste
+  await p.waitForTimeout(150);
   await p.getByRole('button', { name: 'Cadastrar cliente' }).click();
   await p.waitForTimeout(600);
 
@@ -164,6 +208,12 @@ for (const [larg, alt, nome] of [[1440, 900, 'cad'], [390, 844, 'cad-celular']])
   if (!ficha.includes('bar da esquina')) problemas.push('[cad-operacao] o cliente novo nao abriu');
   if (!ficha.includes('gestão digital')) problemas.push('[cad-operacao] o serviço nao apareceu');
   if (ficha.includes('2.500,00')) problemas.push('[cad-operacao] ela le de volta o valor que digitou');
+  // Mesma regra do dinheiro para o documento: a operacao DIGITA no cadastro
+  // (senao o cliente nasce invisivel para a cobranca) e nao le de volta na
+  // ficha. CPF de cliente nao e preciso para fazer um carrossel.
+  if (ficha.includes('para cobrar')) {
+    problemas.push('[cad-operacao] a operacao ve o painel de cobranca na ficha');
+  }
   if (ficha.includes('r$')) problemas.push('[cad-operacao] tem valor em reais na ficha dela');
   await p.screenshot({ path: `${SAIDA}/cad-operacao.png`, fullPage: true });
   await ctx.close();

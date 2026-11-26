@@ -313,6 +313,20 @@ export interface ClienteNovo {
   nome: string;
 }
 
+/**
+ * O que a cobrança precisa saber de um cliente (migrations 0081, 0086 e 0087).
+ * Só dígitos, como mora no banco: a máscara é coisa de tela.
+ */
+export interface DadosDeCobranca {
+  nome: string;
+  cnpjCpf: string | null;
+  email: string | null;
+  telefone: string | null;
+  /** Já tem cadastro na Asaas. Trocar o documento aqui não renomeia o de lá. */
+  naAsaas: boolean;
+  ambiente: string | null;
+}
+
 // --- o projeto (migration 0029) ---------------------------------------------
 
 export interface EntregavelNoProjeto {

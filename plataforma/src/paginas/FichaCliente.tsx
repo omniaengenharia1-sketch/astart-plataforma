@@ -4,6 +4,7 @@ import { NavLink, Link, useParams } from 'react-router-dom';
 import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada, Escolha } from '../componentes/Campo';
+import { DadosDeCobrancaPainel } from '../componentes/DadosDeCobrancaPainel';
 import { LinksDeAprovacao } from '../componentes/LinksDeAprovacao';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
@@ -482,6 +483,16 @@ export function FichaCliente() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Cobranca fica do lado de quem responde, porque e a mesma conversa:
+              quem paga, por onde chega o boleto. So financeiro e direcao veem —
+              o banco recusa de todo jeito, e esconder evita a recusa na cara. */}
+          {dinheiro && (
+            <>
+              <div className="mt-8" />
+              <DadosDeCobrancaPainel clienteId={clienteId} />
+            </>
           )}
 
           <div className="mt-8" />

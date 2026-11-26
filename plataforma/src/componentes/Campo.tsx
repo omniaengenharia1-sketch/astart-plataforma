@@ -6,17 +6,26 @@ const CAIXA =
   'text-[14px] backdrop-blur-xl transition-colors duration-150 ' +
   'hover:border-linha focus:outline-none';
 
-/** Rótulo em cima, dica embaixo. A dica explica a regra antes do erro aparecer. */
+/**
+ * Rótulo em cima, dica embaixo. A dica explica a regra antes do erro aparecer.
+ *
+ * Com `erro`, a dica sai de cena e entra a recusa — nunca as duas juntas: ler
+ * "opcional" ao lado de "esse número não fecha" é não saber em qual acreditar.
+ * O erro vai num `role="alert"` com fundo próprio, o mesmo do resto da
+ * plataforma, porque cor sozinha não se vê de todo jeito.
+ */
 export function Campo({
   id,
   rotulo,
   dica,
+  erro,
   children,
   className = '',
 }: {
   id?: string;
   rotulo: string;
   dica?: ReactNode;
+  erro?: string;
   children: ReactNode;
   className?: string;
 }) {
@@ -26,7 +35,13 @@ export function Campo({
         {rotulo}
       </label>
       <div className="mt-2">{children}</div>
-      {dica && <p className="legenda mt-2">{dica}</p>}
+      {erro ? (
+        <p role="alert" className="legenda mt-2 bg-alerta-fundo px-2 py-1.5">
+          {erro}
+        </p>
+      ) : (
+        dica && <p className="legenda mt-2">{dica}</p>
+      )}
     </div>
   );
 }

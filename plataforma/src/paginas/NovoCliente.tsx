@@ -5,7 +5,14 @@ import { Botao } from '../componentes/Botao';
 import { Campo, CampoDinheiro, Entrada, Escolha, Segmento } from '../componentes/Campo';
 import { Carregando, Falhou } from '../componentes/Estado';
 import { catalogo as lerCatalogo, criarCliente } from '../dados/api';
-import { reais, sluguificar } from '../formato';
+import {
+  documentoValido,
+  mascaraDocumento,
+  mascaraTelefone,
+  reais,
+  sluguificar,
+  soDigitos,
+} from '../formato';
 import { MODULO } from '../rotulos';
 import type {
   Catalogo, ChaveModulo, ChaveServico, FormatoContrato, ServicoCatalogo, ServicoEscolhido,
@@ -114,7 +121,7 @@ function LinhaServico({
         </Campo>
 
         {recorrente ? (
-          <Campo id={`${id}-dia`} rotulo="Vence todo dia" dica="mes mais curto cobra no ultimo dia">
+          <Campo id={`${id}-dia`} rotulo="Vence todo dia" dica="mês mais curto cobra no último dia">
             <Escolha
               id={`${id}-dia`}
               value={escolha.diaVencimento ?? 10}
@@ -240,6 +247,11 @@ export function NovoCliente() {
   const [slug, setSlug] = useState('');
   const [editandoSlug, setEditandoSlug] = useState(false);
   const [fuso, setFuso] = useState('America/Sao_Paulo');
+  // Cobrança: sem CPF/CNPJ o cliente nunca entra na fila da Asaas, e nunca
+  // aparece um erro dizendo isso. Por isso o documento é pedido aqui.
+  const [documento, setDocumento] = useState('');
+  const [emailCobranca, setEmailCobranca] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [escolhidos, setEscolhidos] = useState<ServicoEscolhido[]>([]);
   const [abrindo, setAbrindo] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -307,15 +319,26 @@ export function NovoCliente() {
   }
 
   const semFormato = escolhidos.filter((e) => e.formato === null);
+  // Documento errado não barra o cadastro no banco — só a Asaas recusa, horas
+  // depois, numa rodada que ninguém está olhando. A conta do dígito é aqui.
+  const docOk = documentoValido(documento);
   const podeEnviar =
-    nome.trim().length > 0 && endereco !== '' && escolhidos.length > 0 && semFormato.length === 0;
+    nome.trim().length > 0 &&
+    endereco !== '' &&
+    escolhidos.length > 0 &&
+    semFormato.length === 0 &&
+    docOk;
 
   async function enviar() {
     if (enviando || !podeEnviar) return; // Clique duplo não cadastra dois clientes.
     setEnviando(true);
     setErro(null);
     try {
-      const novo = await criarCliente(nome, escolhidos, endereco, fuso);
+      const novo = await criarCliente(nome, escolhidos, endereco, fuso, {
+        cnpjCpf: soDigitos(documento),
+        email: emailCobranca.trim(),
+        telefone: soDigitos(telefone),
+      });
       navegar(`/clientes/${novo.id}`);
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui cadastrar o cliente.');
@@ -433,6 +456,60 @@ export function NovoCliente() {
                       </option>
                     ))}
                   </Escolha>
+                </Campo>
+              </div>
+
+              <div className="mt-9" />
+              <Fita>Para cobrar</Fita>
+              <p className="mt-3 max-w-xl text-[13px] text-tinta-2">
+                Sem CPF ou CNPJ a plataforma não consegue emitir boleto nem pix para
+                ele — e não avisa, só deixa de cobrar. O resto é opcional: serve para
+                o aviso de cobrança chegar.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Campo
+                  id="documento"
+                  rotulo="CPF ou CNPJ"
+                  dica={
+                    documento.trim() === ''
+                      ? 'quem vai no boleto'
+                      : docOk
+                        ? 'conferido'
+                        : undefined
+                  }
+                  erro={
+                    documento.trim() !== '' && !docOk
+                      ? 'Esse número não fecha. Confira os dígitos.'
+                      : undefined
+                  }
+                >
+                  <Entrada
+                    id="documento"
+                    value={documento}
+                    inputMode="numeric"
+                    placeholder="Ex.: 12.345.678/0001-90"
+                    onChange={(e) => setDocumento(mascaraDocumento(e.target.value))}
+                  />
+                </Campo>
+
+                <Campo id="email-cobranca" rotulo="E-mail de cobrança" dica="opcional">
+                  <Entrada
+                    id="email-cobranca"
+                    type="email"
+                    value={emailCobranca}
+                    placeholder="financeiro@cliente.com.br"
+                    onChange={(e) => setEmailCobranca(e.target.value)}
+                  />
+                </Campo>
+
+                <Campo id="telefone" rotulo="Telefone" dica="opcional">
+                  <Entrada
+                    id="telefone"
+                    value={telefone}
+                    inputMode="numeric"
+                    placeholder="(11) 99999-8888"
+                    onChange={(e) => setTelefone(mascaraTelefone(e.target.value))}
+                  />
                 </Campo>
               </div>
 

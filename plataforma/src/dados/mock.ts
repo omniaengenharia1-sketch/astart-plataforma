@@ -12,7 +12,7 @@ import type {
   ContratoEditado,
   AgendaComercial,
   Canal, Catalogo, ChaveModulo, ChaveServico, Cliente, ClienteNaLista, ClienteNovo, Conector,
-  ContaDescoberta, ContaSocial, Decisao, Publicacao, PublicacaoNova,
+  ContaDescoberta, ContaSocial, DadosDeCobranca, Decisao, Publicacao, PublicacaoNova,
   Album, AmbientesDoCliente, ConviteAberto, EntregavelNoProjeto, EquipeEConvites, EtapaLead,
   EventoNaAgenda, FichaCliente, FinanceiroDoCliente, FormatoContrato, Funil,
   GaleriaNaLista, ItemDoGrid, ItemGaleria,
@@ -578,6 +578,7 @@ export function catalogoExemplo(): Catalogo {
 /** Mesmas recusas de criar_cliente(), para a tela de exemplo nao mentir. */
 export function criarClienteExemplo(
   nome: string, servicos: ServicoEscolhido[], slug?: string,
+  cobranca?: { cnpjCpf?: string; email?: string; telefone?: string },
 ): ClienteNovo {
   const alvo = sluguificar(slug?.trim() || nome);
   if (!nome.trim()) throw new Error('O cliente precisa de um nome.');
@@ -617,7 +618,55 @@ export function criarClienteExemplo(
     extras: servicos.flatMap((e) => e.modulos),
     contatos: [],
   });
+  if (cobranca) salvarDadosDeCobrancaExemplo(cliente.id, cobranca);
   return { id: cliente.id, slug: alvo, nome: cliente.nome };
+}
+
+// ---------------------------------------------------------------------------
+// Os dados de cobrança do exemplo (migrations 0081, 0086, 0087)
+//
+// Ficam de fora de `CLIENTES` porque no banco eles também são colunas que a
+// maior parte da plataforma não lê: só o financeiro e a direção veem CPF.
+// ---------------------------------------------------------------------------
+const COBRANCA = new Map<string, { cnpjCpf: string | null; email: string | null; telefone: string | null }>([
+  // O cliente de exemplo já vem com documento, senão a tela de cobrança do
+  // modo demonstração mostra um vazio que parece defeito.
+  [
+    CLIENTE_EXEMPLO.id,
+    { cnpjCpf: '11222333000181', email: 'financeiro@mormarcas.com.br', telefone: '11999998888' },
+  ],
+]);
+
+export function dadosDeCobrancaExemplo(clienteId: string): DadosDeCobranca {
+  const alvo = CLIENTES.find((c) => c.cliente.id === clienteId);
+  if (!alvo) throw new Error('Cliente não encontrado.');
+  const d = COBRANCA.get(clienteId);
+  return {
+    nome: alvo.cliente.nome,
+    cnpjCpf: d?.cnpjCpf ?? null,
+    email: d?.email ?? null,
+    telefone: d?.telefone ?? null,
+    naAsaas: false,
+    ambiente: null,
+  };
+}
+
+export function salvarDadosDeCobrancaExemplo(
+  clienteId: string,
+  dados: { cnpjCpf?: string; email?: string; telefone?: string },
+): void {
+  const digitos = (t?: string) => (t ?? '').replace(/\D/g, '') || null;
+  const d = digitos(dados.cnpjCpf);
+  if (d !== null && d.length !== 11 && d.length !== 14) {
+    throw new Error(`CPF tem 11 dígitos e CNPJ tem 14. Vieram ${d.length}.`);
+  }
+  const antes = COBRANCA.get(clienteId);
+  // `coalesce`, igual ao banco: campo vazio não apaga o que já estava lá.
+  COBRANCA.set(clienteId, {
+    cnpjCpf: d ?? antes?.cnpjCpf ?? null,
+    email: (dados.email ?? '').trim() || antes?.email || null,
+    telefone: digitos(dados.telefone) ?? antes?.telefone ?? null,
+  });
 }
 
 // ---------------------------------------------------------------------------

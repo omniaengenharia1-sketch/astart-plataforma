@@ -38,13 +38,14 @@ import {
   enviarExemplo, equipeEConvitesExemplo, fichaExemplo, filaExemplo, itemDoEntregavelExemplo,
   listaClientesExemplo, moverPecaExemplo, mudarAcessoExemplo, painelClienteExemplo,
   projetoExemplo, responderExemplo, revogarConviteExemplo, tirarAcessoDoClienteExemplo,
+  dadosDeCobrancaExemplo, salvarDadosDeCobrancaExemplo,
 } from './mock';
 import type {
   ServicoDisponivel,
   ContratoEditado,
   AgendaComercial,
   Album, AmbientesDoCliente, Canal, Catalogo, Cliente, ClienteNaLista, ClienteNovo, Conector,
-  ContaDescoberta, ContaSocial, Decisao,
+  ContaDescoberta, ContaSocial, DadosDeCobranca, Decisao,
   Publicacao, PublicacaoNova,
   EnvioNaFicha, EquipeEConvites, EtapaLead, EventoNaAgenda, FichaCliente,
   FinanceiroDoCliente, Funil,
@@ -416,6 +417,46 @@ export async function fichaCliente(clienteId: string): Promise<FichaCliente> {
 }
 
 /**
+ * CPF/CNPJ, e-mail e telefone de cobranca de um cliente que JA existe.
+ *
+ * Leitura separada da ficha de proposito: a `ficha_cliente` monta a tela
+ * inteira e nao vale arriscar ela por tres campos de texto. Quem nao cuida do
+ * dinheiro leva recusa do banco — documento de cliente e dado pessoal.
+ */
+export async function dadosDeCobranca(clienteId: string): Promise<DadosDeCobranca> {
+  if (!sb) return dadosDeCobrancaExemplo(clienteId);
+  const { data, error } = await sb.rpc('dados_de_cobranca', { p_cliente: clienteId });
+  if (error) throw new FalhaDados(error.message);
+  return exija(data as DadosDeCobranca | null, 'Os dados de cobrança');
+}
+
+/**
+ * Grava o que mudou. Campo vazio NAO apaga o que estava lá: a funcao do banco
+ * usa `coalesce`, porque abrir o formulario e salvar sem mexer em nada nao pode
+ * zerar o CPF de um cliente que ja esta cobrando.
+ */
+export async function salvarDadosDeCobranca(
+  clienteId: string,
+  dados: { cnpjCpf?: string; email?: string; telefone?: string },
+): Promise<void> {
+  if (!sb) {
+    try {
+      salvarDadosDeCobrancaExemplo(clienteId, dados);
+      return;
+    } catch (x) {
+      throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui salvar.');
+    }
+  }
+  const { error } = await sb.rpc('salvar_dados_de_cobranca', {
+    p_cliente: clienteId,
+    p_cnpj_cpf: dados.cnpjCpf?.trim() || null,
+    p_email: dados.email?.trim() || null,
+    p_telefone: dados.telefone?.trim() || null,
+  });
+  if (error) throw new FalhaDados(error.message);
+}
+
+/**
  * Responder e a unica escrita que o cliente faz na plataforma. A regra do
  * comentario obrigatorio esta aqui E na funcao do banco: a tela avisa antes,
  * a funcao recusa de todo jeito.
@@ -471,10 +512,14 @@ export async function criarCliente(
   servicos: ServicoEscolhido[],
   slug?: string,
   fuso = 'America/Sao_Paulo',
+  // Cobrança. Vem junto e não depois: sem CPF/CNPJ o cliente não entra na fila
+  // da Asaas, e a plataforma não tem como reclamar de um campo que ninguém
+  // prometeu preencher.
+  cobranca?: { cnpjCpf?: string; email?: string; telefone?: string },
 ): Promise<ClienteNovo> {
   if (!sb) {
     try {
-      return criarClienteExemplo(nome, servicos, slug);
+      return criarClienteExemplo(nome, servicos, slug, cobranca);
     } catch (x) {
       throw new FalhaDados(x instanceof Error ? x.message : 'Não consegui cadastrar.');
     }
@@ -485,6 +530,9 @@ export async function criarCliente(
     p_servicos: servicos,
     p_slug: slug?.trim() || null,
     p_fuso: fuso,
+    p_cnpj_cpf: cobranca?.cnpjCpf?.trim() || null,
+    p_email_cobranca: cobranca?.email?.trim() || null,
+    p_telefone: cobranca?.telefone?.trim() || null,
   });
   if (error) {
     // RLS recusando vira uma mensagem que ninguem entende. As outras mensagens

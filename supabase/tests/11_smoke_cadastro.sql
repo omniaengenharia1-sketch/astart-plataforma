@@ -158,7 +158,7 @@ begin
         'valorCentavos',280000,'diaVencimento',10)));
     raise exception 'FALHOU: cadastrou o mesmo cliente duas vezes';
   exception when others then
-    if position('Ja existe um cliente' in sqlerrm) = 0 then raise; end if;
+    if position('Já existe um cliente' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- Audiovisual sem formato.
@@ -218,7 +218,7 @@ begin
     perform public.criar_cliente('Bar do Zé', '[]'::jsonb);
     raise exception 'FALHOU: cadastrou cliente sem contrato';
   exception when others then
-    if position('pelo menos um servico' in sqlerrm) = 0 then raise; end if;
+    if position('pelo menos um serviço' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- Modulo que nao e opcional daquele servico.
@@ -228,7 +228,7 @@ begin
         'parcelas',1,'modulos',jsonb_build_array('campanhas'))));
     raise exception 'FALHOU: ligou campanhas num contrato de site';
   exception when others then
-    if position('nao e uma opcao' in sqlerrm) = 0 then raise; end if;
+    if position('não é uma opção' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- E nada disso deixou lixo para tras.
@@ -274,7 +274,11 @@ end $$;
 reset role;
 
 do $$ begin
-  perform public.afirma(not has_function_privilege('anon','public.criar_cliente(text,jsonb,text,text)','execute'),
+  -- A assinatura ganhou CPF/CNPJ, e-mail e telefone de cobranca na 0086, e a
+  -- de quatro argumentos foi EMBORA: duas com defaults deixariam a chamada de
+  -- quatro ambigua. `has_function_privilege` recusa nome que nao existe, entao
+  -- esta linha tambem cobra que a assinatura nova e a unica.
+  perform public.afirma(not has_function_privilege('anon','public.criar_cliente(text,jsonb,text,text,text,text,text)','execute'),
     'anon nao chama criar_cliente');
   perform public.afirma(not has_function_privilege('anon','public.catalogo()','execute'),
     'anon nao chama catalogo');

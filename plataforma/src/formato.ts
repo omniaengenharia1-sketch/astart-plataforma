@@ -69,3 +69,86 @@ export function sluguificar(texto: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+/**
+ * Só os dígitos — é assim que o documento mora no banco. "12.345.678/0001-90"
+ * e "12345678000190" seriam dois clientes diferentes para qualquer busca, e a
+ * Asaas recusa o que vem com pontuação.
+ */
+export function soDigitos(texto: string): string {
+  return texto.replace(/\D/g, '');
+}
+
+/**
+ * Põe a máscara de CPF ou CNPJ enquanto a pessoa digita. Até 11 dígitos é CPF,
+ * acima disso é CNPJ — e o que passa de 14 é cortado, porque deixar digitar o
+ * décimo quinto dígito é deixar a pessoa descobrir no erro do servidor.
+ */
+export function mascaraDocumento(texto: string): string {
+  const d = soDigitos(texto).slice(0, 14);
+  if (d.length <= 11) {
+    return d
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  }
+  return d
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
+/**
+ * Máscara de telefone brasileiro, celular ou fixo. A Asaas quer só os dígitos;
+ * a máscara é para quem digita conferir se errou um número.
+ */
+export function mascaraTelefone(texto: string): string {
+  const d = soDigitos(texto).slice(0, 11);
+  if (d.length <= 10) {
+    return d.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d{1,4})$/, '$1-$2');
+  }
+  return d.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d{1,4})$/, '$1-$2');
+}
+
+/**
+ * Confere o dígito verificador de CPF/CNPJ. Não é frescura: a Asaas recusa
+ * documento inválido, e a recusa chega depois, numa rodada de madrugada, como
+ * "cobrança falhou" — longe de quem digitou. Aqui o erro aparece na hora, com
+ * o contrato ainda na mão.
+ *
+ * Vazio devolve `true`: documento em branco é um cliente que ainda não vai
+ * para a cobrança, e isso é decisão dela, não erro de digitação.
+ */
+export function documentoValido(texto: string): boolean {
+  const d = soDigitos(texto);
+  if (d === '') return true;
+  if (d.length === 11) return cpfValido(d);
+  if (d.length === 14) return cnpjValido(d);
+  return false;
+}
+
+function cpfValido(d: string): boolean {
+  // Todos os dígitos iguais passam na conta dos verificadores e não existem.
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  for (const corte of [9, 10]) {
+    let soma = 0;
+    for (let i = 0; i < corte; i += 1) soma += Number(d[i]) * (corte + 1 - i);
+    const resto = (soma * 10) % 11;
+    if ((resto === 10 ? 0 : resto) !== Number(d[corte])) return false;
+  }
+  return true;
+}
+
+function cnpjValido(d: string): boolean {
+  if (/^(\d)\1{13}$/.test(d)) return false;
+  const pesos = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (const corte of [12, 13]) {
+    const p = pesos.slice(pesos.length - corte);
+    let soma = 0;
+    for (let i = 0; i < corte; i += 1) soma += Number(d[i]) * Number(p[i]);
+    const resto = soma % 11;
+    if ((resto < 2 ? 0 : 11 - resto) !== Number(d[corte])) return false;
+  }
+  return true;
+}

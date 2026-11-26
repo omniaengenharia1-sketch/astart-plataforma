@@ -78,7 +78,11 @@ begin
     perform public.salvar_dados_de_cobranca(
       '20000000-0000-0000-0000-000000000002', '123');
     ok := false;
-  exception when others then ok := position('11 digitos' in sqlerrm) > 0;
+  -- Casa com o pedaco SEM acento de proposito: a mensagem ganhou acento na
+  -- 0087 ("11 dígitos"), e um teste casado na palavra inteira quebra a cada
+  -- revisao de texto. O que importa aqui e que a recusa DIZ o tamanho certo.
+  exception when others then ok := position('11 d' in sqlerrm) > 0
+                               and position('14' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'documento com tamanho errado e recusado, dizendo o tamanho certo');
 
@@ -135,7 +139,7 @@ begin
     perform public.casar_cliente_com_asaas(
       '20000000-0000-0000-0000-000000000001', 'cus_x', 'homologacao');
     ok := false;
-  exception when others then ok := position('sandbox ou producao' in sqlerrm) > 0;
+  exception when others then ok := position('sandbox ou produção' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'ambiente inventado e recusado');
 
@@ -206,7 +210,7 @@ begin
   begin
     perform public.cobranca_ganhou_pix(v_perto, 'outro_pix_qualquer');
     ok := false;
-  exception when others then ok := position('ja tem pix' in sqlerrm) > 0;
+  exception when others then ok := position('já tem pix' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'e nao se reescreve um pix que o cliente ja pode ter copiado');
 
@@ -309,7 +313,7 @@ begin
   begin
     perform public.apagar_lancamento(v_longe);
     ok := false;
-  exception when others then ok := position('Cancele a cobranca la antes' in sqlerrm) > 0;
+  exception when others then ok := position('Cancele a cobrança lá antes' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
     'lancamento com cobranca emitida na Asaas nao se apaga sem cancelar la primeiro');
