@@ -180,6 +180,41 @@ begin
       where (x->>'lancamentoId')::uuid = v_longe) = 0,
     'e na terceira ela para de voltar: dai em diante o problema nao e a rede');
 
+  -- O PIX QUE CHEGA DEPOIS.
+  --
+  -- A Asaas gera o QR do pix alguns SEGUNDOS depois de criar a cobranca: no
+  -- primeiro ciclo de verdade em sandbox ele veio vazio, e existia logo em
+  -- seguida. O defeito nao era o pix faltar — era ele NUNCA MAIS ser
+  -- buscado, porque cobranca emitida sai da fila de emissao de proposito.
+  -- O cliente abriria o portal e veria meia cobranca, sem erro nenhum.
+  update public.cobrancas set pix_payload = null where id = v_cb;
+  perform public.afirma(
+    (select count(*) from jsonb_array_elements(public.cobrancas_sem_pix('sandbox')) x
+      where (x->>'lancamentoId')::uuid = v_perto) = 1,
+    'cobranca emitida sem pix entra na fila de buscar o pix');
+
+  perform public.cobranca_ganhou_pix(v_perto, '00020101021226820014br.gov.bcb.pix...');
+  perform public.afirma(
+    (select pix_payload from public.cobrancas where id = v_cb) is not null,
+    'e o pix e preenchido');
+  perform public.afirma(
+    jsonb_array_length(public.cobrancas_sem_pix('sandbox')) = 0,
+    'e ela sai dessa fila');
+
+  -- Preencher de novo NAO sobrescreve: o cliente pode ja ter copiado o
+  -- codigo, e trocar por baixo quebraria o pagamento dele.
+  begin
+    perform public.cobranca_ganhou_pix(v_perto, 'outro_pix_qualquer');
+    ok := false;
+  exception when others then ok := position('ja tem pix' in sqlerrm) > 0;
+  end;
+  perform public.afirma(ok, 'e nao se reescreve um pix que o cliente ja pode ter copiado');
+
+  -- A fila do pix nao e uma porta para emitir: ela so preenche um campo.
+  perform public.afirma(
+    not has_function_privilege('authenticated', 'public.cobranca_ganhou_pix(uuid, text)', 'execute'),
+    'e nem essa funcao e alcancavel pela tela');
+
   -- 5 e 6. O AVISO DE PAGAMENTO.
   perform public.afirma(
     public.registrar_evento_de_cobranca(

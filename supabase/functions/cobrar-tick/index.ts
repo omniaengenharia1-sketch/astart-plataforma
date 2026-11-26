@@ -214,9 +214,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       const pagamento = r.dados.id as string;
 
-      // O código pix vem noutra chamada. Se ela falhar, a cobrança JÁ EXISTE
-      // lá: gravar assim mesmo, sem o pix, é melhor do que deixar a cobrança
-      // órfã na Asaas e tentar criar outra na próxima rodada.
+      // O código pix vem noutra chamada, e a Asaas o gera alguns SEGUNDOS
+      // depois de criar a cobrança — no primeiro ciclo de verdade ele veio
+      // vazio aqui e existia logo em seguida. Se falhar, a cobrança JÁ
+      // EXISTE lá: gravar assim mesmo é melhor do que deixá-la órfã na
+      // Asaas. Quem volta para buscar o que ficou para trás é a segunda
+      // fila, no fim deste arquivo.
       let pix: string | null = null;
       const qr = await asaas(base, chave, `/payments/${pagamento}/pixQrCode`, 'GET');
       if (qr.ok) pix = (qr.dados.payload as string) ?? null;
@@ -240,6 +243,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
+  // ---- SEGUNDA FILA: o pix que chegou depois --------------------------
+  //
+  // Sem isto, a cobrança emitida sem pix nunca mais seria visitada — ela sai
+  // da fila de emissão de propósito, e essa é a trava contra cobrar duas
+  // vezes. O cliente abriria o portal e veria meia cobrança, sem erro nenhum
+  // em lugar nenhum.
+  const pixBuscado: unknown[] = [];
+  if (Date.now() < limiteEm) {
+    const { data: semPix } = await sb.rpc('cobrancas_sem_pix', {
+      p_ambiente: ambiente, p_limite: 50,
+    });
+    for (const c of (semPix ?? []) as { lancamentoId: string; externoId: string }[]) {
+      if (Date.now() > limiteEm) break;
+      const qr = await asaas(base, chave, `/payments/${c.externoId}/pixQrCode`, 'GET');
+      const payload = qr.ok ? (qr.dados.payload as string | undefined) : undefined;
+      if (!payload) continue;
+      const { error } = await sb.rpc('cobranca_ganhou_pix', {
+        p_lancamento: c.lancamentoId, p_pix: payload,
+      });
+      if (!error) pixBuscado.push(c.externoId);
+    }
+  }
+
   return json(200, {
     ok: true,
     ambiente,
@@ -247,5 +273,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     naFila: fila.length,
     emitidas,
     falhas,
+    pixBuscado,
   });
 });
