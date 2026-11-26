@@ -285,6 +285,35 @@ begin
   end;
   perform public.afirma(ok, 'nem se apaga');
 
+  -- O EVENTO SOBREVIVE A COBRANCA.
+  --
+  -- Descoberto apagando o cliente de teste depois do ciclo em sandbox: a
+  -- chave estrangeira fazia `set null` no delete, `set null` e UPDATE, e
+  -- UPDATE bate no append-only. Resultado: nenhuma cobranca com historico
+  -- podia ser apagada, e por cascata nenhum lancamento nem cliente ja
+  -- cobrado. Um cadastro errado ficaria preso para sempre.
+  delete from public.cobrancas where id = v_cb;
+  perform public.afirma(
+    (select count(*) from public.cobranca_eventos where evento_externo_id = 'evt_aaa') = 1,
+    'apagar a cobranca NAO apaga o evento: o log registra o que o provedor disse');
+  perform public.afirma(
+    not exists (select 1 from public.cobrancas where id = v_cb),
+    'e a cobranca sai mesmo — sem a FK, o delete passa');
+
+  -- E APAGAR LANCAMENTO COM COBRANCA VIVA E RECUSADO.
+  --
+  -- Sumir com a linha aqui deixaria o boleto de pe na Asaas, e o cliente
+  -- receberia a cobranca de algo que para nos nao existe mais.
+  perform public.estornar_lancamento(v_longe);
+  perform public.cobranca_emitida(v_longe, 'pay_viva', null, null, current_date + 40, 150000, 'sandbox');
+  begin
+    perform public.apagar_lancamento(v_longe);
+    ok := false;
+  exception when others then ok := position('Cancele a cobranca la antes' in sqlerrm) > 0;
+  end;
+  perform public.afirma(ok,
+    'lancamento com cobranca emitida na Asaas nao se apaga sem cancelar la primeiro');
+
   -- A TELA DO FINANCEIRO.
   perform public.afirma(
     jsonb_array_length(public.cobrancas_do_mes(current_date)) >= 1,
