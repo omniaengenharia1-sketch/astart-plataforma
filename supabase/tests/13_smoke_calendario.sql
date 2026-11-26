@@ -122,7 +122,7 @@ begin
     perform public.mover_peca(v_post, date '2026-11-09');
     raise exception 'FALHOU: mexeu na data de peca ja publicada';
   exception when others then
-    if position('ja saiu' in sqlerrm) = 0 then raise; end if;
+    if position('já saiu' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 

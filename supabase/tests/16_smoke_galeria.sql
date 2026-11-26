@@ -155,7 +155,7 @@ begin
     perform public.favoritar_por_token(v_token, gen_random_uuid(), 'Bruna', true);
     raise exception 'FALHOU: favoritou item que nao e da galeria';
   exception when others then
-    if position('nao e desta galeria' in sqlerrm) = 0 then raise; end if;
+    if position('não é desta galeria' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- Revogar e a unica porta de saida, entao tem de fechar de verdade.
@@ -169,7 +169,7 @@ begin
     perform public.favoritar_por_token(v_token, (g->'itens'->0->>'id')::uuid, 'Bruna', true);
     raise exception 'FALHOU: favoritou por link revogado';
   exception when others then
-    if position('invalido ou revogado' in sqlerrm) = 0 then raise; end if;
+    if position('inválido ou revogado' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -221,7 +221,7 @@ do $$ begin
     perform public.favoritar_item(current_setting('teste.item')::uuid, true);
     raise exception 'FALHOU: o Carlos escolheu foto da Aurora';
   exception when others then
-    if position('Sem permissao' in sqlerrm) = 0 then raise; end if;
+    if position('Sem permissão' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 set "teste.uid" = '20000000-0000-0000-0000-00000000000a';

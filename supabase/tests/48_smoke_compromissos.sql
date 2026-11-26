@@ -107,7 +107,7 @@ begin
   begin
     perform public.criar_compromisso('   ', now());
     ok := false;
-  exception when others then ok := position('titulo' in sqlerrm) > 0;
+  exception when others then ok := position('título' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'compromisso sem titulo e recusado');
 
@@ -121,7 +121,7 @@ begin
   begin
     perform public.criar_compromisso('Ao contrario', now(), now() - interval '1 hour');
     ok := false;
-  exception when others then ok := position('depois do comeco' in sqlerrm) > 0;
+  exception when others then ok := position('depois do começo' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'e fim antes do comeco');
 
@@ -132,7 +132,7 @@ begin
     perform public.editar_compromisso(
       v_a, p_quando => ((v_dia || ' 23:45')::timestamp at time zone 'America/Sao_Paulo'));
     ok := false;
-  exception when others then ok := position('depois do comeco' in sqlerrm) > 0;
+  exception when others then ok := position('depois do começo' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
     'empurrar so o comeco para depois do fim e recusado — a regra olha o que vai ficar');
@@ -204,7 +204,7 @@ begin
   begin
     perform public.apagar_compromisso(v_b);
     ok := false;
-  exception when others then ok := position('nao encontrado' in sqlerrm) > 0;
+  exception when others then ok := position('não encontrado' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'e apagar duas vezes avisa, em vez de fingir que deu certo');
 end $$;

@@ -98,7 +98,7 @@ begin
       300000::bigint, 10::smallint);
     ok := false;
   exception when others then
-    ok := position('ja tem' in sqlerrm) > 0 and position('encerre' in sqlerrm) > 0;
+    ok := position('já tem' in sqlerrm) > 0 and position('encerre' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'servico ja ativo recusa, e diz o que fazer');
 
@@ -135,7 +135,7 @@ begin
     perform public.alterar_servico_do_cliente(v_cs, p_valor_centavos => 999900::bigint);
     ok := false;
   exception when others then
-    ok := position('nao mexe em valor' in sqlerrm) > 0;
+    ok := position('não mexe em valor' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'operacao nao mexe em valor de contrato');
 
@@ -222,7 +222,7 @@ begin
     perform public.remover_servico_do_cliente(v_site);
     ok := false;
   exception when others then
-    ok := position('historico' in sqlerrm) > 0
+    ok := position('histórico' in sqlerrm) > 0
       and position('entregaveis' in sqlerrm) > 0
       and position('encerrar' in sqlerrm) > 0;
   end;
@@ -286,7 +286,7 @@ begin
     perform public.encerrar_servico_do_cliente(v_cs, '2020-01-01'::date);
     perform public.afirma(false, 'aceitou fim antes do inicio');
   exception when others then
-    if position('anterior ao inicio' in sqlerrm) = 0 then raise; end if;
+    if position('anterior ao início' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- 3. Reativar: a MESMA linha volta, com o historico pendurado nela.

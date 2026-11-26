@@ -135,7 +135,7 @@ begin
       '11110000-0000-0000-0000-000000000001', 'com_ajustes', 'Bruna');
     raise exception 'FALHOU: pediu ajuste sem dizer o que mudar';
   exception when others then
-    if position('exige um comentario' in sqlerrm) = 0 then raise; end if;
+    if position('exige um comentário' in sqlerrm) = 0 then raise; end if;
   end;
 
   begin
@@ -169,7 +169,7 @@ begin
       '11110000-0000-0000-0000-000000000001', 'aprovado', 'Bruna Melo');
     raise exception 'FALHOU: respondeu o mesmo item duas vezes';
   exception when others then
-    if position('nao esta em aprovacao' in sqlerrm) = 0 then raise; end if;
+    if position('não está em aprovação' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 

@@ -251,8 +251,8 @@ begin
   exception when others then
     -- A mensagem tem de dizer que a limitacao e NOSSA e o que fazer, senao a
     -- pessoa acha defeito: ela acabou de ver carrossel com video no Instagram.
-    ok := position('limitacao nossa' in sqlerrm) > 0
-      and position('nao da Meta' in sqlerrm) > 0
+    ok := position('limitação nossa' in sqlerrm) > 0
+      and position('não da Meta' in sqlerrm) > 0
       and position('Reel' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'carrossel com video e recusado no anexo, explicando de quem e a limitacao');

@@ -48,7 +48,7 @@ begin
     perform public.criar_publicacao('20000000-0000-0000-0000-000000000009', 'nao devia', 'imagem');
     ok := false;
   exception when others then
-    ok := position('publicacao no contrato' in sqlerrm) > 0;
+    ok := position('publicação no contrato' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'cliente sem publicacao contratada nao cria publicacao');
 end $$;
@@ -155,7 +155,7 @@ begin
     perform public.atualizar_publicacao(v_post, p_legenda => 'tentando mudar');
     ok := false;
   exception when others then
-    ok := position('nao muda mais' in sqlerrm) > 0;
+    ok := position('não muda mais' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'publicacao no ar nao aceita edicao');
 
@@ -163,7 +163,7 @@ begin
     perform public.agendar_publicacao(v_post, now() + interval '1 day');
     ok := false;
   exception when others then
-    ok := position('nao da para agendar de novo' in sqlerrm) > 0;
+    ok := position('não dá para agendar de novo' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'e nao aceita ser reagendada');
 end $$;
@@ -202,7 +202,7 @@ begin
     -- sentido da recusa. Antes dizia "voce mandou o formato errado"; agora diz
     -- "este arquivo chegou sem passar pela conversao" — que e o unico jeito de
     -- um PNG chegar ate aqui depois da 0068.
-    ok := position('so em JPEG' in sqlerrm) > 0
+    ok := position('só em JPEG' in sqlerrm) > 0
       and position('converte sozinha no envio' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,

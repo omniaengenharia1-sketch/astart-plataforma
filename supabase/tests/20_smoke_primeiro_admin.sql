@@ -33,7 +33,7 @@ begin
     perform public.primeiro_admin('naoexiste@astartstudio.com.br');
     raise exception 'FALHOU: promoveu um e-mail sem conta';
   exception when others then
-    if position('Nao achei a conta' in sqlerrm) = 0 then raise; end if;
+    if position('Não achei a conta' in sqlerrm) = 0 then raise; end if;
     ok := true;
   end;
   perform public.afirma(ok, 'e-mail sem conta recusa dizendo onde criar');
@@ -75,7 +75,7 @@ begin
     perform public.primeiro_admin('layana@astartstudio.com.br');
     raise exception 'FALHOU: a porta do primeiro dia continuou aberta';
   exception when others then
-    if position('Ja existe alguem administrando' in sqlerrm) = 0 then raise; end if;
+    if position('Já existe alguém administrando' in sqlerrm) = 0 then raise; end if;
     ok := true;
   end;
   perform public.afirma(ok, 'com um admin ativo, a funcao recusa');

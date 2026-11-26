@@ -191,7 +191,7 @@ do $$ begin
       'aprovado', 'Bruna');
     raise exception 'FALHOU: a Aurora aprovou peca do Bloco B';
   exception when others then
-    if position('Sem permissao' in sqlerrm) = 0 then raise; end if;
+    if position('Sem permissão' in sqlerrm) = 0 then raise; end if;
   end;
 
   begin
@@ -199,7 +199,7 @@ do $$ begin
       'com_ajustes', 'Bruna');
     raise exception 'FALHOU: pedido de ajuste passou sem dizer o que mudar';
   exception when others then
-    if position('exige um comentario' in sqlerrm) = 0 then raise; end if;
+    if position('exige um comentário' in sqlerrm) = 0 then raise; end if;
   end;
 
   perform public.responder_item('e1000000-0000-0000-0000-000000000001',
@@ -251,7 +251,7 @@ do $$ begin
       'com_ajustes', 'Bruna', 'cliente', 'Mudei de ideia.');
     raise exception 'FALHOU: respondeu duas vezes o mesmo item';
   exception when others then
-    if position('nao esta em aprovacao' in sqlerrm) = 0 then raise; end if;
+    if position('não está em aprovação' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 

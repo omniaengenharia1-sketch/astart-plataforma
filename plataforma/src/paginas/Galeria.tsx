@@ -306,7 +306,7 @@ export function Galeria({
       setRecado(`"${item.nome}" virou a capa. E a primeira coisa que a cliente ve ao abrir o link.`);
       await carregar();
     } catch (x) {
-      setErro(x instanceof Error ? x.message : 'Nao consegui trocar a capa.');
+      setErro(x instanceof Error ? x.message : 'Não consegui trocar a capa.');
     } finally {
       setMexendo(null);
     }

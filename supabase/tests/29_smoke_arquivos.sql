@@ -70,7 +70,7 @@ begin
       'contratos/qualquer.pdf');
     ok := false;
   exception when others then
-    ok := position('comecar pelo id do cliente' in sqlerrm) > 0;
+    ok := position('começar pelo id do cliente' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'caminho fora da convencao e recusado');
 
@@ -193,7 +193,7 @@ begin
       '20000000-0000-0000-0000-000000000001/doc/x.pdf');
     ok := false;
   exception when others then
-    ok := position('permissao' in sqlerrm) > 0;
+    ok := position('permissão' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'papel leitura nao anexa documento');
 end $$;
@@ -216,7 +216,7 @@ begin
       'Relatorio', '20000000-0000-0000-0000-000000000009/camp/r.pdf');
     ok := false;
   exception when others then
-    ok := position('trafego pago no contrato' in sqlerrm) > 0;
+    ok := position('tráfego pago no contrato' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'relatorio exige o modulo de campanhas no contrato');
 
@@ -227,7 +227,7 @@ begin
       'Relatorio', '20000000-0000-0000-0000-000000000001/camp/r.pdf');
     ok := false;
   exception when others then
-    ok := position('antes do inicio' in sqlerrm) > 0;
+    ok := position('antes do início' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'periodo invertido e recusado');
 

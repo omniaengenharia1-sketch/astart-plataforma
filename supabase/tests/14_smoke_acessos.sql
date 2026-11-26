@@ -68,7 +68,7 @@ begin
         where id = 'c0000000-0000-0000-0000-000000000001'),
       'operacao nao revoga convite');
   exception when others then
-    if position('nao encontrado' in sqlerrm) = 0 then raise; end if;
+    if position('não encontrado' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -96,7 +96,7 @@ do $$ begin
     perform public.revogar_convite('c0000000-0000-0000-0000-000000000002');
     raise exception 'FALHOU: revogou convite ja aceito';
   exception when others then
-    if position('ja foi aceito' in sqlerrm) = 0 then raise; end if;
+    if position('já foi aceito' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -108,7 +108,7 @@ do $$ begin
     perform public.desativar_pessoa('10000000-0000-0000-0000-000000000001');
     raise exception 'FALHOU: a pessoa tirou o proprio acesso';
   exception when others then
-    if position('proprio acesso' in sqlerrm) = 0 then raise; end if;
+    if position('próprio acesso' in sqlerrm) = 0 then raise; end if;
   end;
 
   perform public.desativar_pessoa('10000000-0000-0000-0000-000000000002');

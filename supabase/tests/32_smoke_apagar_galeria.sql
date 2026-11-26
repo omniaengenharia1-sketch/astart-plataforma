@@ -98,7 +98,7 @@ begin
     perform public.excluir_galeria(v_gal);
     ok := false;
   exception when others then
-    ok := position('direcao' in sqlerrm) > 0 and position('arquivar' in sqlerrm) > 0;
+    ok := position('direção' in sqlerrm) > 0 and position('arquivar' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'quem edita nao exclui, e a recusa diz o que fazer no lugar');
   perform public.afirma(

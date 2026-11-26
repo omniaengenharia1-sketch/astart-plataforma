@@ -96,7 +96,7 @@ begin
     perform public.arquivos_orfaos(60);
     ok := false;
   exception when others then
-    ok := position('direcao' in sqlerrm) > 0;
+    ok := position('direção' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'operacao nao ve os arquivos orfaos');
 end $$;

@@ -189,7 +189,7 @@ begin
     perform public.mudar_papel('10000000-0000-0000-0000-000000000002', 'social');
     raise exception 'FALHOU: aceitou o papel morto';
   exception when others then
-    if position('Papel invalido' in sqlerrm) = 0 then raise; end if;
+    if position('Papel inválido' in sqlerrm) = 0 then raise; end if;
     ok := true;
   end;
   perform public.afirma(ok, 'e recusa "social", que e lixo da fase do agendador');

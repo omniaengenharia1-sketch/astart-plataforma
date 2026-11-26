@@ -170,7 +170,7 @@ begin
     perform public.definir_capa_galeria(v_gal, v_it);
     ok := false;
   exception when others then
-    ok := position('permissao' in sqlerrm) > 0;
+    ok := position('permissão' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'quem so le nao troca a capa');
 end $$;

@@ -116,7 +116,7 @@ begin
   begin
     perform public.converter_lead(v_h, '20000000-0000-0000-0000-0000000000ff');
     ok := false;
-  exception when others then ok := position('nao encontrado' in sqlerrm) > 0;
+  exception when others then ok := position('não encontrado' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'converter para cliente que nao existe e recusado');
 
@@ -136,7 +136,7 @@ begin
   begin
     perform public.apagar_lead(v_h);
     ok := false;
-  exception when others then ok := position('comeco daquele contrato' in sqlerrm) > 0;
+  exception when others then ok := position('começo daquele contrato' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'lead que virou cliente nao e apagado');
 

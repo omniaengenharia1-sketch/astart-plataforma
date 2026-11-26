@@ -98,7 +98,7 @@ begin
       '20000000-0000-0000-0000-00000000dead', 'instagram', 'x', '1784140000009', '1098');
     ok := false;
   exception when others then
-    ok := position('nao encontrado' in sqlerrm) > 0;
+    ok := position('não encontrado' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'cliente inexistente e recusado');
 end $$;

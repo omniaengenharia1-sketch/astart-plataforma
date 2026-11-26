@@ -141,7 +141,7 @@ begin
   begin
     perform public.apagar_publicacao(v_post);
     ok := false;
-  exception when others then ok := position('log de publicacao e permanente' in sqlerrm) > 0;
+  exception when others then ok := position('log de publicação é permanente' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
     'peca com log nao se apaga, e a mensagem manda cancelar em vez de so recusar');
@@ -179,7 +179,7 @@ begin
   begin
     perform public.apagar_publicacao(v_post);
     ok := false;
-  exception when others then ok := position('nao tira o post do ar' in sqlerrm) > 0;
+  exception when others then ok := position('não tira o post do ar' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
     'peca publicada e recusada, e a mensagem explica que apagar aqui nao tira do ar');
@@ -201,7 +201,7 @@ begin
   begin
     perform public.apagar_publicacao(v_post);
     ok := false;
-  exception when others then ok := position('ainda nao se sabe se saiu' in sqlerrm) > 0;
+  exception when others then ok := position('ainda não se sabe se saiu' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
     'peca publicando e recusada — e o estado em que nem se sabe se o post existe');
@@ -218,7 +218,7 @@ begin
   begin
     perform public.apagar_publicacao(v_post);
     ok := false;
-  exception when others then ok := position('permissao' in sqlerrm) > 0;
+  exception when others then ok := position('permissão' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'quem so le nao apaga peca');
 end $$;

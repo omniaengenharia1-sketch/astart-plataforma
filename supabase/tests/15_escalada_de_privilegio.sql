@@ -41,7 +41,7 @@ do $$ begin
     update public.perfis set papel = 'admin' where user_id = auth.uid();
     raise exception 'FALHOU: operacao se promoveu a admin';
   exception when others then
-    if position('Papel so quem administra' in sqlerrm) = 0 then raise; end if;
+    if position('Papel só quem administra' in sqlerrm) = 0 then raise; end if;
   end;
   perform public.afirma(not public.usuario_admin(), 'e continua nao sendo admin');
 
@@ -59,7 +59,7 @@ do $$ begin
     update public.perfis set email = 'outro@astartstudio.com.br' where user_id = auth.uid();
     raise exception 'FALHOU: trocou o proprio e-mail de acesso';
   exception when others then
-    if position('nao se trocam' in sqlerrm) = 0 then raise; end if;
+    if position('não se trocam' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- O que ela PODE: o proprio nome e o proprio cargo.

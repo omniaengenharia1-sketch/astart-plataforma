@@ -119,7 +119,7 @@ begin
   begin
     perform public.criar_lancamento('   ', v_custo, 1000);
     ok := false;
-  exception when others then ok := position('descricao' in sqlerrm) > 0;
+  exception when others then ok := position('descrição' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'lancamento sem descricao e recusado');
 
@@ -161,7 +161,7 @@ begin
     perform public.liquidar_lancamento(v_a, current_date - 3);
     ok := false;
   exception when others then
-    ok := position('ja foi liquidado' in sqlerrm) > 0
+    ok := position('já foi liquidado' in sqlerrm) > 0
           and position(to_char(current_date, 'DD/MM/YYYY') in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
@@ -274,7 +274,7 @@ begin
   begin
     perform public.apagar_lancamento(v_id);
     ok := false;
-  exception when others then ok := position('direcao' in sqlerrm) > 0;
+  exception when others then ok := position('direção' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'mas nao apaga — apagar e so da direcao');
 end $$;

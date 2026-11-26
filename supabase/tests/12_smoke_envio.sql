@@ -99,7 +99,7 @@ begin
     perform public.enviar_para_aprovacao(array[v_i1]);
     raise exception 'FALHOU: reenviou item que ja estava esperando o cliente';
   exception when others then
-    if position('ja esta esperando' in sqlerrm) = 0 then raise; end if;
+    if position('já está esperando' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -118,7 +118,7 @@ begin
     perform public.enviar_para_aprovacao(array[v_a, v_b]);
     raise exception 'FALHOU: juntou dois clientes no mesmo envio';
   exception when others then
-    if position('de um cliente so' in sqlerrm) = 0 then raise; end if;
+    if position('de um cliente só' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -195,7 +195,7 @@ begin
     perform public.enviar_para_aprovacao(array[v_i1]);
     raise exception 'FALHOU: reenviou item ja aprovado';
   exception when others then
-    if position('ja foi aprovado' in sqlerrm) = 0 then raise; end if;
+    if position('já foi aprovado' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -212,7 +212,7 @@ begin
     perform public.enviar_para_aprovacao(array[v_i]);
     raise exception 'FALHOU: papel leitura enviou material para o cliente';
   exception when others then
-    if position('nao envia material' in sqlerrm) = 0 then raise; end if;
+    if position('não envia material' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -226,7 +226,7 @@ begin
     perform public.enviar_para_aprovacao(array[v_i]);
     raise exception 'FALHOU: o cliente enviou material para ele mesmo';
   exception when others then
-    if position('nao envia material' in sqlerrm) = 0 then raise; end if;
+    if position('não envia material' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- E nao enxerga o projeto do vizinho.

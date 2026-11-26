@@ -117,7 +117,7 @@ begin
   begin
     perform public.editar_lead('00000000-0000-0000-0000-0000000000ff', p_nome => 'Fantasma');
     ok := false;
-  exception when others then ok := position('nao encontrado' in sqlerrm) > 0;
+  exception when others then ok := position('não encontrado' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'editar lead que nao existe e recusado, em vez de passar calado');
 
@@ -132,7 +132,7 @@ begin
   begin
     perform public.apagar_lead(v_l);
     ok := false;
-  exception when others then ok := position('nao encontrado' in sqlerrm) > 0;
+  exception when others then ok := position('não encontrado' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'e apagar duas vezes avisa, em vez de fingir que deu certo');
 end $$;
@@ -162,7 +162,7 @@ begin
   begin
     perform public.apagar_lead(v_l);
     ok := false;
-  exception when others then ok := position('direcao' in sqlerrm) > 0;
+  exception when others then ok := position('direção' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'mas nao apaga — apagar e so da direcao');
   perform public.afirma(

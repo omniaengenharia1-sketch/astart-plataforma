@@ -202,7 +202,7 @@ begin
     perform public.responder_nps('d3000000-0000-0000-0000-000000000001', 8::smallint, 'de novo');
     raise exception 'FALHOU: respondeu a mesma pesquisa duas vezes';
   exception when others then
-    if position('ja foi respondida' in sqlerrm) = 0 then raise; end if;
+    if position('já foi respondida' in sqlerrm) = 0 then raise; end if;
   end;
 
   -- Sem manutencao no contrato, nao ha chamado. A funcao e SECURITY DEFINER:
@@ -211,7 +211,7 @@ begin
     perform public.abrir_chamado('a0000000-0000-0000-0000-00000000000a', 'Teste sem contrato');
     raise exception 'FALHOU: abriu chamado sem manutencao contratada';
   exception when others then
-    if position('nao tem manutencao' in sqlerrm) = 0 then raise; end if;
+    if position('não tem manutenção' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 
@@ -238,7 +238,7 @@ do $$ begin
     perform public.abrir_chamado('b0000000-0000-0000-0000-00000000000b', 'Chamado alheio');
     raise exception 'FALHOU: abriu chamado em cliente que nao e dele';
   exception when others then
-    if position('Sem permissao' in sqlerrm) = 0 then raise; end if;
+    if position('Sem permissão' in sqlerrm) = 0 then raise; end if;
   end;
 end $$;
 

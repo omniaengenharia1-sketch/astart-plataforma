@@ -151,8 +151,8 @@ begin
     perform public.definir_responsaveis_do_servico(v_gd, array[]::uuid[]);
     ok := false;
   exception when others then
-    ok := position('nao encontrado' in sqlerrm) > 0
-       or position('permissao' in sqlerrm) > 0;
+    ok := position('não encontrado' in sqlerrm) > 0
+       or position('permissão' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'cliente de outro cliente nao mexe em quem cuida da Mor');
 end $$;

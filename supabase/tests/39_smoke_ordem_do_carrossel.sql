@@ -147,7 +147,7 @@ begin
     perform public.mover_midia_do_post(v_ids[1], 0::smallint);
     ok := false;
   exception when others then
-    ok := position('nao muda' in sqlerrm) > 0;
+    ok := position('não muda' in sqlerrm) > 0;
   end;
   perform public.afirma(ok,
     'peca no ar recusa mudanca de ordem — o carrossel ja esta na conta do cliente');
@@ -163,8 +163,8 @@ begin
   exception when others then
     -- "nao encontrado", e nao "sem permissao": quem nao ve o cliente nao pode
     -- nem descobrir que a peca existe.
-    ok := position('nao encontrado' in sqlerrm) > 0
-       or position('permissao' in sqlerrm) > 0;
+    ok := position('não encontrado' in sqlerrm) > 0
+       or position('permissão' in sqlerrm) > 0;
   end;
   perform public.afirma(ok, 'cliente de outro cliente nao mexe na ordem da Mor');
 end $$;
