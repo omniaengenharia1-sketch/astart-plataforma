@@ -461,7 +461,23 @@ function Lente({
   );
 }
 
-export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
+/**
+ * `equipe` NAO e `!porToken`.
+ *
+ * O "usar de capa" era liberado com `porToken ? null : ...`, e isso estava
+ * errado: esta tela tambem abre para o CLIENTE LOGADO, que entra pelo
+ * `tipo: 'galeria'` e nao por token. Ele via um botao de trocar a capa da
+ * propria entrega — que o banco recusa (`definir_capa_galeria` exige
+ * `usuario_edita`), mas botao que leva a recusa e botao que nao devia estar
+ * la.
+ *
+ * Hoje os dois lugares que montam esta tela passam `false`: a pagina publica
+ * e a aba de entregas do cliente logado. A equipe cuida da galeria na tela de
+ * conferencia (`Galeria.tsx`), que tem a grade com capa e tirar.
+ */
+export function Album({
+  fonte, quem, equipe = false,
+}: { fonte: FonteAlbum; quem: string; equipe?: boolean }) {
   // Duas portas para a mesma sala. Quem tem o link não tem conta e passa pela
   // Edge Function; quem está logado lê direto, porque o RLS já sabe quem é.
   const porToken = fonte.tipo === 'token';
@@ -635,10 +651,15 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
           <div className="aurora absolute inset-0 -z-10" />
         )}
         {/* O véu existe para o nome ser legível sobre qualquer foto — clara,
-            escura, com céu branco atrás. Sem ele, metade das capas some. */}
+            escura, com céu branco atrás. Sem ele, metade das capas some.
+
+            O pedaço do TOPO entrou junto com a logo que passou a flutuar
+            sobre a capa (a barra branca que empurrava a capa para baixo
+            saiu). Sem ele, a logo clara desaparece numa foto de fundo claro —
+            e some justamente nas fotos de estúdio, que são a maioria. */}
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgb(3_3_8/0.82)_0%,rgb(3_3_8/0.45)_38%,rgb(3_3_8/0.12)_72%)]"
+          className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgb(3_3_8/0.82)_0%,rgb(3_3_8/0.45)_38%,rgb(3_3_8/0.12)_72%),linear-gradient(180deg,rgb(3_3_8/0.5)_0%,rgb(3_3_8/0.18)_12%,transparent_26%)]"
         />
 
         <div className="w-full px-5 pb-10 sm:px-8 sm:pb-14 lg:px-12">
@@ -810,7 +831,7 @@ export function Album({ fonte, quem }: { fonte: FonteAlbum; quem: string }) {
           fonte={fonte}
           podeBaixar={album.permiteDownload}
           ehCapa={(item) => album.capaItemId === item.id}
-          aoUsarDeCapa={porToken ? null : (item) => void usarDeCapa(item)}
+          aoUsarDeCapa={equipe && !porToken ? (item) => void usarDeCapa(item) : null}
           aoFechar={() => setAberto(null)}
           aoAndar={(passo) =>
             setAberto((a) => {

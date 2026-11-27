@@ -11,13 +11,23 @@ export function AlbumPublico() {
   const { token = '' } = useParams();
 
   return (
-    <div className="min-h-dvh text-tinta">
-      {/* `py`, não `pt`. Só com respiro em cima a logo encostava na capa: a
-          barra media exatamente a altura da logo, e a foto começava no pixel
-          seguinte. Parecia logo cortada, e a dona leu como logo quebrada. */}
-      <header className="flex items-center justify-between gap-4 px-5 py-6 sm:px-8 lg:px-12">
-        <Logo altura={26} />
-        <span className="rotulo">galeria</span>
+    <div className="relative min-h-dvh text-tinta">
+      {/* A LOGO FLUTUA SOBRE A CAPA, NÃO EMPURRA A CAPA PARA BAIXO.
+
+          Antes esta barra ocupava 74px de altura no topo da página, e a foto
+          começava depois dela. No tema claro isso é uma faixa branca em cima
+          da capa — foi o que a dona viu: "a capa tá com esse espaço em
+          branco". Uma entrega de fotografia começa na foto.
+
+          `absolute` + `pointer-events-none` na barra para que ela não roube o
+          clique de nada que esteja embaixo; os elementos que importam
+          recuperam o `pointer-events`. A legibilidade sobre qualquer foto vem
+          do véu de cima que a própria capa desenha (em `Album.tsx`). */}
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-4 px-5 py-6 sm:px-8 lg:px-12">
+        {/* Sempre a logo clara: ela fica sobre uma foto escurecida pelo véu,
+            e não sobre o papel do tema. */}
+        <Logo altura={26} className="marca-sobre-foto pointer-events-auto" />
+        <span className="rotulo text-[rgb(255_255_255/0.78)]">galeria</span>
       </header>
 
       <main id="conteudo" className="entra">

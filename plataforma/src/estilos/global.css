@@ -601,6 +601,15 @@ input::placeholder, textarea::placeholder {
 :root[data-tema="claro"] .marca-papel { display: none; }
 :root[data-tema="claro"] .marca-tinta { display: block; }
 
+/* Sobre uma foto, a logo e sempre a clara — o tema da pagina nao manda ali.
+   A capa da galeria escurece a foto com um veu, entao a versao de papel e a
+   unica que se le; a de tinta sumiria num retrato escuro.
+
+   A especificidade precisa ganhar das duas regras de tema acima (0,3,0), por
+   isso o `:root` e o `img` no seletor. */
+:root .marca-sobre-foto img.marca-papel { display: block; }
+:root .marca-sobre-foto img.marca-tinta { display: none; }
+
 /* ---------------------------------------------------------------------------
    Vidro, a camada de sensação.
 
