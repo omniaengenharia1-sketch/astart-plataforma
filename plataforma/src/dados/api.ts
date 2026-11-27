@@ -1440,6 +1440,55 @@ export async function definirCapaGaleria(galeriaId: string, itemId: string | nul
   if (error) throw new FalhaDados(error.message);
 }
 
+/**
+ * Tira UMA foto da galeria (0089).
+ *
+ * A dona: "as vezes mando foto errada". Antes disso a saida era refazer a
+ * galeria inteira.
+ *
+ * O `delete` no banco e metade do trabalho. A outra metade e apagar os
+ * ARQUIVOS do balde, e e por isso que a funcao do banco devolve os caminhos
+ * em vez de so sumir com a linha: arquivo que ninguem mais referencia continua
+ * ocupando espaco e nao aparece em lugar nenhum. Foi assim que 175 MB viraram
+ * lixo invisivel em outubro.
+ *
+ * O que NAO saiu do balde volta contado, como em `excluirGaleria`. Falha
+ * silenciosa e proibida aqui, e "o arquivo ficou" e uma falha pequena que vira
+ * grande depois de cem vezes.
+ */
+export async function removerItemGaleria(itemId: string): Promise<{
+  nome: string;
+  eraCapa: boolean;
+  sobram: number;
+  arquivosApagados: number;
+  arquivosQueFicaram: number;
+}> {
+  if (!sb) {
+    const { removerItemGaleriaExemplo } = await import('./mock');
+    return removerItemGaleriaExemplo(itemId);
+  }
+
+  const { data, error } = await sb.rpc('remover_item_galeria', { p_item: itemId });
+  if (error) throw new FalhaDados(error.message);
+
+  const r = data as {
+    nome: string; eraCapa: boolean; sobram: number; caminhos: string[];
+  };
+  let apagados = 0;
+  if (r.caminhos.length > 0) {
+    const { data: saiu, error: e } = await sb.storage.from('galerias').remove(r.caminhos);
+    // O que o servidor devolveu, nao o que foi pedido.
+    if (!e) apagados += saiu?.length ?? 0;
+  }
+  return {
+    nome: r.nome,
+    eraCapa: r.eraCapa,
+    sobram: r.sobram,
+    arquivosApagados: apagados,
+    arquivosQueFicaram: r.caminhos.length - apagados,
+  };
+}
+
 export async function favoritarItem(itemId: string, ligadoAgora: boolean): Promise<void> {
   if (!sb) {
     const { favoritarExemplo } = await import('./mock');

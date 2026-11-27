@@ -5,7 +5,7 @@ import { Campo, Entrada } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
 import {
   arquivarGaleria, criarGaleria, criarLinkGaleria, definirCapaGaleria, excluirGaleria,
-  galeriasDoCliente, itensDaGaleria, revogarLinkGaleria,
+  galeriasDoCliente, itensDaGaleria, removerItemGaleria, revogarLinkGaleria,
 } from '../dados/api';
 import { naFila, subirItem } from '../dados/galeria';
 import { Album } from './Album';
@@ -121,6 +121,7 @@ function Cartao({
   equipe,
   acoes,
   aoEscolherCapa,
+  aoTirar,
 }: {
   g: GaleriaNaLista;
   aoAbrir: () => void;
@@ -129,7 +130,22 @@ function Cartao({
   equipe: boolean;
   acoes: { texto: string; perigo?: boolean; aoClicar: () => void }[];
   aoEscolherCapa: (item: ItemGaleria) => void;
+  aoTirar: (item: ItemGaleria) => void;
 }) {
+  /**
+   * Qual foto está com o "tirar" armado.
+   *
+   * Dois toques, não um: tirar apaga o arquivo junto e não tem desfazer. E
+   * desarma sozinho depois de alguns segundos — um botão de apagar que fica
+   * armado esperando é uma armadilha para o toque seguinte, ainda mais numa
+   * grade onde as fotos ficam coladas.
+   */
+  const [aTirar, setATirar] = useState<string | null>(null);
+  useEffect(() => {
+    if (!aTirar) return;
+    const t = setTimeout(() => setATirar(null), 6000);
+    return () => clearTimeout(t);
+  }, [aTirar]);
   return (
     <article className={'group bloco overflow-hidden' + (g.arquivadaEm ? ' opacity-70' : '')}>
       <div className="relative">
@@ -190,7 +206,19 @@ function Cartao({
           ) : itens.length === 0 ? (
             <p className="text-tinta-3">Nada subiu ainda.</p>
           ) : (
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+              {/* MENOS COLUNAS, MINIATURA MAIOR.
+
+                  Com oito colunas a miniatura media 42 PIXELS de lado. Nessa
+                  medida não cabe um controle, quanto mais dois: o "×" de
+                  tirar e a faixa da capa se sobrepunham em dez pixels, e o de
+                  baixo comia o toque do de cima. Medi com régua antes de
+                  mexer, e não no olho.
+
+                  E 42px também não serve para o que esta grade existe:
+                  conferir o que subiu. Procurar a foto errada numa miniatura
+                  do tamanho de uma unha é parte do motivo de a foto errada
+                  escapar. */}
               {itens.map((i) => {
                 const ehCapa = i.id === g.capaItemId;
                 return (
@@ -210,23 +238,82 @@ function Cartao({
                       </span>
                     )}
                     {i.tipo === 'video' && (
-                      <span className="rotulo-forte absolute bottom-1 left-1 rounded-full bg-[rgb(3_3_8/0.6)] px-1.5 text-[9px] text-tinta">
+                      <span className="rotulo-forte absolute top-1 right-1 rounded-full bg-[rgb(3_3_8/0.6)] px-1.5 text-[9px] text-tinta">
                         vídeo
                       </span>
                     )}
 
-                    {/* ESCOLHER A CAPA, aqui.
-                        Este botão só existia dentro da lupa, e a lupa só abre
-                        no modo cliente — ou seja, a equipe não tinha tela
-                        nenhuma para trocar a capa. A capa da entrega da
-                        Confraria era a primeira foto por falta de caminho, não
-                        por escolha.
+                    {/* DOIS CONTROLES NUMA MINIATURA DE 70px
+                        
+                        O "capa" era um chip no canto de cima à direita. Ao
+                        acrescentar o "tirar" no canto oposto, os dois se
+                        encostaram — e o de tirar, invisível até passar o
+                        mouse mas presente, ficava POR CIMA do de capa e comia
+                        o toque dele. No celular, onde os dois ficam sempre
+                        visíveis, tocar em "capa" apagaria a foto.
 
-                        Num canto, e não na foto inteira: clicar na foto para
-                        trocar a capa troca a capa sem querer o tempo todo. No
-                        celular fica sempre visível, porque não há passar o
-                        mouse. */}
-                    {equipe && i.tipo === 'foto' && (
+                        O roteiro de tela pegou na primeira execução. A lição:
+                        dois alvos lado a lado não cabem num quadrado de 70px,
+                        por mais que caibam no desenho.
+
+                        Então um em cima e outro embaixo: "×" no canto de
+                        cima, e a faixa de baixo — onde há largura de sobra —
+                        para a capa. A faixa também é mais legível que o chip
+                        de 9px que estava lá. */}
+                    {equipe && (
+                      <button
+                        type="button"
+                        onClick={() => setATirar(aTirar === i.id ? null : i.id)}
+                        aria-label={`Tirar ${i.nome} da galeria`}
+                        title="Apaga a foto e o arquivo dela. Não tem desfazer."
+                        className={
+                          'absolute top-1 left-1 grid size-6 place-items-center rounded-full ' +
+                          'text-[13px] leading-none backdrop-blur-md transition-opacity ' +
+                          'duration-200 ' +
+                          (aTirar === i.id
+                            ? 'bg-white text-[rgb(3_3_8)]'
+                            : 'bg-[rgb(3_3_8/0.55)] text-white opacity-0 ' +
+                              'group-hover/foto:opacity-100 focus-visible:opacity-100 max-[768px]:opacity-100')
+                        }
+                      >
+                        ×
+                      </button>
+                    )}
+
+                    {/* A faixa de baixo: normalmente a capa; com o "×" armado,
+                        a confirmação. Uma de cada vez, porque as duas no mesmo
+                        lugar voltariam ao problema de cima.
+
+                        A confirmação não cobre a foto inteira de propósito: um
+                        alvo do tamanho da miniatura seria um apagar esperando
+                        o próximo toque errado. E desarma sozinha em segundos. */}
+                    {equipe && aTirar === i.id ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setATirar(null);
+                          aoTirar(i);
+                        }}
+                        aria-label={`Confirmar: tirar ${i.nome} da galeria`}
+                        className={
+                          'rotulo-forte absolute inset-x-0 bottom-0 bg-[rgb(3_3_8/0.9)] py-2 ' +
+                          'text-[9px] text-white backdrop-blur-md'
+                        }
+                      >
+                        tirar mesmo?
+                      </button>
+                    ) : equipe && i.tipo === 'foto' ? (
+                      /* ESCOLHER A CAPA.
+                         Este botão só existia dentro da lupa, e a lupa só abre
+                         no modo cliente — ou seja, a equipe não tinha tela
+                         nenhuma para trocar a capa. A capa da entrega da
+                         Confraria era a primeira foto por falta de caminho,
+                         não por escolha.
+
+                         Numa faixa, e não na foto inteira: clicar na foto para
+                         trocar a capa troca a capa sem querer o tempo todo. No
+                         celular fica sempre visível, porque não há passar o
+                         mouse. */
                       <button
                         type="button"
                         onClick={() => aoEscolherCapa(i)}
@@ -235,17 +322,18 @@ function Cartao({
                         aria-label={ehCapa ? `${i.nome} é a capa` : `Usar ${i.nome} de capa`}
                         title={ehCapa ? 'Esta é a capa da entrega' : 'Usar esta foto de capa'}
                         className={
-                          'rotulo-forte absolute top-1 right-1 rounded-full px-2 py-1 text-[9px] ' +
+                          'rotulo-forte absolute inset-x-0 bottom-0 py-2 text-[9px] ' +
                           'backdrop-blur-md transition-opacity duration-200 ' +
                           (ehCapa
                             ? 'bg-[linear-gradient(180deg,var(--pink-topo),var(--pink-base))] text-sobre-pink'
-                            : 'bg-[rgb(3_3_8/0.55)] text-white opacity-0 ' +
+                            : 'bg-[rgb(3_3_8/0.6)] text-white opacity-0 ' +
                               'group-hover/foto:opacity-100 focus-visible:opacity-100 max-[768px]:opacity-100')
                         }
                       >
                         capa
                       </button>
-                    )}
+                    ) : null}
+
                   </li>
                 );
               })}
@@ -307,6 +395,37 @@ export function Galeria({
       await carregar();
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não consegui trocar a capa.');
+    } finally {
+      setMexendo(null);
+    }
+  }
+
+  /**
+   * Tirar uma foto da galeria (0089).
+   *
+   * A dona: "as vezes mando foto errada". A entrega inteira continua de pé.
+   *
+   * Recarrega a lista, e nao so a grade: a foto que saiu pode ser a capa, e aí
+   * o cartao mostra outra foto. Tela que discorda do banco logo depois de uma
+   * acao destrutiva e a pior hora possivel para discordar.
+   */
+  async function tirarFoto(galeriaId: string, item: ItemGaleria) {
+    setErro(null);
+    setMexendo(galeriaId);
+    try {
+      const r = await removerItemGaleria(item.id);
+      setRecado(
+        `"${r.nome}" saiu da galeria.`
+        + (r.eraCapa ? ' Era a capa — escolha outra, senão o cliente vê a primeira foto.' : '')
+        // Arquivo que fica no balde nao desfaz a remocao, mas nao pode sumir
+        // do relato: foi assim que 175 MB viraram lixo invisivel em outubro.
+        + (r.arquivosQueFicaram > 0
+            ? ` Atenção: ${r.arquivosQueFicaram} arquivo(s) ficaram no armazenamento.`
+            : ''),
+      );
+      await carregar();
+    } catch (x) {
+      setErro(x instanceof Error ? x.message : 'Não consegui tirar esta foto.');
     } finally {
       setMexendo(null);
     }
@@ -612,6 +731,7 @@ export function Galeria({
                 aoAbrir={() => void abrir(g.id)}
                 acoes={acoesDa(g)}
                 aoEscolherCapa={(i) => void escolherCapa(g.id, i)}
+                aoTirar={(i) => void tirarFoto(g.id, i)}
               />
 
               {equipe && aberta === g.id && (

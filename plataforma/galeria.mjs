@@ -121,6 +121,53 @@ await p.screenshot({ path: `${SAIDA}/19-galeria-aberta.png`, fullPage: true });
   }
 }
 
+// TIRAR UMA FOTO DA GALERIA (0089)
+//
+// A dona: "conseguir apagar foto das galerias, as vezes mando foto errada".
+// Antes disto os dois botoes destrutivos eram tirar do ar e apagar a entrega
+// INTEIRA — mandar uma foto errada num ensaio de 60 custava refazer tudo.
+//
+// A verificacao e pela CONTA de fotos na grade, nao pelo recado na tela: um
+// recado dizendo "saiu" com a foto ainda la e exatamente o defeito que isto
+// precisa pegar.
+{
+  const fotos = () => p.locator('li.group\\/foto, li[class*="group/foto"]').count();
+  const antes = await fotos();
+  if (antes < 2) problemas.push(`a grade de conferencia tem ${antes} foto(s); esperava varias`);
+
+  const tirar = p.locator('li button[aria-label^="Tirar "]');
+  if ((await tirar.count()) === 0) {
+    problemas.push('a equipe nao tem como tirar uma foto da galeria');
+  } else {
+    // UM toque nao apaga: o primeiro arma, o segundo confirma. Apagar foto
+    // nao tem desfazer, e o botao fica numa miniatura de 80px ao lado do de
+    // capa.
+    await tirar.first().click();
+    await p.waitForTimeout(250);
+    if ((await fotos()) !== antes) {
+      problemas.push('um toque so ja apagou a foto — nao houve confirmacao');
+    }
+    // Sem o `if`, a sabotagem que apaga num toque so morria aqui com um
+    // TimeoutError do Playwright — vermelho, mas sem dizer o que aconteceu.
+    // Roteiro que falha sem explicar custa uma investigacao a cada vez.
+    const confirmar = p.locator('li button[aria-label^="Confirmar: tirar "]');
+    if ((await confirmar.count()) === 0) {
+      problemas.push('o botao nao pediu confirmacao depois do primeiro toque');
+    } else {
+      await confirmar.first().click();
+      await p.waitForTimeout(900);
+      const depois = await fotos();
+      if (depois !== antes - 1) {
+        problemas.push(`depois de tirar, a grade tem ${depois} foto(s); esperava ${antes - 1}`);
+      }
+      const aviso = await limpo();
+      if (!aviso.includes('saiu da galeria')) {
+        problemas.push('tirar a foto nao avisou nada na tela');
+      }
+    }
+  }
+}
+
 // cria o link
 await p.getByRole('button', { name: /Criar (outro )?link/ }).click();
 await p.waitForTimeout(400);
@@ -248,6 +295,72 @@ if ((await q.locator('figure img').count()) < 6) problemas.push('o album nao car
 // abre numa parede branca, que foi a queixa que originou tudo isto.
 if ((await q.locator('header img').count()) < 1) problemas.push('o album abriu sem capa');
 
+// A CAPA COMECA NO TOPO DA PAGINA.
+//
+// A dona, olhando a entrega da Dona Zilda: "a capa como ta com esse espaco em
+// branco". Era a barra da logo, 74px de altura, empurrando a foto para baixo —
+// no tema claro, uma faixa branca em cima da capa. Agora a logo FLUTUA sobre a
+// foto e a capa comeca no pixel zero.
+//
+// Medido em pixels, e nao olhado: foi um `getBoundingClientRect` que me disse
+// que a barra tinha 74px, depois de eu ter passado a vista pela tela sem ver
+// problema nenhum.
+{
+  const m = await q.evaluate(() => {
+    const capa = document.querySelector('main header');
+    // A logo sao DUAS imagens, clara e escura, e o CSS esconde uma. Pego a
+    // que esta de fato na tela, o que de quebra cobra que sobre a foto
+    // aparece a clara — a escura sumiria num retrato escuro.
+    const logo = [...document.querySelectorAll('img[alt="Astart Studio"]')]
+      .find((e) => e.getBoundingClientRect().height > 0);
+    const r = (e) => (e ? Math.round(e.getBoundingClientRect().top) : null);
+    return { capa: r(capa), logo: r(logo) };
+  });
+  if (m.capa !== 0) {
+    problemas.push(`a capa comeca em ${m.capa}px e nao no topo — voltou a faixa branca`);
+  }
+  if (m.logo === null) problemas.push('a logo sumiu da galeria do cliente');
+  else if (m.logo > 60) problemas.push(`a logo esta em ${m.logo}px: nao esta sobre a capa`);
+}
+
+// E NO TEMA CLARO, que e o que ela usa.
+//
+// Esta pagina inteira e testada no escuro (o `colorScheme: 'dark'` la em
+// cima), e a regra que forca a logo clara sobre a foto SO vale no claro — no
+// escuro a logo clara ja e a padrao. Sabotei a regra e o roteiro passou:
+// verde porque eu testei no tema que eu escolhi, nao no dela.
+//
+// A mesma licao do arrastar que estava morto no Safari dela, verde no
+// Chromium aqui.
+{
+  const ctxClaro = await b.newContext({
+    viewport: { width: 1440, height: 1000 }, colorScheme: 'light',
+  });
+  const cl = await ctxClaro.newPage();
+  cl.on('pageerror', (e) => problemas.push('erro(claro): ' + e.message));
+  await cl.goto('http://localhost:4178/g/exemplo-gal-1', { waitUntil: 'networkidle' });
+  await cl.waitForTimeout(700);
+  const m = await cl.evaluate(() => {
+    const capa = document.querySelector('main header');
+    const visivel = [...document.querySelectorAll('img[alt="Astart Studio"]')]
+      .find((e) => e.getBoundingClientRect().height > 0);
+    return {
+      capa: capa ? Math.round(capa.getBoundingClientRect().top) : null,
+      classe: visivel ? visivel.className : null,
+    };
+  });
+  if (m.capa !== 0) {
+    problemas.push(`no tema claro a capa comeca em ${m.capa}px: faixa branca em cima`);
+  }
+  // Sobre a foto tem de ser a clara. A de tinta sumiria num retrato escuro, e
+  // no tema claro e ela que o CSS mostraria se ninguem mandasse o contrario.
+  if (m.classe !== 'marca-papel') {
+    problemas.push(`no tema claro a logo sobre a capa e "${m.classe}", nao a clara`);
+  }
+  await cl.screenshot({ path: `${SAIDA}/26-galeria-capa-clara.png` });
+  await ctxClaro.close();
+}
+
 // O peso saia "0 MB" em toda foto de menos de meio mega, com 185 delas na tela
 // do cliente. `Math.round(0,5)` e 0.
 if (/\b0 MB\b/.test(await q.locator('body').innerText())) {
@@ -287,6 +400,13 @@ await q.locator('button[aria-label^="Abrir"]').first().click();
 await q.waitForTimeout(400);
 if (await q.getByRole('button', { name: /capa/i }).count()) {
   problemas.push('o cliente ve o botao de trocar a capa');
+}
+// Nem de apagar. Hoje o controle de tirar foto so existe na grade de
+// conferencia da equipe, entao esta linha nao morde nada AGORA — ela esta aqui
+// para o dia em que alguem puser o botao tambem nesta tela. A trava que morde
+// hoje e a do banco (teste 52: o cliente leva recusa) e o `equipe &&` da grade.
+if (await q.getByRole('button', { name: /tirar .* da galeria/i }).count()) {
+  problemas.push('o cliente ve o botao de tirar foto da galeria');
 }
 
 // A LUPA E A DA REFERENCIA?

@@ -1609,6 +1609,32 @@ export function definirCapaExemplo(galeriaId: string, itemId: string | null): vo
   else CAPAS.delete(galeriaId);
 }
 
+/**
+ * Tira a foto da galeria de exemplo (0089).
+ *
+ * Mexe no array de verdade, e nao numa copia: o roteiro de tela abre a lupa,
+ * tira a foto e confere que a grade ficou com uma a menos. Se o exemplo so
+ * fingisse, o roteiro passaria com a tela quebrada.
+ */
+export function removerItemGaleriaExemplo(itemId: string): {
+  nome: string; eraCapa: boolean; sobram: number;
+  arquivosApagados: number; arquivosQueFicaram: number;
+} {
+  const g = GALERIAS.find((x) => x.itens.some((i) => i.id === itemId));
+  const item = g?.itens.find((i) => i.id === itemId);
+  if (!g || !item) throw new Error('Esta foto não existe mais. Recarregue a galeria.');
+
+  const eraCapa = CAPAS.get(g.id) === itemId;
+  if (eraCapa) CAPAS.delete(g.id);
+  g.itens.splice(g.itens.indexOf(item), 1);
+
+  // Dois arquivos por foto no exemplo, como no banco: original e miniatura.
+  return {
+    nome: item.nome, eraCapa, sobram: g.itens.length,
+    arquivosApagados: 2, arquivosQueFicaram: 0,
+  };
+}
+
 export function albumExemplo(chave: string): Album {
   const g = GALERIAS.find((x) => x.id === chave || x.links.some((l) => l.id === chave))
     ?? GALERIAS[0]!;
