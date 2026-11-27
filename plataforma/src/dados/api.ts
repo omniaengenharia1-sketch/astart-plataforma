@@ -1476,9 +1476,20 @@ export async function removerItemGaleria(itemId: string): Promise<{
   };
   let apagados = 0;
   if (r.caminhos.length > 0) {
-    const { data: saiu, error: e } = await sb.storage.from('galerias').remove(r.caminhos);
-    // O que o servidor devolveu, nao o que foi pedido.
-    if (!e) apagados += saiu?.length ?? 0;
+    // O `try` nao e decoracao: a LINHA JA FOI APAGADA quando se chega aqui.
+    // Se a remocao do balde estourar (rede, sessao vencida), deixar o erro
+    // subir faria a tela nao recarregar — e a foto continuaria aparecendo na
+    // grade mesmo tendo sumido do banco. A pessoa clicaria de novo e levaria
+    // "esta foto nao existe mais", sem entender nada.
+    //
+    // Arquivo que nao sai e um orfao, e orfao a gente conta e mostra.
+    try {
+      const { data: saiu, error: e } = await sb.storage.from('galerias').remove(r.caminhos);
+      // O que o servidor devolveu, nao o que foi pedido.
+      if (!e) apagados += saiu?.length ?? 0;
+    } catch {
+      apagados = 0;
+    }
   }
   return {
     nome: r.nome,

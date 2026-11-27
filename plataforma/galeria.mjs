@@ -131,6 +131,16 @@ await p.screenshot({ path: `${SAIDA}/19-galeria-aberta.png`, fullPage: true });
 // recado dizendo "saiu" com a foto ainda la e exatamente o defeito que isto
 // precisa pegar.
 {
+  // NO TAMANHO DE CELULAR, de proposito.
+  //
+  // A verificacao de "a pergunta nasceu na tela" nao morde em 1440x1000: num
+  // monitor cabe tudo. O defeito que ela existe para pegar — o painel
+  // nascendo no pixel 1191 de uma tela de 852 — so acontece no telefone, que
+  // e onde a dona estava quando reclamou. Testar na janela larga e testar no
+  // lugar onde o defeito nao mora.
+  await p.setViewportSize({ width: 393, height: 852 });
+  await p.waitForTimeout(400);
+
   const fotos = () => p.locator('li.group\\/foto, li[class*="group/foto"]').count();
   const antes = await fotos();
   if (antes < 2) problemas.push(`a grade de conferencia tem ${antes} foto(s); esperava varias`);
@@ -139,18 +149,67 @@ await p.screenshot({ path: `${SAIDA}/19-galeria-aberta.png`, fullPage: true });
   if ((await tirar.count()) === 0) {
     problemas.push('a equipe nao tem como tirar uma foto da galeria');
   } else {
-    // UM toque nao apaga: o primeiro arma, o segundo confirma. Apagar foto
-    // nao tem desfazer, e o botao fica numa miniatura de 80px ao lado do de
-    // capa.
+    // UM toque nao apaga: o primeiro MARCA a foto e abre o pop-up.
+    //
+    // A primeira versao perguntava dentro da miniatura ("tirar mesmo?") e a
+    // dona respondeu: "agora fica esse tirar mesmo? e nao aparece
+    // confirmacao". Pergunta sem sim nem nao nao e confirmacao — e por isso o
+    // roteiro agora cobra as PALAVRAS da pergunta e os DOIS botoes, nao so
+    // "existe um segundo clique".
     await tirar.first().click();
     await p.waitForTimeout(250);
     if ((await fotos()) !== antes) {
       problemas.push('um toque so ja apagou a foto — nao houve confirmacao');
     }
+    // O POP-UP: existe, diz o que vai acontecer, e tem as duas respostas.
+    //
+    // A dona pediu assim depois de duas tentativas minhas dentro da pagina
+    // ("tirar mesmo?" dentro da miniatura, e um painel embaixo da grade que
+    // no telefone nascia no pixel 1191 de uma tela de 852). Entao o roteiro
+    // cobra que e um DIALOGO de verdade, e nao so que ha um segundo clique
+    // em algum lugar.
+    const popup = p.getByRole('dialog');
+    if ((await popup.count()) === 0) {
+      problemas.push('tocar no x nao abriu pop-up de confirmacao');
+    } else {
+      const semAcento = (await popup.innerText())
+        .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      for (const palavra of ['tirar', 'nao tem desfazer', 'cancelar']) {
+        if (!semAcento.includes(palavra)) problemas.push(`o pop-up nao diz "${palavra}"`);
+      }
+      // NO MEIO DA TELA, e nao abaixo da dobra. Esta e a verificacao que o
+      // painel antigo nao passava no telefone.
+      const cx = await popup.boundingBox();
+      const janela = p.viewportSize();
+      if (!cx || !janela || cx.y < 0 || cx.y + cx.height > janela.height) {
+        problemas.push(
+          `o pop-up nasceu fora da tela (y=${cx ? Math.round(cx.y) : '?'}, `
+          + `janela=${janela ? janela.height : '?'})`);
+      }
+      // O foco NAO comeca no botao que apaga: um Enter distraido nao pode
+      // apagar foto de ninguem.
+      const focado = await p.evaluate(() => document.activeElement?.textContent?.trim() ?? '');
+      if (/tirar da galeria/i.test(focado)) {
+        problemas.push('o pop-up abre com o foco no botao de apagar');
+      }
+      // Esc cancela, e cancelar nao apaga nada.
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(400);
+      if ((await p.getByRole('dialog').count()) !== 0) {
+        // Nao reabro: com o pop-up aberto por cima, o clique seguinte morreria
+        // num TimeoutError e a mensagem util nunca seria impressa.
+        problemas.push('Esc nao fecha o pop-up');
+      } else {
+        if ((await fotos()) !== antes) problemas.push('cancelar pelo Esc apagou a foto');
+        await tirar.first().click();
+        await p.waitForTimeout(400);
+      }
+    }
+
     // Sem o `if`, a sabotagem que apaga num toque so morria aqui com um
     // TimeoutError do Playwright — vermelho, mas sem dizer o que aconteceu.
     // Roteiro que falha sem explicar custa uma investigacao a cada vez.
-    const confirmar = p.locator('li button[aria-label^="Confirmar: tirar "]');
+    const confirmar = p.getByRole('dialog').getByRole('button', { name: 'Tirar da galeria' });
     if ((await confirmar.count()) === 0) {
       problemas.push('o botao nao pediu confirmacao depois do primeiro toque');
     } else {
@@ -166,6 +225,9 @@ await p.screenshot({ path: `${SAIDA}/19-galeria-aberta.png`, fullPage: true });
       }
     }
   }
+
+  await p.setViewportSize({ width: 1440, height: 1000 });
+  await p.waitForTimeout(400);
 }
 
 // cria o link

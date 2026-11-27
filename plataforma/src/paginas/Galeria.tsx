@@ -3,6 +3,7 @@ import { Bloco, Fita, Marca } from '../componentes/Bloco';
 import { Botao } from '../componentes/Botao';
 import { Campo, Entrada } from '../componentes/Campo';
 import { Carregando, Falhou, Vazio } from '../componentes/Estado';
+import { Confirmar } from '../componentes/Confirmar';
 import {
   arquivarGaleria, criarGaleria, criarLinkGaleria, definirCapaGaleria, excluirGaleria,
   galeriasDoCliente, itensDaGaleria, removerItemGaleria, revogarLinkGaleria,
@@ -122,6 +123,7 @@ function Cartao({
   acoes,
   aoEscolherCapa,
   aoTirar,
+  tirando,
 }: {
   g: GaleriaNaLista;
   aoAbrir: () => void;
@@ -131,21 +133,27 @@ function Cartao({
   acoes: { texto: string; perigo?: boolean; aoClicar: () => void }[];
   aoEscolherCapa: (item: ItemGaleria) => void;
   aoTirar: (item: ItemGaleria) => void;
+  tirando: boolean;
 }) {
   /**
-   * Qual foto está com o "tirar" armado.
+   * Qual foto está escolhida para sair.
    *
-   * Dois toques, não um: tirar apaga o arquivo junto e não tem desfazer. E
-   * desarma sozinho depois de alguns segundos — um botão de apagar que fica
-   * armado esperando é uma armadilha para o toque seguinte, ainda mais numa
-   * grade onde as fotos ficam coladas.
+   * A PRIMEIRA VERSÃO PERGUNTAVA DENTRO DA MINIATURA e a dona respondeu:
+   * "agora fica esse tirar mesmo? e nao aparece confirmacao". Ela estava
+   * certa — uma faixa escrita "tirar mesmo?" é uma PERGUNTA SEM RESPOSTA:
+   * não há sim nem não, e quem lê não tem como saber que a própria faixa é o
+   * botão. Numa miniatura, ainda por cima, o texto quebrava em duas linhas e
+   * cobria a foto.
+   *
+   * Agora a miniatura só MARCA qual vai sair, e a pergunta é um pop-up, que
+   * aparece no meio da tela com as duas respostas juntas.
+   *
+   * Sem desarme por tempo: com um "Cancelar" visível, a confirmação sumindo
+   * sozinha no meio da leitura só confunde.
    */
   const [aTirar, setATirar] = useState<string | null>(null);
-  useEffect(() => {
-    if (!aTirar) return;
-    const t = setTimeout(() => setATirar(null), 6000);
-    return () => clearTimeout(t);
-  }, [aTirar]);
+  const escolhida = itens?.find((i) => i.id === aTirar) ?? null;
+
   return (
     <article className={'group bloco overflow-hidden' + (g.arquivadaEm ? ' opacity-70' : '')}>
       <div className="relative">
@@ -206,7 +214,7 @@ function Cartao({
           ) : itens.length === 0 ? (
             <p className="text-tinta-3">Nada subiu ainda.</p>
           ) : (
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+            <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
               {/* MENOS COLUNAS, MINIATURA MAIOR.
 
                   Com oito colunas a miniatura media 42 PIXELS de lado. Nessa
@@ -227,7 +235,11 @@ function Cartao({
                     title={i.nome}
                     className={
                       'group/foto relative aspect-square overflow-hidden rounded-[12px] border ' +
-                      (ehCapa ? 'border-pink' : 'border-linha-fraca')
+                      // Marcada para sair: fica apagada e com anel branco, para
+                      // a pergunta la embaixo ter um "qual" visivel aqui em cima.
+                      (aTirar === i.id
+                        ? 'border-transparent opacity-45 ring-2 ring-tinta'
+                        : ehCapa ? 'border-pink' : 'border-linha-fraca')
                     }
                   >
                     {i.miniatura ? (
@@ -265,6 +277,7 @@ function Cartao({
                         type="button"
                         onClick={() => setATirar(aTirar === i.id ? null : i.id)}
                         aria-label={`Tirar ${i.nome} da galeria`}
+                        aria-pressed={aTirar === i.id}
                         title="Apaga a foto e o arquivo dela. Não tem desfazer."
                         className={
                           'absolute top-1 left-1 grid size-6 place-items-center rounded-full ' +
@@ -280,29 +293,11 @@ function Cartao({
                       </button>
                     )}
 
-                    {/* A faixa de baixo: normalmente a capa; com o "×" armado,
-                        a confirmação. Uma de cada vez, porque as duas no mesmo
-                        lugar voltariam ao problema de cima.
-
-                        A confirmação não cobre a foto inteira de propósito: um
-                        alvo do tamanho da miniatura seria um apagar esperando
-                        o próximo toque errado. E desarma sozinha em segundos. */}
-                    {equipe && aTirar === i.id ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setATirar(null);
-                          aoTirar(i);
-                        }}
-                        aria-label={`Confirmar: tirar ${i.nome} da galeria`}
-                        className={
-                          'rotulo-forte absolute inset-x-0 bottom-0 bg-[rgb(3_3_8/0.9)] py-2 ' +
-                          'text-[9px] text-white backdrop-blur-md'
-                        }
-                      >
-                        tirar mesmo?
-                      </button>
-                    ) : equipe && i.tipo === 'foto' ? (
+                    {/* A faixa de baixo é da capa. A pergunta de tirar NÃO mora
+                        aqui: numa miniatura ela vira "tirar mesmo?" quebrado
+                        em duas linhas, sem sim nem não — foi o que a dona
+                        viu. A pergunta está embaixo da grade. */}
+                    {equipe && i.tipo === 'foto' && (
                       /* ESCOLHER A CAPA.
                          Este botão só existia dentro da lupa, e a lupa só abre
                          no modo cliente — ou seja, a equipe não tinha tela
@@ -332,12 +327,57 @@ function Cartao({
                       >
                         capa
                       </button>
-                    ) : null}
+                    )}
 
                   </li>
                 );
               })}
             </ul>
+          )}
+
+          {/* A PERGUNTA É UM POP-UP.
+              
+              A dona: "quando eu for apertar para apagar, a mensagem de
+              confirmação for um pop-up, igual tem em outros sites".
+
+              Antes dela pedir eu tentei duas vezes dentro da página, e as
+              duas falharam pelo mesmo motivo: a pergunta ficava onde ela não
+              estava olhando. Primeiro dentro da miniatura ("tirar mesmo?",
+              sem sim nem não), depois embaixo da grade — que no telefone
+              nascia no pixel 1191 de uma tela de 852.
+
+              O pop-up acaba com a classe inteira: ele aparece no meio da
+              tela, trava o resto e traz as duas respostas juntas. */}
+          {escolhida && (
+            <Confirmar
+              titulo="Tirar esta foto da galeria?"
+              acao="Tirar da galeria"
+              ocupado={tirando}
+              aoCancelar={() => setATirar(null)}
+              aoConfirmar={() => {
+                const alvo = escolhida;
+                setATirar(null);
+                aoTirar(alvo);
+              }}
+            >
+              {/* A foto, e não só o nome: nome de arquivo de câmera não
+                  distingue nada. "ASTART_0003.jpg" não diz qual é — a imagem
+                  diz. */}
+              <div className="flex items-start gap-3">
+                {escolhida.miniatura && (
+                  <img
+                    src={escolhida.miniatura}
+                    alt=""
+                    className="size-20 shrink-0 rounded-[10px] object-cover"
+                  />
+                )}
+                <p>
+                  <strong className="text-tinta">{escolhida.nome}</strong> sai da galeria e o
+                  arquivo é apagado junto. Não tem desfazer.
+                  {g.capaItemId === escolhida.id && ' Esta é a capa da entrega.'}
+                </p>
+              </div>
+            </Confirmar>
           )}
         </div>
       )}
@@ -732,6 +772,7 @@ export function Galeria({
                 acoes={acoesDa(g)}
                 aoEscolherCapa={(i) => void escolherCapa(g.id, i)}
                 aoTirar={(i) => void tirarFoto(g.id, i)}
+                tirando={mexendo === g.id}
               />
 
               {equipe && aberta === g.id && (
