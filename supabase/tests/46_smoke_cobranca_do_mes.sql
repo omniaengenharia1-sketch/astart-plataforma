@@ -104,8 +104,14 @@ begin
   -- -------------------------------------------------------------------------
   -- A CONTAGEM QUE O BOTAO MOSTRA ANTES DE SER APERTADO.
   -- -------------------------------------------------------------------------
-  perform public.afirma(public.contratos_a_cobrar() = 4,
-    'a contagem ve os quatro em vigor: ativo, cortesia, novo e projeto');
+  -- TRES, e nao quatro: a cortesia saiu da conta na 0090.
+  --
+  -- O numero do botao e uma promessa — "tem tanta cobranca para gerar". A
+  -- linha de R$ 0 nunca vira cobranca (`lancamentos` tem
+  -- `check (valor_centavos > 0)`), entao conta-la era a tela prometendo o que
+  -- nao ia acontecer.
+  perform public.afirma(public.contratos_a_cobrar() = 3,
+    'a contagem ve os tres que geram dinheiro: ativo, novo e projeto');
 
   -- -------------------------------------------------------------------------
   -- 1. A PRIMEIRA RODADA.
@@ -116,8 +122,16 @@ begin
   -- 1 do ativo + 1 do que comecou no meio do mes + 3 parcelas do projeto.
   perform public.afirma((v_r->>'criadas')::int = 5,
     'e cria cinco lancamentos: duas mensalidades e tres parcelas');
-  perform public.afirma((v_r->>'erros')::int = 1,
-    'com uma falha: o contrato de cortesia, valor zero');
+  -- A CORTESIA DEIXOU DE SER ERRO (0090).
+  --
+  -- Antes a rodada tentava lancar R$ 0, o CHECK da tabela recusava, e isso
+  -- virava uma falha no resultado — TODO MES, para sempre, por causa de um
+  -- presente. A dona deu um ensaio de graca para a dona Zilda e quer a linha
+  -- no contrato; erro mensal nao e o preco disso.
+  perform public.afirma((v_r->>'erros')::int = 0,
+    'e nenhuma falha: cortesia nao e erro, e contada à parte');
+  perform public.afirma((v_r->>'cortesias')::int = 1,
+    'a rodada diz quantas cortesias passaram sem cobrar');
 
   -- 3. PAUSADO E ENCERRADO NAO FORAM COBRADOS.
   perform public.afirma(
@@ -136,12 +150,21 @@ begin
                and competencia = v_mes),
     'contrato que comecou no meio do mes e cobrado no mes em que comecou');
 
-  -- 5. A FALHA APARECE, COM O MOTIVO, E NAO LEVOU AS OUTRAS JUNTO.
+  -- 5. A CORTESIA APARECE NO RESULTADO, SEM ERRO E SEM COBRANCA.
+  --
+  -- Aparecer importa: some do resultado e a dona nao tem como saber que a
+  -- linha existe e nao foi cobrada. Falha calada e proibida, e silencio sobre
+  -- o que nao aconteceu e a mesma coisa.
   select count(*) into v_n
     from jsonb_array_elements(v_r->'linhas') x
-   where x->>'cliente' = 'Cliente Cortesia' and x->>'erro' is not null;
+   where x->>'cliente' = 'Cliente Cortesia'
+     and x->>'erro' is null and (x->>'criadas')::int = 0;
   perform public.afirma(v_n = 1,
-    'o contrato quebrado aparece no resultado com o motivo — falha calada e proibida');
+    'a cortesia aparece no resultado, sem erro e sem cobranca');
+  perform public.afirma(
+    not exists (select 1 from public.lancamentos
+                 where cliente_id = '20000000-0000-0000-0000-000000000004'),
+    'e nao lancou nada para ela');
   perform public.afirma(
     exists (select 1 from public.lancamentos
              where cliente_id = '20000000-0000-0000-0000-000000000001'),

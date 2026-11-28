@@ -47,6 +47,7 @@ function paraCentavos(texto: string): number | null {
 }
 
 interface Form {
+  apelido: string;
   valor: string;
   diaVencimento: string;
   parcelas: string;
@@ -58,6 +59,7 @@ interface Form {
 
 function doServico(s: ServicoContratado): Form {
   return {
+    apelido: s.apelido ?? '',
     valor: paraReais(s.valorCentavos),
     diaVencimento: s.diaVencimento === null ? '' : String(s.diaVencimento),
     parcelas: s.parcelas === null ? '' : String(s.parcelas),
@@ -166,6 +168,25 @@ function Campos({
         </Campo>
       </div>
 
+      {/* O NOME DESTA LINHA (0090).
+          Primeiro campo do formulário porque é o que separa uma linha da
+          outra: com duas captações no mesmo cliente, é por aqui que ela diz
+          qual é o ensaio e qual é o aniversário. Vai no boleto também. */}
+      <Campo
+        id="c-apelido"
+        rotulo="Nome deste trabalho"
+        dica="opcional · aparece no boleto do cliente"
+        className="mt-3"
+      >
+        <Entrada
+          id="c-apelido"
+          value={form.apelido}
+          maxLength={60}
+          onChange={(e) => setForm({ ...form, apelido: e.target.value })}
+          placeholder="Ex.: Aniversário da Zilda"
+        />
+      </Campo>
+
       <Campo id="c-obs" rotulo="Observação" className="mt-3">
         <Entrada
           id="c-obs"
@@ -227,13 +248,22 @@ function Linha({
     entregaEm: form.entregaEm || null,
     dataEvento: form.dataEvento || null,
     observacao: form.observacao || null,
+    apelido: form.apelido,
     responsaveis: form.responsaveis,
   }));
 
   return (
     <li className="border-b border-linha-fraca px-3 py-3.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="w-44 shrink-0 font-bold">{s.servicoNome}</span>
+        {/* O NOME DA LINHA NA FRENTE, quando ela tem um (0090).
+            Com duas captações no mesmo cliente, "Audiovisual" duas vezes não
+            diz qual é qual — e o que ela precisa ver é "Aniversário da
+            Zilda". O serviço continua logo abaixo, menor: é ele que decide
+            quais abas o cliente enxerga. */}
+        <span className="w-44 shrink-0">
+          <span className="block font-bold">{s.apelido ?? s.servicoNome}</span>
+          {s.apelido && <span className="rotulo block">{s.servicoNome}</span>}
+        </span>
         <Marca>{FORMATO[s.formato]}</Marca>
         {s.status !== 'ativo' && <Marca forte>{STATUS_SERVICO[s.status]}</Marca>}
         <span className="legenda min-w-48 flex-1 text-[13px]">
@@ -353,6 +383,7 @@ export function ContratoDoCliente({
   const [escolhido, setEscolhido] = useState('');
   const [formato, setFormato] = useState('recorrente');
   const [form, setForm] = useState<Form>({
+    apelido: '',
     valor: '', diaVencimento: '', parcelas: '', entregaEm: '',
     dataEvento: '', observacao: '', responsaveis: [],
   });
@@ -381,12 +412,13 @@ export function ContratoDoCliente({
         entregaEm: form.entregaEm || null,
         dataEvento: form.dataEvento || null,
         observacao: form.observacao || null,
+        apelido: form.apelido,
         responsaveis: form.responsaveis,
       });
       setNovo(false);
       setEscolhido('');
       setForm({
-        valor: '', diaVencimento: '', parcelas: '', entregaEm: '',
+        apelido: '', valor: '', diaVencimento: '', parcelas: '', entregaEm: '',
         dataEvento: '', observacao: '', responsaveis: [],
       });
       await aoMudar();

@@ -175,6 +175,8 @@ function srv(
     // Os quatro da 0075. Sem eles o formulario de editar abriria vazio.
     dataEvento: null,
     observacao: null,
+    // O nome desta linha (0090). Nulo = chame pelo nome do servico.
+    apelido: null,
     responsaveisIds: [],
     fim: null,
     entregaEm: null,
@@ -602,6 +604,7 @@ export function criarClienteExemplo(
       throw new Error(`Diga o dia de vencimento de ${NOME_SERVICO[e.servico]} (1 a 28).`);
     }
     return srv(cliente.id, e.servico, NOME_SERVICO[e.servico], formato, e.valorCentavos, {
+      apelido: e.apelido?.trim() || null,
       diaVencimento: formato === 'recorrente' ? e.diaVencimento : null,
       parcelas: formato === 'recorrente' ? null : (e.parcelas ?? 1),
       inicio: e.inicio,
@@ -1255,6 +1258,8 @@ export function alterarServicoExemplo(id: string, d: ContratoEditado): void {
   if (d.diaVencimento != null && (d.diaVencimento < 1 || d.diaVencimento > 31)) {
     throw new Error('O dia de vencimento vai de 1 a 31.');
   }
+  // Nulo e "nao mexe"; texto vazio apaga o nome (0090).
+  if (d.apelido !== undefined) s.apelido = d.apelido.trim() || null;
   if (d.valorCentavos != null) s.valorCentavos = d.valorCentavos;
   if (d.diaVencimento != null) s.diaVencimento = d.diaVencimento;
   if (d.parcelas != null) s.parcelas = d.parcelas;
@@ -1273,12 +1278,13 @@ export function adicionarServicoExemplo(
 ): void {
   const c = CLIENTES.find((x) => x.cliente.id === clienteId);
   if (!c) throw new Error('Cliente nao encontrado.');
-  if (c.servicos.some((s) => s.servico === d.servico && s.status !== 'encerrado')) {
-    throw new Error('Este servico ja esta contratado por este cliente.');
-  }
+  // A TRAVA DE "JA ESTA CONTRATADO" SAIU (0090): o mesmo servico pode entrar
+  // mais de uma vez. A dona deu um ensaio de graca para a dona Zilda e depois
+  // fez o aniversario dela por R$ 500 — os dois sao audiovisual.
   c.servicos.push({
     id: `cs-novo-${d.servico}-${c.servicos.length}`,
     clienteId,
+    apelido: d.apelido?.trim() || null,
     servico: d.servico as ServicoContratado['servico'],
     servicoNome: servicosParaAdicionarExemplo(clienteId).find((s) => s.chave === d.servico)?.nome
       ?? d.servico,

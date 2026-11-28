@@ -92,22 +92,41 @@ do $$
 declare ok boolean;
 begin
   perform set_config('teste.uid', '10000000-0000-0000-0000-000000000001', false);
-  begin
-    perform public.adicionar_servico_ao_cliente(
-      '20000000-0000-0000-0000-000000000001', 'gestao_digital', 'recorrente',
-      300000::bigint, 10::smallint);
-    ok := false;
-  exception when others then
-    ok := position('já tem' in sqlerrm) > 0 and position('encerre' in sqlerrm) > 0;
-  end;
-  perform public.afirma(ok, 'servico ja ativo recusa, e diz o que fazer');
+  -- A REGRA VIROU DO AVESSO NA 0090, e de proposito.
+  --
+  -- Ate aqui o mesmo servico duas vezes era RECUSADO ("este cliente ja tem
+  -- Gestao Digital no contrato"), e este teste cobrava a recusa. A dona:
+  -- "igual a dona Zilda, eu dei um ensaio pra ela de graca. E aí eu vou fazer
+  -- as fotos do aniversario dela, que aí vai ser R$ 500" — os dois sao
+  -- audiovisual, e a recusa era o que a impedia.
+  --
+  -- O medo que a regra antiga guardava — cobrar o cliente duas vezes — nao
+  -- some; ele muda de lugar. Quem segura agora e o vinculo
+  -- `lancamentos.cliente_servico_id` mais o indice unico por competencia, e e
+  -- o teste 53 que cobra isso.
+  perform public.adicionar_servico_ao_cliente(
+    '20000000-0000-0000-0000-000000000001', 'gestao_digital', 'recorrente',
+    300000::bigint, 10::smallint, p_apelido => 'Segundo contrato');
 
   perform public.afirma(
     (select count(*) from public.cliente_servicos
       where cliente_id = '20000000-0000-0000-0000-000000000001'
-        and servico_id = (select id from public.servicos where chave = 'gestao_digital')) = 1,
-    'e NAO criou uma segunda linha — isso cobraria o cliente duas vezes'
+        and servico_id = (select id from public.servicos where chave = 'gestao_digital')) = 2,
+    'o mesmo servico entra duas vezes no mesmo cliente'
   );
+  perform public.afirma(
+    (select count(*) from public.cliente_servicos
+      where cliente_id = '20000000-0000-0000-0000-000000000001'
+        and apelido = 'Segundo contrato') = 1,
+    'e a linha nova guarda o nome que a dona deu a ela'
+  );
+
+  -- E a segunda linha sai, para o resto deste arquivo continuar valendo: mais
+  -- adiante ele encerra a gestao digital e cobra que a aba FECHA, e uma
+  -- segunda linha ativa manteria a aba aberta — com razao.
+  delete from public.cliente_servicos
+   where cliente_id = '20000000-0000-0000-0000-000000000001'
+     and apelido = 'Segundo contrato';
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -289,26 +308,43 @@ begin
     if position('anterior ao início' in sqlerrm) = 0 then raise; end if;
   end;
 
-  -- 3. Reativar: a MESMA linha volta, com o historico pendurado nela.
+  -- 3. O CLIENTE QUE VOLTA GANHA UMA LINHA NOVA (0090).
+  --
+  -- Ate a 0090 este bloco cobrava o contrario: adicionar um servico encerrado
+  -- fazia a MESMA linha voltar a valer, e o teste se chamava "cliente que
+  -- volta reativa, nao duplica". A trava `unique (cliente_id, servico_id)`
+  -- nao deixava outra coisa acontecer.
+  --
+  -- Com a trava fora, reativar virou ambiguo: voltar qual linha? E para o
+  -- caso que originou a mudanca — o ensaio de cortesia da dona Zilda e,
+  -- depois, o aniversario dela — a resposta certa e nao voltar nenhuma: o
+  -- ensaio fica encerrado, com a galeria e os entregaveis pendurados nele, e
+  -- o trabalho novo nasce como linha nova, com o seu proprio valor.
+  --
+  -- Retomar uma linha especifica continua existindo: `mudar_estado_do_servico`.
   v := public.adicionar_servico_ao_cliente(
     '20000000-0000-0000-0000-000000000001', 'gestao_digital', 'recorrente',
-    350000::bigint, 15::smallint);
-  perform public.afirma((v->>'reativou')::boolean, 'cliente que volta reativa, nao duplica');
-  perform public.afirma((v->>'id')::uuid = v_cs, 'e e a MESMA linha de antes');
+    350000::bigint, 15::smallint, p_apelido => 'Voltou em 2027');
+  perform public.afirma((v->>'id')::uuid <> v_cs,
+    'o cliente que volta ganha uma LINHA NOVA, nao a antiga de volta');
   perform public.afirma(
     (select count(*) from public.cliente_servicos cs
        join public.servicos s on s.id = cs.servico_id
       where cs.cliente_id = '20000000-0000-0000-0000-000000000001'
-        and s.chave = 'gestao_digital') = 1,
-    'continua uma linha so para aquele servico'
+        and s.chave = 'gestao_digital') = 2,
+    'e agora sao duas linhas: a encerrada e a nova'
   );
   perform public.afirma(
-    (select fim from public.cliente_servicos where id = v_cs) is null,
-    'e a data de fim foi limpa: ativo com fim no passado nao quer dizer nada'
+    (select status from public.cliente_servicos where id = v_cs)::text = 'encerrado',
+    'a linha antiga continua encerrada, e nao foi mexida'
   );
   perform public.afirma(
     (select count(*) from public.entregaveis where cliente_servico_id = v_cs) = v_ents,
-    'o historico continua la depois da reativacao'
+    'com o historico dela intacto — e o que protege as duas partes'
+  );
+  perform public.afirma(
+    public.cliente_tem_modulo('20000000-0000-0000-0000-000000000001', 'publicacao'),
+    'e a aba reabre, porque ha servico ativo de novo'
   );
 end $$;
 

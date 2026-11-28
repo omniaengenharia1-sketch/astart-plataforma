@@ -136,6 +136,42 @@ if (quantas > 1) {
   );
 }
 
+// --- 5. O MESMO SERVICO DUAS VEZES, com nome (0090) -------------------------
+//
+// A dona: "eu dei um ensaio pra ela de graca. E aí eu vou fazer as fotos do
+// aniversario dela, que aí vai ser R$ 500". Os dois sao audiovisual, e ate
+// agora o segundo era RECUSADO: "este cliente ja tem Audiovisual no
+// contrato".
+//
+// A verificacao e pela CONTA de linhas na tela, e nao pela ausencia de erro:
+// uma tela que aceita e nao mostra a linha nova e o mesmo defeito com outra
+// cara.
+{
+  const linhas = () => p.locator('li', { has: p.locator('button', { hasText: 'Editar' }) }).count();
+  const antes = await linhas();
+
+  await p.getByRole('button', { name: '+ Adicionar serviço' }).click();
+  await p.waitForTimeout(400);
+  const sel = p.locator('#c-servico');
+  // O MESMO servico que ja esta no contrato: a primeira opcao da lista, que
+  // antes da 0090 nem aparecia duas vezes.
+  const jaTem = await sel.locator('option').nth(1).getAttribute('value');
+  await sel.selectOption(jaTem);
+  await p.locator('#c-apelido').fill('Aniversário da Zilda');
+  await p.locator('#c-valor').fill('500,00');
+  await p.getByRole('button', { name: 'Adicionar ao contrato' }).click();
+  await p.waitForTimeout(1200);
+
+  const depois = await linhas();
+  if (depois !== antes + 1) {
+    falhas.push(`depois de adicionar o mesmo servico de novo ha ${depois} linhas, esperava ${antes + 1}`);
+  }
+  cobrar((await corpo()).includes('Aniversário da Zilda'),
+    'o nome que ela deu a linha aparece no contrato');
+  cobrar((await corpo()).includes('500,00'),
+    'e o valor da segunda linha tambem');
+}
+
 await p.screenshot({ path: './tiros/contrato-01-editar.png', fullPage: true });
 
 cobrar(problemas.length === 0, `nenhum erro de pagina (${problemas.length})`);

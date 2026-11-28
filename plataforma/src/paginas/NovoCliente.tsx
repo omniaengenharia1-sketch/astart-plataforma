@@ -89,6 +89,26 @@ function LinhaServico({
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {/* O NOME DESTE TRABALHO (0090).
+            O mesmo serviço pode entrar mais de uma vez no mesmo cliente — o
+            ensaio de cortesia e o aniversário são os dois audiovisual — e é
+            este nome que separa um do outro na tela e no boleto. Aqui no
+            cadastro cada serviço aparece uma vez; a segunda linha se
+            acrescenta depois, no contrato do cliente. */}
+        <Campo
+          id={`${id}-apelido`}
+          rotulo="Nome deste trabalho"
+          dica="opcional · aparece no boleto"
+        >
+          <Entrada
+            id={`${id}-apelido`}
+            value={escolha.apelido}
+            maxLength={60}
+            placeholder={`Ex.: ${s.nome} de dezembro`}
+            onChange={(e) => aoMudar({ ...escolha, apelido: e.target.value })}
+          />
+        </Campo>
+
         <Campo
           rotulo="Como cobra"
           dica={
@@ -305,6 +325,7 @@ export function NovoCliente() {
       ...a,
       {
         servico: chave,
+        apelido: '',
         formato: s.formatoPadrao,
         valorCentavos: 0,
         diaVencimento: s.formatoPadrao === 'recorrente' ? 10 : null,

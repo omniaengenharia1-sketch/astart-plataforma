@@ -914,6 +914,9 @@ export async function alterarServico(id: string, d: ContratoEditado): Promise<vo
     p_data_evento: d.dataEvento ?? null,
     p_responsaveis: d.responsaveis ?? null,
     p_observacao: d.observacao ?? null,
+    // Nulo e "nao mexe". Para APAGAR o nome, a tela manda um espaco: o
+    // `btrim` do banco devolve vazio, e vazio vira nulo la.
+    p_apelido: d.apelido === undefined ? null : (d.apelido.trim() || ' '),
   });
   if (error) throw new FalhaDados(error.message);
 }
@@ -935,6 +938,9 @@ export async function adicionarServico(
     p_data_evento: d.dataEvento ?? null,
     p_responsaveis: d.responsaveis ?? null,
     p_observacao: d.observacao ?? null,
+    // O nome desta linha (0090). Vazio vira nulo: "sem nome" quer dizer
+    // "chame pelo nome do servico".
+    p_apelido: d.apelido?.trim() || null,
     p_modulos: null,
   });
   if (error) throw new FalhaDados(error.message);

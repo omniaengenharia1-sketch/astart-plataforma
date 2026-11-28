@@ -56,6 +56,18 @@ export interface ServicoContratado {
   clienteId: string;
   servico: ChaveServico;
   servicoNome: string;
+  /**
+   * O nome que a dona deu a ESTA linha: "Ensaio cortesia", "Aniversário da
+   * Zilda" (migration 0090).
+   *
+   * Existe porque o mesmo serviço pode entrar mais de uma vez no mesmo
+   * cliente — ela deu um ensaio de graça para a dona Zilda e depois fez o
+   * aniversário por R$ 500, e os dois são audiovisual. Sem um nome por linha,
+   * a tela mostraria "Audiovisual" duas vezes e o boleto também.
+   *
+   * Nulo quer dizer "chame pelo nome do serviço".
+   */
+  apelido: string | null;
   formato: FormatoContrato;
   status: StatusServico;
   /**
@@ -94,6 +106,8 @@ export interface ServicoContratado {
 
 /** O que a edição de um contrato manda de volta. Nulo = não mexe. */
 export interface ContratoEditado {
+  /** O nome desta linha do contrato (0090). */
+  apelido?: string;
   valorCentavos?: number | null;
   diaVencimento?: number | null;
   parcelas?: number | null;
@@ -295,6 +309,8 @@ export interface Catalogo {
 /** Uma linha do contrato, do jeito que `criar_cliente()` espera. */
 export interface ServicoEscolhido {
   servico: ChaveServico;
+  /** O nome desta linha, se a dona quis dar um (0090). */
+  apelido: string;
   formato: FormatoContrato | null;
   valorCentavos: number;
   diaVencimento: number | null;

@@ -93,12 +93,25 @@ begin
    where g.chave = 'receita' limit 1;
 
   -- Tres lancamentos de receita, em situacoes diferentes.
+  --
+  -- A COMPETENCIA VAI DITA, e isso nao e detalhe. Sem ela, `criar_lancamento`
+  -- tira a competencia do VENCIMENTO: `current_date + 5` cai no mes seguinte
+  -- em todo fim de mes, e a assercao la embaixo — "a tela do financeiro ve as
+  -- cobrancas do mes" — passava a falhar nos ultimos dias de cada mes, por
+  -- causa do calendario e nao do codigo.
+  --
+  -- Descoberto em 28/11, com o teste vermelho antes de eu encostar nele.
+  -- Teste que falha sozinho em certos dias ensina a equipe a ignorar
+  -- vermelho, que e o pior habito que um teste pode criar.
   v_perto := public.criar_lancamento('Mensalidade 03/2026', v_sub, 150000,
-    current_date + 5, p_cliente => '20000000-0000-0000-0000-000000000001');
+    current_date + 5, p_cliente => '20000000-0000-0000-0000-000000000001',
+    p_competencia => date_trunc('month', current_date)::date);
   v_longe := public.criar_lancamento('Mensalidade 04/2026', v_sub, 150000,
-    current_date + 40, p_cliente => '20000000-0000-0000-0000-000000000001');
+    current_date + 40, p_cliente => '20000000-0000-0000-0000-000000000001',
+    p_competencia => date_trunc('month', current_date)::date);
   v_sem   := public.criar_lancamento('Job do sem documento', v_sub, 90000,
-    current_date + 3, p_cliente => '20000000-0000-0000-0000-000000000002');
+    current_date + 3, p_cliente => '20000000-0000-0000-0000-000000000002',
+    p_competencia => date_trunc('month', current_date)::date);
 
   -- 1 e 2. A FILA: janela de dez dias, e so quem tem documento.
   v_fila := public.cobrancas_para_emitir();
